@@ -1,13 +1,12 @@
 # pyrefly: ignore [missing-import]
 from django.urls import path
 from .views import (
-    RegisterView, CitizenPortalView, PharmacyPortalView, ManufacturerPortalView,
+    CitizenPortalView, PharmacyPortalView, ManufacturerPortalView,
     DistributorPortalView, DGDAPortalView, DoctorPortalView, ResearcherPortalView
 )
 from .debug_views import DebugAuthView
 
 urlpatterns = [
-    path('register/', RegisterView.as_view(), name='register'),
     path('debug/', DebugAuthView.as_view(), name='debug'),
     path('citizen-portal/', CitizenPortalView.as_view(), name='citizen-portal'),
     path('pharmacy-portal/', PharmacyPortalView.as_view(), name='pharmacy-portal'),
