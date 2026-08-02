@@ -1,0 +1,24 @@
+# Environments
+venv/
+env/
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Django
+db.sqlite3
+*.log
+
+# Project specific
+test_auth.py
+test_debug.py
+test_db_connection.py
+check_user.py
+check_urls.py
+list_tables.py
+create_test_users.py
+debug_auth.py
+original_schema.sql
