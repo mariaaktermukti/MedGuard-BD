@@ -1,9 +1,11 @@
 import React, { useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
-import { Shield, Bell, User, LogOut } from 'lucide-react';
+import { ThemeContext } from '../context/ThemeContext';
+import { Shield, Bell, User, LogOut, Moon, Sun } from 'lucide-react';
 
 const Navbar = () => {
     const { user, logout } = useContext(AuthContext);
+    const { isDarkMode, toggleTheme } = useContext(ThemeContext);
 
     return (
         <nav className="glass-panel" style={{
@@ -16,6 +18,9 @@ const Navbar = () => {
             </div>
             
             <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                <button onClick={toggleTheme} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                    {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+                </button>
                 <button style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
                     <Bell size={20} />
                 </button>

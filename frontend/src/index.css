@@ -8,6 +8,26 @@
   --border-color: #e2e8f0; /* Slate 200 for borders */
   --danger: #ef4444;
   --success: #10b981;
+  --bg-glass: rgba(255, 255, 255, 0.85);
+  --bg-input: #ffffff;
+}
+
+[data-theme="dark"] {
+  --primary-color: #3b82f6; 
+  --primary-hover: #60a5fa;
+  --bg-dark: #0f172a; 
+  --bg-card: #1e293b; 
+  --text-light: #f8fafc; 
+  --text-muted: #94a3b8; 
+  --border-color: #334155; 
+  --bg-glass: rgba(30, 41, 59, 0.85);
+  --bg-input: #1e293b;
+}
+
+[data-theme="dark"] body {
+  background: radial-gradient(circle at 15% 50%, rgba(59, 130, 246, 0.1), transparent 25%),
+              radial-gradient(circle at 85% 30%, rgba(16, 185, 129, 0.1), transparent 25%),
+              var(--bg-dark);
 }
 
 * {
@@ -30,7 +50,7 @@ body {
 
 /* Glassmorphism Utilities */
 .glass-panel {
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--bg-glass);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--border-color);
@@ -55,7 +75,7 @@ body {
 .input-group input, .input-group select {
   padding: 0.75rem 1rem;
   border-radius: 0.5rem;
-  background: #ffffff;
+  background: var(--bg-input);
   border: 1px solid var(--border-color);
   color: var(--text-light);
   font-size: 1rem;
