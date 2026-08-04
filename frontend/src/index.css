@@ -1,11 +1,11 @@
 :root {
-  --primary-color: #3b82f6; /* Blue */
-  --primary-hover: #2563eb;
-  --bg-dark: #0f172a;
-  --bg-card: rgba(30, 41, 59, 0.7);
-  --text-light: #f8fafc;
-  --text-muted: #94a3b8;
-  --border-color: rgba(255, 255, 255, 0.1);
+  --primary-color: #2563eb; /* Stronger blue for light theme */
+  --primary-hover: #1d4ed8;
+  --bg-dark: #f8fafc; /* Now it's a light background */
+  --bg-card: #ffffff; /* Solid white cards */
+  --text-light: #0f172a; /* Slate 900 for main text */
+  --text-muted: #64748b; /* Slate 500 for secondary text */
+  --border-color: #e2e8f0; /* Slate 200 for borders */
   --danger: #ef4444;
   --success: #10b981;
 }
@@ -21,21 +21,21 @@ body {
   background-color: var(--bg-dark);
   color: var(--text-light);
   min-height: 100vh;
-  /* Premium dynamic background gradient */
-  background: radial-gradient(circle at 15% 50%, rgba(59, 130, 246, 0.15), transparent 25%),
-              radial-gradient(circle at 85% 30%, rgba(16, 185, 129, 0.1), transparent 25%),
+  /* Premium dynamic background gradient - Light */
+  background: radial-gradient(circle at 15% 50%, rgba(59, 130, 246, 0.05), transparent 25%),
+              radial-gradient(circle at 85% 30%, rgba(16, 185, 129, 0.05), transparent 25%),
               var(--bg-dark);
   background-attachment: fixed;
 }
 
 /* Glassmorphism Utilities */
 .glass-panel {
-  background: var(--bg-card);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--border-color);
   border-radius: 1rem;
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
 }
 
 /* Inputs */
@@ -55,11 +55,12 @@ body {
 .input-group input, .input-group select {
   padding: 0.75rem 1rem;
   border-radius: 0.5rem;
-  background: rgba(15, 23, 42, 0.6);
+  background: #ffffff;
   border: 1px solid var(--border-color);
   color: var(--text-light);
   font-size: 1rem;
   transition: all 0.2s ease;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .input-group input:focus, .input-group select:focus {

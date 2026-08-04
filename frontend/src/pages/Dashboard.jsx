@@ -4,7 +4,7 @@ import { Shield, Activity, Users, FileText } from 'lucide-react';
 
 const StatCard = ({ icon, label, value }) => (
     <div style={{
-        background: 'rgba(30, 41, 59, 0.4)',
+        background: 'var(--bg-card)',
         border: '1px solid var(--border-color)',
         borderRadius: '1rem',
         padding: '1.5rem',

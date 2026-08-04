@@ -1,7 +1,7 @@
 import React, { useContext } from 'react';
 import { NavLink } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { LayoutDashboard, FileText, Activity, AlertTriangle, Package, Users, Settings } from 'lucide-react';
+import { LayoutDashboard, FileText, Activity, AlertTriangle, Package, Users, Settings, QrCode, Pill, MessageSquare, MapPin } from 'lucide-react';
 
 const Sidebar = () => {
     const { user } = useContext(AuthContext);
@@ -9,14 +9,17 @@ const Sidebar = () => {
     // Dynamic menu items based on role
     const getMenuItems = () => {
         const baseMenu = [
-            { path: '/', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
+            { path: '/dashboard', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
         ];
 
         switch (user?.role) {
             case 'citizen':
                 return [...baseMenu, 
-                    { path: '/prescriptions', icon: <FileText size={20} />, label: 'My Prescriptions' },
-                    { path: '/report-adr', icon: <AlertTriangle size={20} />, label: 'Report ADR' }
+                    { path: '/dashboard/drug-passport', icon: <QrCode size={20} />, label: 'Drug Passport' },
+                    { path: '/dashboard/my-medicines', icon: <Pill size={20} />, label: 'My Medicines' },
+                    { path: '/dashboard/report-adr', icon: <AlertTriangle size={20} />, label: 'Report ADR' },
+                    { path: '/dashboard/ai-assistant', icon: <MessageSquare size={20} />, label: 'AI Assistant' },
+                    { path: '/dashboard/find-pharmacy', icon: <MapPin size={20} />, label: 'Find Pharmacy' }
                 ];
             case 'manufacturer':
                 return [...baseMenu, 

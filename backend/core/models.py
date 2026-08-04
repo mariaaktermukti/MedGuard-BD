@@ -91,6 +91,18 @@ class PrescriptionItem(models.Model):
     duration = models.CharField(max_length=50, blank=True, null=True)
     instructions = models.TextField(blank=True, null=True)
 
+class DosageSchedule(models.Model):
+    citizen = models.ForeignKey(User, on_delete=models.CASCADE, related_name='dosage_schedules')
+    medicine = models.ForeignKey(Medicine, on_delete=models.CASCADE, related_name='dosage_schedules')
+    dosage = models.CharField(max_length=100)
+    frequency = models.CharField(max_length=100)
+    start_date = models.DateField()
+    end_date = models.DateField(blank=True, null=True)
+    reminder_times = models.JSONField(default=list) # e.g. ["08:00", "20:00"]
+    is_active = models.BooleanField(default=True)
+    notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
 class ADRReport(models.Model):
     reported_by_user = models.ForeignKey(User, on_delete=models.RESTRICT, related_name='adr_reports_filed')
     citizen = models.ForeignKey(User, on_delete=models.RESTRICT, related_name='adr_reports_patient')
