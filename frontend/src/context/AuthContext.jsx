@@ -11,7 +11,7 @@ export const AuthProvider = ({ children }) => {
 
     useEffect(() => {
         const checkUserStatus = async () => {
-            const token = localStorage.getItem('access_token');
+            const token = localStorage.getItem('access_token') || localStorage.getItem('access');
             if (token) {
                 try {
                     // Try to hit the debug endpoint to get user details
@@ -20,6 +20,7 @@ export const AuthProvider = ({ children }) => {
                 } catch (error) {
                     console.error("Token invalid or expired", error);
                     localStorage.removeItem('access_token');
+                    localStorage.removeItem('access');
                     localStorage.removeItem('refresh_token');
                 }
             }
@@ -32,6 +33,7 @@ export const AuthProvider = ({ children }) => {
         try {
             const response = await api.post('token/', { username, password });
             localStorage.setItem('access_token', response.data.access);
+            localStorage.setItem('access', response.data.access);
             localStorage.setItem('refresh_token', response.data.refresh);
             
             // Fetch user info after login
@@ -56,6 +58,7 @@ export const AuthProvider = ({ children }) => {
 
     const logout = () => {
         localStorage.removeItem('access_token');
+        localStorage.removeItem('access');
         localStorage.removeItem('refresh_token');
         setUser(null);
         navigate('/login');

@@ -65,7 +65,7 @@ const ReportADR = () => {
                 description,
                 severity
             }, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('access')}` }
+                headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('access')}` }
             });
             setSuccess(true);
             setDescription('');

@@ -17,7 +17,7 @@ const DrugPassport = () => {
         try {
             const response = await axios.get(`http://localhost:8000/api/core/passport/${qrCode}/`, {
                 headers: {
-                    Authorization: `Bearer ${localStorage.getItem('access')}`
+                    Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('access')}`
                 }
             });
             setPassport(response.data);

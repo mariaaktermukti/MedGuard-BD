@@ -15,7 +15,7 @@ const MyMedicines = () => {
     const fetchSchedules = async () => {
         try {
             const res = await axios.get('http://localhost:8000/api/core/medicines/personal/', {
-                headers: { Authorization: `Bearer ${localStorage.getItem('access')}` }
+                headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('access')}` }
             });
             setSchedules(res.data);
         } catch (err) {
@@ -34,7 +34,7 @@ const MyMedicines = () => {
         const medNames = schedules.map(s => s.medicine_details?.name).filter(Boolean);
         try {
             const res = await axios.post('http://localhost:8000/api/core/interaction-checker/', { medicines: medNames }, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('access')}` }
+                headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('access')}` }
             });
             setInteractionResult(res.data.response);
         } catch (err) {

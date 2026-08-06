@@ -11,7 +11,7 @@ const PharmacyFinder = () => {
         const fetchPharmacies = async () => {
             try {
                 const res = await axios.get('http://localhost:8000/api/core/pharmacies/', {
-                    headers: { Authorization: `Bearer ${localStorage.getItem('access')}` }
+                    headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('access')}` }
                 });
                 setPharmacies(res.data);
             } catch (err) {

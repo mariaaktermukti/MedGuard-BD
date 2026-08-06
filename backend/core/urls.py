@@ -1,8 +1,25 @@
 from django.urls import path
 from .views import (
-    DrugPassportView, PersonalMedicineRecordView, PersonalMedicineRecordDetailView,
-    ADRReportCreateView, PharmacyFinderView, NotificationListView, NotificationMarkReadView,
-    AIAssistantView, InteractionCheckerView
+    ADRReportCreateView,
+    AIAssistantView,
+    BatchQualityTestListCreateView,
+    BatchQRExportView,
+    BatchReleaseView,
+    ComplianceDashboardView,
+    DemandForecastView,
+    DistributionEventListCreateView,
+    DrugPassportView,
+    ManufacturerBatchDetailView,
+    ManufacturerBatchListCreateView,
+    ManufacturerDashboardView,
+    ManufacturerMedicineListCreateView,
+    NotificationListView,
+    NotificationMarkReadView,
+    InteractionCheckerView,
+    PharmacyFinderView,
+    PersonalMedicineRecordDetailView,
+    PersonalMedicineRecordView,
+    RecallListCreateView,
 )
 
 urlpatterns = [
@@ -15,4 +32,15 @@ urlpatterns = [
     path('notifications/<int:pk>/read/', NotificationMarkReadView.as_view(), name='notification-mark-read'),
     path('ai-assistant/', AIAssistantView.as_view(), name='ai-assistant'),
     path('interaction-checker/', InteractionCheckerView.as_view(), name='interaction-checker'),
+    path('manufacturer/dashboard/', ManufacturerDashboardView.as_view(), name='manufacturer-dashboard'),
+    path('manufacturer/medicines/', ManufacturerMedicineListCreateView.as_view(), name='manufacturer-medicines'),
+    path('manufacturer/batches/', ManufacturerBatchListCreateView.as_view(), name='manufacturer-batches'),
+    path('manufacturer/batches/<int:pk>/', ManufacturerBatchDetailView.as_view(), name='manufacturer-batch-detail'),
+    path('manufacturer/batches/<int:pk>/release/', BatchReleaseView.as_view(), name='manufacturer-batch-release'),
+    path('manufacturer/batches/<int:pk>/qr-export/', BatchQRExportView.as_view(), name='manufacturer-batch-qr-export'),
+    path('manufacturer/batches/<int:pk>/quality-tests/', BatchQualityTestListCreateView.as_view(), name='manufacturer-batch-quality-tests'),
+    path('manufacturer/batches/<int:pk>/distribution-events/', DistributionEventListCreateView.as_view(), name='manufacturer-batch-distribution-events'),
+    path('manufacturer/recalls/', RecallListCreateView.as_view(), name='manufacturer-recalls'),
+    path('manufacturer/compliance/', ComplianceDashboardView.as_view(), name='manufacturer-compliance'),
+    path('manufacturer/demand-forecast/', DemandForecastView.as_view(), name='manufacturer-demand-forecast'),
 ]

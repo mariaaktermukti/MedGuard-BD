@@ -1,7 +1,7 @@
 import React, { useContext } from 'react';
 import { NavLink } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { LayoutDashboard, FileText, Activity, AlertTriangle, Package, Users, Settings, QrCode, Pill, MessageSquare, MapPin } from 'lucide-react';
+import { LayoutDashboard, Activity, AlertTriangle, Package, Users, Settings, QrCode, Pill, MessageSquare, MapPin, Factory, Plus, ScanLine, BellRing, Truck } from 'lucide-react';
 
 const Sidebar = () => {
     const { user } = useContext(AuthContext);
@@ -22,9 +22,13 @@ const Sidebar = () => {
                     { path: '/dashboard/find-pharmacy', icon: <MapPin size={20} />, label: 'Find Pharmacy' }
                 ];
             case 'manufacturer':
-                return [...baseMenu, 
-                    { path: '/medicines', icon: <Package size={20} />, label: 'Medicines' },
-                    { path: '/batches', icon: <Activity size={20} />, label: 'Production Batches' }
+                return [...baseMenu,
+                    { path: '/dashboard/manufacturer', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
+                    { path: '/dashboard/manufacturer/register', icon: <Plus size={20} />, label: 'Register New Medicine' },
+                    { path: '/dashboard/manufacturer/batch', icon: <Factory size={20} />, label: 'Create New Batch' },
+                    { path: '/dashboard/manufacturer/verify', icon: <ScanLine size={20} />, label: 'Scan QR / Verify Batch' },
+                    { path: '/dashboard/manufacturer/recall', icon: <BellRing size={20} />, label: 'Start a Recall' },
+                    { path: '/dashboard/manufacturer/shipment', icon: <Truck size={20} />, label: 'Create Shipment' }
                 ];
             case 'pharmacy':
                 return [...baseMenu, 

@@ -7,24 +7,24 @@ class IsCitizen(permissions.BasePermission):
 
 class IsPharmacy(permissions.BasePermission):
     def has_permission(self, request, view):
-        return bool(request.user and request.user.is_authenticated and request.user.role == 'PHARMACY')
+        return bool(request.user and request.user.is_authenticated and getattr(request.user, 'role', None) == 'pharmacy')
 
 class IsManufacturer(permissions.BasePermission):
     def has_permission(self, request, view):
-        return bool(request.user and request.user.is_authenticated and request.user.role == 'MANUFACTURER')
+        return bool(request.user and request.user.is_authenticated and getattr(request.user, 'role', None) == 'manufacturer')
 
 class IsDistributor(permissions.BasePermission):
     def has_permission(self, request, view):
-        return bool(request.user and request.user.is_authenticated and request.user.role == 'DISTRIBUTOR')
+        return bool(request.user and request.user.is_authenticated and getattr(request.user, 'role', None) == 'distributor')
 
 class IsDGDA(permissions.BasePermission):
     def has_permission(self, request, view):
-        return bool(request.user and request.user.is_authenticated and request.user.role == 'DGDA')
+        return bool(request.user and request.user.is_authenticated and getattr(request.user, 'role', None) == 'dgda')
 
 class IsDoctor(permissions.BasePermission):
     def has_permission(self, request, view):
-        return bool(request.user and request.user.is_authenticated and request.user.role == 'DOCTOR')
+        return bool(request.user and request.user.is_authenticated and getattr(request.user, 'role', None) == 'doctor')
 
 class IsResearcher(permissions.BasePermission):
     def has_permission(self, request, view):
-        return bool(request.user and request.user.is_authenticated and request.user.role == 'RESEARCHER')
+        return bool(request.user and request.user.is_authenticated and getattr(request.user, 'role', None) == 'researcher')

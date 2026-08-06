@@ -12,6 +12,7 @@ import MyMedicines from './pages/citizen/MyMedicines';
 import ReportADR from './pages/citizen/ReportADR';
 import AIAssistant from './pages/citizen/AIAssistant';
 import PharmacyFinder from './pages/citizen/PharmacyFinder';
+import ManufacturerPortal from './pages/manufacturer/ManufacturerPortal';
 
 function App() {
   return (
@@ -31,6 +32,12 @@ function App() {
             <Route path="report-adr" element={<ReportADR />} />
             <Route path="ai-assistant" element={<AIAssistant />} />
             <Route path="find-pharmacy" element={<PharmacyFinder />} />
+            <Route path="manufacturer" element={<ManufacturerPortal />} />
+            <Route path="manufacturer/register" element={<ManufacturerPortal />} />
+            <Route path="manufacturer/batch" element={<ManufacturerPortal />} />
+            <Route path="manufacturer/verify" element={<ManufacturerPortal />} />
+            <Route path="manufacturer/recall" element={<ManufacturerPortal />} />
+            <Route path="manufacturer/shipment" element={<ManufacturerPortal />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

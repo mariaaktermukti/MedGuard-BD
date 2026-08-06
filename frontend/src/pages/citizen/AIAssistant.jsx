@@ -29,7 +29,7 @@ const AIAssistant = () => {
 
         try {
             const res = await axios.post('http://localhost:8000/api/core/ai-assistant/', { prompt: userMessage.content }, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('access')}` }
+                headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('access')}` }
             });
             setMessages(prev => [...prev, { role: 'assistant', content: res.data.response }]);
         } catch (err) {
