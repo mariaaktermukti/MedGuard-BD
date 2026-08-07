@@ -22,7 +22,7 @@ const Sidebar = () => {
                     { path: '/dashboard/find-pharmacy', icon: <MapPin size={20} />, label: 'Find Pharmacy' }
                 ];
             case 'manufacturer':
-                return [...baseMenu,
+                return [
                     { path: '/dashboard/manufacturer', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
                     { path: '/dashboard/manufacturer/register', icon: <Plus size={20} />, label: 'Register New Medicine' },
                     { path: '/dashboard/manufacturer/batch', icon: <Factory size={20} />, label: 'Create New Batch' },

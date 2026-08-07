@@ -1,37 +1,17 @@
-import React, { useContext, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
     AlertTriangle,
-    BarChart3,
-    BellRing,
-    Building2,
     CalendarDays,
-    ChevronLeft,
-    ChevronRight,
+    CheckCircle2,
     ClipboardPlus,
     Factory,
-    Gauge,
-    Menu,
-    Moon,
     Package,
-    Plus,
     QrCode,
-    RefreshCw,
-    ScanLine,
+    Send,
     ShieldCheck,
-    Sun,
-    Truck,
+    Upload,
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ThemeContext } from '../../context/ThemeContext';
-
-const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: <BarChart3 size={18} /> },
-    { id: 'register', label: 'Register New Medicine', icon: <Plus size={18} /> },
-    { id: 'batch', label: 'Create New Batch', icon: <Factory size={18} /> },
-    { id: 'verify', label: 'Scan QR / Verify Batch', icon: <ScanLine size={18} /> },
-    { id: 'recall', label: 'Start a Recall', icon: <BellRing size={18} /> },
-    { id: 'shipment', label: 'Create Shipment', icon: <Truck size={18} /> },
-];
 
 const metrics = [
     { label: 'Total Registered Medicines', value: '2', icon: <Package size={18} /> },
@@ -48,58 +28,103 @@ const sampleBatches = [
     { id: 'B-24003', medicine: 'Cefixime 200mg', status: 'Active', expiry: '2026-12-04' },
 ];
 
-const shellStyle = {
-    minHeight: '100vh',
-    display: 'grid',
-    gridTemplateColumns: '290px minmax(0, 1fr)',
-    background: 'var(--bg-dark)',
-    color: 'var(--text-light)',
-};
-
-const sidebarStyle = {
-    position: 'sticky',
-    top: 0,
-    height: '100vh',
-    padding: '1rem',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.9rem',
-    borderRight: '1px solid var(--border-color)',
-    background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.93))',
-    backdropFilter: 'blur(16px)',
+const viewMeta = {
+    dashboard: {
+        title: 'Manufacturer Dashboard',
+        subtitle: 'Operational overview for medicine registration, batches, quality checks, recalls, and shipments.',
+        icon: <Factory size={30} />,
+    },
+    register: {
+        title: 'Register New Medicine',
+        subtitle: 'Create a verified medicine record with the required identity, dosage, and date information.',
+        icon: <ClipboardPlus size={30} />,
+    },
+    batch: {
+        title: 'Create New Batch',
+        subtitle: 'Add production batch details and record the quality-control status.',
+        icon: <Package size={30} />,
+    },
+    verify: {
+        title: 'Scan QR / Verify Batch',
+        subtitle: 'Upload a QR image to simulate product verification and review batch details.',
+        icon: <QrCode size={30} />,
+    },
+    recall: {
+        title: 'Start a Recall',
+        subtitle: 'Select an affected batch, provide a reason, and confirm the recall action.',
+        icon: <AlertTriangle size={30} />,
+    },
+    shipment: {
+        title: 'Create Shipment',
+        subtitle: 'Record shipment destination, quantity, batch assignment, date, and delivery status.',
+        icon: <Factory size={30} />,
+    },
 };
 
 const panelStyle = {
     background: 'var(--bg-card)',
     border: '1px solid var(--border-color)',
-    borderRadius: '1.2rem',
-    boxShadow: '0 18px 40px rgba(15, 23, 42, 0.06)',
+    borderRadius: '1rem',
+    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.04)',
 };
 
 const buttonBase = {
     border: 'none',
-    borderRadius: '0.95rem',
+    borderRadius: '0.5rem',
     cursor: 'pointer',
-    fontWeight: 700,
+    fontWeight: 600,
     transition: 'transform 0.2s ease, opacity 0.2s ease, background 0.2s ease',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '0.5rem',
 };
 
 const inputStyle = {
     width: '100%',
-    padding: '0.85rem 1rem',
-    borderRadius: '0.8rem',
+    padding: '0.75rem 1rem',
+    borderRadius: '0.5rem',
     border: '1px solid var(--border-color)',
     background: 'var(--bg-input)',
     color: 'var(--text-light)',
-    fontSize: '0.95rem',
+    fontSize: '1rem',
+    boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.05)',
 };
 
 const SectionTitle = ({ title, subtitle }) => (
-    <div style={{ marginBottom: '1rem' }}>
-        <h2 style={{ margin: 0, fontSize: '1.15rem' }}>{title}</h2>
+    <div style={{ marginBottom: '1.25rem' }}>
+        <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>{title}</h2>
         <p style={{ margin: '0.25rem 0 0', color: 'var(--text-muted)' }}>{subtitle}</p>
     </div>
 );
+
+const PageHeader = ({ icon, title, subtitle }) => (
+    <div className="manufacturer-page-header" style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', marginBottom: '2rem' }}>
+        <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: 'rgba(59, 130, 246, 0.1)', color: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto' }}>
+            {icon}
+        </div>
+        <div>
+            <h1 style={{ fontSize: '2rem', fontWeight: 700, margin: 0 }}>{title}</h1>
+            <p style={{ color: 'var(--text-muted)', margin: '0.35rem 0 0', lineHeight: 1.6 }}>{subtitle}</p>
+        </div>
+    </div>
+);
+
+const Field = ({ label, children }) => (
+    <div className="input-group" style={{ marginBottom: 0 }}>
+        <label>{label}</label>
+        {children}
+    </div>
+);
+
+const StatusPill = ({ children, tone = 'blue' }) => {
+    const color = tone === 'green' ? '#10b981' : tone === 'red' ? '#ef4444' : tone === 'amber' ? '#f59e0b' : 'var(--primary-color)';
+    return (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.35rem 0.75rem', borderRadius: '999px', background: `${tone === 'blue' ? 'rgba(59, 130, 246, 0.1)' : tone === 'green' ? 'rgba(16, 185, 129, 0.1)' : tone === 'amber' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(239, 68, 68, 0.1)'}`, color, fontSize: '0.8rem', fontWeight: 700 }}>
+            {children}
+        </span>
+    );
+};
 
 const DashboardChart = () => (
     <div style={{ padding: '1rem', borderRadius: '1rem', border: '1px dashed var(--border-color)', background: 'rgba(59, 130, 246, 0.04)' }}>
@@ -107,7 +132,7 @@ const DashboardChart = () => (
             Production vs Sales chart placeholder
         </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.85rem' }}>
-            <button type="button" style={{ ...buttonBase, width: 'auto', padding: '0.7rem 1rem', background: 'rgba(59, 130, 246, 0.12)', color: 'var(--primary-color)' }}>
+            <button type="button" style={{ ...buttonBase, width: 'auto', padding: '0.7rem 1rem', background: 'rgba(59, 130, 246, 0.1)', color: 'var(--primary-color)' }}>
                 Open
             </button>
         </div>
@@ -128,23 +153,21 @@ const MiniBars = () => {
 };
 
 const MetricCard = ({ icon, label, value }) => (
-    <div style={{ ...panelStyle, padding: '1rem 1.05rem', minHeight: '112px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-        <div style={{ width: '36px', height: '36px', borderRadius: '0.95rem', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(59, 130, 246, 0.12)', color: 'var(--primary-color)' }}>
+    <div className="glass-panel" style={{ padding: '1.5rem', minHeight: '132px', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <div style={{ width: '48px', height: '48px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(59, 130, 246, 0.1)', color: 'var(--primary-color)', flex: '0 0 auto' }}>
             {icon}
         </div>
         <div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 800 }}>{value}</div>
+            <div style={{ fontSize: '1.75rem', fontWeight: 800, lineHeight: 1 }}>{value}</div>
             <div style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>{label}</div>
         </div>
     </div>
 );
 
 const ManufacturerPortal = () => {
-    const { isDarkMode, toggleTheme } = useContext(ThemeContext);
     const location = useLocation();
     const navigate = useNavigate();
     const [activeView, setActiveView] = useState('dashboard');
-    const [sidebarOpen, setSidebarOpen] = useState(true);
     const [message, setMessage] = useState('');
     const [registerForm, setRegisterForm] = useState({
         medicineName: '',
@@ -172,6 +195,8 @@ const ManufacturerPortal = () => {
         status: 'Preparing',
     });
     const [recallReason, setRecallReason] = useState('');
+    const [selectedRecallBatch, setSelectedRecallBatch] = useState('');
+    const [recallConfirmation, setRecallConfirmation] = useState(null);
     const [scannerUploaded, setScannerUploaded] = useState(false);
 
     const activeBatches = useMemo(() => sampleBatches, []);
@@ -183,17 +208,6 @@ const ManufacturerPortal = () => {
         if (pathname.endsWith('/recall')) return 'recall';
         if (pathname.endsWith('/shipment')) return 'shipment';
         return 'dashboard';
-    };
-
-    const viewToPath = (view) => {
-        switch (view) {
-            case 'register': return '/dashboard/manufacturer/register';
-            case 'batch': return '/dashboard/manufacturer/batch';
-            case 'verify': return '/dashboard/manufacturer/verify';
-            case 'recall': return '/dashboard/manufacturer/recall';
-            case 'shipment': return '/dashboard/manufacturer/shipment';
-            default: return '/dashboard/manufacturer';
-        }
     };
 
     useEffect(() => {
@@ -212,25 +226,48 @@ const ManufacturerPortal = () => {
         }
     };
 
-    const viewLabel = navItems.find((item) => item.id === activeView)?.label || 'Dashboard';
+    const startRecall = (batchId) => {
+        setSelectedRecallBatch(batchId);
+        setMessage(`Recall initiated for ${batchId}. Add a reason, then confirm.`);
+    };
 
-    const openView = (view) => {
-        navigate(viewToPath(view));
+    const confirmRecall = () => {
+        const reason = recallReason.trim();
+
+        if (!selectedRecallBatch) {
+            setMessage('Please choose a batch to recall first.');
+            return;
+        }
+
+        if (!reason) {
+            setMessage('Please enter a recall reason.');
+            return;
+        }
+
+        setMessage('');
+        setRecallConfirmation({ batchId: selectedRecallBatch, reason });
+        setRecallReason('');
+        setSelectedRecallBatch('');
+    };
+
+    const closeRecallConfirmation = () => {
+        setRecallConfirmation(null);
+        navigate(-1);
     };
 
     const renderDashboard = () => (
         <div style={{ display: 'grid', gap: '1rem' }}>
-            <div className="medguard-metric-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '1rem' }}>
+            <div className="medguard-metric-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '1.5rem' }}>
                 {metrics.map((item) => <MetricCard key={item.label} icon={item.icon} label={item.label} value={item.value} />)}
             </div>
 
-            <div className="medguard-two-col" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.2fr) minmax(0, 0.8fr)', gap: '1rem', alignItems: 'start' }}>
-                <div style={{ ...panelStyle, padding: '1.2rem' }}>
+            <div className="medguard-two-col" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.2fr) minmax(0, 0.8fr)', gap: '1.5rem', alignItems: 'start' }}>
+                <div className="glass-panel" style={{ padding: '1.5rem' }}>
                     <SectionTitle title="Production vs Sales" subtitle="Simple progress view for the last 6 months." />
                     <DashboardChart />
                 </div>
 
-                <div style={{ ...panelStyle, padding: '1.2rem' }}>
+                <div className="glass-panel" style={{ padding: '1.5rem' }}>
                     <SectionTitle title="AI Demand Prediction" subtitle="Next-month confidence: 78%" />
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
                         <div style={{ width: '180px', height: '180px', borderRadius: '50%', background: 'conic-gradient(var(--primary-color) 0% 78%, rgba(148, 163, 184, 0.16) 78% 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -247,71 +284,103 @@ const ManufacturerPortal = () => {
     );
 
     const renderRegister = () => (
-        <div style={{ ...panelStyle, padding: '1.2rem' }}>
-            <SectionTitle title="Register New Medicine" subtitle="Create a new medicine record and show a success message on submit." />
-            <form onSubmit={(event) => submitMessage(event, 'Medicine registered successfully.', resetRegisterForm)} style={{ display: 'grid', gap: '0.9rem' }}>
-                <div className="medguard-two-col" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '0.9rem' }}>
-                    <input value={registerForm.medicineName} onChange={(e) => setRegisterForm((current) => ({ ...current, medicineName: e.target.value }))} placeholder="Medicine Name" style={inputStyle} required />
-                    <input value={registerForm.genericName} onChange={(e) => setRegisterForm((current) => ({ ...current, genericName: e.target.value }))} placeholder="Generic Name" style={inputStyle} />
-                    <input value={registerForm.category} onChange={(e) => setRegisterForm((current) => ({ ...current, category: e.target.value }))} placeholder="Category" style={inputStyle} />
-                    <input value={registerForm.dosageForm} onChange={(e) => setRegisterForm((current) => ({ ...current, dosageForm: e.target.value }))} placeholder="Dosage Form" style={inputStyle} />
-                    <input value={registerForm.strength} onChange={(e) => setRegisterForm((current) => ({ ...current, strength: e.target.value }))} placeholder="Strength" style={inputStyle} />
-                    <input type="date" value={registerForm.manufacturerDate} onChange={(e) => setRegisterForm((current) => ({ ...current, manufacturerDate: e.target.value }))} style={inputStyle} />
-                    <input type="date" value={registerForm.expiryDate} onChange={(e) => setRegisterForm((current) => ({ ...current, expiryDate: e.target.value }))} style={inputStyle} />
+        <div className="glass-panel" style={{ padding: '2rem' }}>
+            <SectionTitle title="Medicine Identity" subtitle="Use complete and traceable product information for regulatory review." />
+            <form onSubmit={(event) => submitMessage(event, 'Medicine registered successfully.', resetRegisterForm)} style={{ display: 'grid', gap: '1.5rem' }}>
+                <div className="medguard-two-col" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '1.25rem' }}>
+                    <Field label="Medicine Name">
+                        <input value={registerForm.medicineName} onChange={(e) => setRegisterForm((current) => ({ ...current, medicineName: e.target.value }))} placeholder="e.g. Paracetamol" style={inputStyle} required />
+                    </Field>
+                    <Field label="Generic Name">
+                        <input value={registerForm.genericName} onChange={(e) => setRegisterForm((current) => ({ ...current, genericName: e.target.value }))} placeholder="e.g. Acetaminophen" style={inputStyle} />
+                    </Field>
+                    <Field label="Category">
+                        <input value={registerForm.category} onChange={(e) => setRegisterForm((current) => ({ ...current, category: e.target.value }))} placeholder="e.g. Analgesic" style={inputStyle} />
+                    </Field>
+                    <Field label="Dosage Form">
+                        <input value={registerForm.dosageForm} onChange={(e) => setRegisterForm((current) => ({ ...current, dosageForm: e.target.value }))} placeholder="e.g. Tablet" style={inputStyle} />
+                    </Field>
+                    <Field label="Strength">
+                        <input value={registerForm.strength} onChange={(e) => setRegisterForm((current) => ({ ...current, strength: e.target.value }))} placeholder="e.g. 500mg" style={inputStyle} />
+                    </Field>
+                    <Field label="Manufacturing Date">
+                        <input type="date" value={registerForm.manufacturerDate} onChange={(e) => setRegisterForm((current) => ({ ...current, manufacturerDate: e.target.value }))} style={inputStyle} />
+                    </Field>
+                    <Field label="Expiry Date">
+                        <input type="date" value={registerForm.expiryDate} onChange={(e) => setRegisterForm((current) => ({ ...current, expiryDate: e.target.value }))} style={inputStyle} />
+                    </Field>
                 </div>
-                <button type="submit" style={{ ...buttonBase, width: 'auto', padding: '0.95rem 1.2rem', background: 'var(--primary-color)', color: '#fff' }}>Register</button>
+                <div className="manufacturer-action-row" style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
+                    <button type="submit" style={{ ...buttonBase, width: 'auto', padding: '0.75rem 1.5rem', background: 'var(--primary-color)', color: '#fff' }}><Send size={18} />Register Medicine</button>
+                </div>
             </form>
         </div>
     );
 
     const renderBatch = () => (
-        <div style={{ ...panelStyle, padding: '1.2rem' }}>
-            <SectionTitle title="Create New Batch" subtitle="Add batch details and QC status." />
-            <form onSubmit={(event) => submitMessage(event, 'Batch created successfully.', resetBatchForm)} style={{ display: 'grid', gap: '0.9rem' }}>
-                <div className="medguard-two-col" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '0.9rem' }}>
-                    <input value={batchForm.batchId} onChange={(e) => setBatchForm((current) => ({ ...current, batchId: e.target.value }))} placeholder="Batch ID" style={inputStyle} required />
-                    <select value={batchForm.medicine} onChange={(e) => setBatchForm((current) => ({ ...current, medicine: e.target.value }))} style={inputStyle} required>
-                        <option value="">Medicine</option>
-                        <option value="Paracetamol 500mg">Paracetamol 500mg</option>
-                        <option value="Omeprazole 20mg">Omeprazole 20mg</option>
-                        <option value="Cefixime 200mg">Cefixime 200mg</option>
-                    </select>
-                    <input type="date" value={batchForm.manufacturingDate} onChange={(e) => setBatchForm((current) => ({ ...current, manufacturingDate: e.target.value }))} style={inputStyle} required />
-                    <input type="date" value={batchForm.expiryDate} onChange={(e) => setBatchForm((current) => ({ ...current, expiryDate: e.target.value }))} style={inputStyle} required />
-                    <input type="number" value={batchForm.quantity} onChange={(e) => setBatchForm((current) => ({ ...current, quantity: e.target.value }))} placeholder="Quantity" style={inputStyle} required />
-                    <select value={batchForm.qcStatus} onChange={(e) => setBatchForm((current) => ({ ...current, qcStatus: e.target.value }))} style={inputStyle}>
-                        <option value="Passed">QC Status: Passed</option>
-                        <option value="Pending">QC Status: Pending</option>
-                        <option value="Failed">QC Status: Failed</option>
-                    </select>
+        <div className="glass-panel" style={{ padding: '2rem' }}>
+            <SectionTitle title="Batch Production Record" subtitle="Keep batch identity, dates, quantity, and QC status in one standard format." />
+            <form onSubmit={(event) => submitMessage(event, 'Batch created successfully.', resetBatchForm)} style={{ display: 'grid', gap: '1.5rem' }}>
+                <div className="medguard-two-col" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '1.25rem' }}>
+                    <Field label="Batch ID">
+                        <input value={batchForm.batchId} onChange={(e) => setBatchForm((current) => ({ ...current, batchId: e.target.value }))} placeholder="e.g. B-24004" style={inputStyle} required />
+                    </Field>
+                    <Field label="Medicine">
+                        <select value={batchForm.medicine} onChange={(e) => setBatchForm((current) => ({ ...current, medicine: e.target.value }))} style={inputStyle} required>
+                            <option value="">Select medicine</option>
+                            <option value="Paracetamol 500mg">Paracetamol 500mg</option>
+                            <option value="Omeprazole 20mg">Omeprazole 20mg</option>
+                            <option value="Cefixime 200mg">Cefixime 200mg</option>
+                        </select>
+                    </Field>
+                    <Field label="Manufacturing Date">
+                        <input type="date" value={batchForm.manufacturingDate} onChange={(e) => setBatchForm((current) => ({ ...current, manufacturingDate: e.target.value }))} style={inputStyle} required />
+                    </Field>
+                    <Field label="Expiry Date">
+                        <input type="date" value={batchForm.expiryDate} onChange={(e) => setBatchForm((current) => ({ ...current, expiryDate: e.target.value }))} style={inputStyle} required />
+                    </Field>
+                    <Field label="Quantity">
+                        <input type="number" value={batchForm.quantity} onChange={(e) => setBatchForm((current) => ({ ...current, quantity: e.target.value }))} placeholder="e.g. 12000" style={inputStyle} required />
+                    </Field>
+                    <Field label="QC Status">
+                        <select value={batchForm.qcStatus} onChange={(e) => setBatchForm((current) => ({ ...current, qcStatus: e.target.value }))} style={inputStyle}>
+                            <option value="Passed">Passed</option>
+                            <option value="Pending">Pending</option>
+                            <option value="Failed">Failed</option>
+                        </select>
+                    </Field>
                 </div>
-                <button type="submit" style={{ ...buttonBase, width: 'auto', padding: '0.95rem 1.2rem', background: 'var(--primary-color)', color: '#fff' }}>Create Batch</button>
+                <div className="manufacturer-action-row" style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
+                    <button type="submit" style={{ ...buttonBase, width: 'auto', padding: '0.75rem 1.5rem', background: 'var(--primary-color)', color: '#fff' }}><Send size={18} />Create Batch</button>
+                </div>
             </form>
         </div>
     );
 
     const renderVerify = () => (
         <div style={{ display: 'grid', gap: '1rem' }}>
-            <div style={{ ...panelStyle, padding: '1.2rem' }}>
-                <SectionTitle title="Scan QR / Verify Batch" subtitle="Upload a QR image and verify a product quickly." />
-                <div style={{ minHeight: '180px', borderRadius: '1rem', border: '1px dashed var(--border-color)', background: 'rgba(59, 130, 246, 0.04)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.9rem', textAlign: 'center', padding: '1rem' }}>
+            <div className="glass-panel" style={{ padding: '2rem' }}>
+                <SectionTitle title="QR Verification" subtitle="Upload a QR image to simulate a batch verification request." />
+                <div style={{ minHeight: '220px', borderRadius: '1rem', border: '1px dashed var(--border-color)', background: 'rgba(59, 130, 246, 0.04)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem', textAlign: 'center', padding: '1.5rem' }}>
                     <QrCode size={46} color="var(--primary-color)" />
                     <div>
-                        <div style={{ fontWeight: 700 }}>QR code scanner placeholder</div>
-                        <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Upload a QR image to simulate batch verification</div>
+                        <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>Batch QR scanner</div>
+                        <div style={{ color: 'var(--text-muted)', fontSize: '0.95rem', marginTop: '0.25rem' }}>
+                            {scannerUploaded ? 'QR image uploaded. Review the verified batch details below.' : 'Upload a QR image to simulate batch verification.'}
+                        </div>
                     </div>
-                    <button type="button" onClick={() => setMessage('QR image uploaded successfully.')} style={{ ...buttonBase, width: 'auto', padding: '0.85rem 1.1rem', background: 'rgba(59, 130, 246, 0.12)', color: 'var(--primary-color)' }}>
-                        Upload QR image
+                    <button type="button" onClick={() => { setScannerUploaded(true); setMessage('QR image uploaded successfully.'); }} style={{ ...buttonBase, width: 'auto', padding: '0.75rem 1.5rem', background: 'var(--primary-color)', color: '#fff' }}>
+                        <Upload size={18} />Upload QR image
                     </button>
                 </div>
             </div>
 
-            <div style={{ ...panelStyle, padding: '1.2rem' }}>
+            <div className="glass-panel" style={{ padding: '2rem' }}>
                 <SectionTitle title="Verified Batch Details" subtitle="Sample data for the selected batch." />
-                <div className="medguard-two-col" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '0.9rem' }}>
+                <div className="medguard-two-col" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '1.25rem' }}>
                     <div><div style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>Batch ID</div><div style={{ fontWeight: 700 }}>B-24001</div></div>
                     <div><div style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>Medicine</div><div style={{ fontWeight: 700 }}>Paracetamol 500mg</div></div>
-                    <div><div style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>Status</div><div style={{ fontWeight: 700, color: '#10b981' }}>Verified</div></div>
+                    <div><div style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>Status</div><StatusPill tone="green"><CheckCircle2 size={14} />Verified</StatusPill></div>
                     <div><div style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>Expiry</div><div style={{ fontWeight: 700 }}>2027-03-12</div></div>
                 </div>
             </div>
@@ -319,26 +388,49 @@ const ManufacturerPortal = () => {
     );
 
     const renderRecall = () => (
-        <div style={{ ...panelStyle, padding: '1.2rem' }}>
-            <SectionTitle title="Start a Recall" subtitle="List active batches and confirm a recall with a reason." />
-            <div style={{ display: 'grid', gap: '0.85rem' }}>
+        <div className="glass-panel" style={{ padding: '2rem' }}>
+            <SectionTitle title="Recall Workflow" subtitle="Select one affected batch, document the reason, then confirm the recall." />
+            <div style={{ display: 'grid', gap: '1rem' }}>
                 {activeBatches.map((batch) => (
-                    <div key={batch.id} style={{ padding: '0.95rem 1rem', borderRadius: '1rem', border: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
-                        <div>
-                            <div style={{ fontWeight: 700 }}>{batch.id}</div>
-                            <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>{batch.medicine}</div>
+                    <div
+                        key={batch.id}
+                        className="medguard-recall-row"
+                        style={{
+                            padding: '1rem 1.25rem',
+                            borderRadius: '1rem',
+                            border: selectedRecallBatch === batch.id ? '1px solid rgba(239, 68, 68, 0.55)' : '1px solid var(--border-color)',
+                            background: selectedRecallBatch === batch.id ? 'rgba(239, 68, 68, 0.06)' : 'transparent',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            gap: '1rem',
+                        }}
+                    >
+                        <div style={{ display: 'grid', gap: '0.25rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                                <div style={{ fontWeight: 700 }}>{batch.id}</div>
+                                <StatusPill tone={batch.status === 'Active' ? 'green' : 'amber'}>{batch.status}</StatusPill>
+                            </div>
+                            <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>{batch.medicine} | Expiry {batch.expiry}</div>
                         </div>
-                        <button type="button" style={{ ...buttonBase, width: 'auto', padding: '0.8rem 1rem', background: 'rgba(239, 68, 68, 0.12)', color: '#ef4444' }} onClick={() => setMessage(`Recall initiated for ${batch.id}.`)}>
-                            Recall
+                        <button
+                            type="button"
+                            className="medguard-recall-button"
+                            style={{ ...buttonBase, width: 'auto', padding: '0.75rem 1rem', background: selectedRecallBatch === batch.id ? '#ef4444' : 'rgba(239, 68, 68, 0.1)', color: selectedRecallBatch === batch.id ? '#fff' : '#ef4444' }}
+                            onClick={() => startRecall(batch.id)}
+                        >
+                            {selectedRecallBatch === batch.id ? 'Selected' : 'Recall'}
                         </button>
                     </div>
                 ))}
 
-                <div style={{ marginTop: '0.25rem', padding: '1rem', borderRadius: '1rem', background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
-                    <div style={{ fontWeight: 700, marginBottom: '0.6rem' }}>Recall confirmation</div>
+                <div style={{ marginTop: '0.5rem', padding: '1.5rem', borderRadius: '1rem', background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+                    <div style={{ fontWeight: 700, marginBottom: '0.6rem' }}>
+                        Recall confirmation{selectedRecallBatch ? `: ${selectedRecallBatch}` : ''}
+                    </div>
                     <textarea value={recallReason} onChange={(e) => setRecallReason(e.target.value)} placeholder="Reason for recall" rows={4} style={{ ...inputStyle, resize: 'vertical' }} />
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.75rem' }}>
-                        <button type="button" style={{ ...buttonBase, width: 'auto', padding: '0.9rem 1.2rem', background: '#ef4444', color: '#fff' }} onClick={() => setMessage(recallReason ? `Recall confirmed: ${recallReason}` : 'Please enter a recall reason.') }>
+                    <div className="medguard-recall-actions" style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.75rem' }}>
+                        <button type="button" className="medguard-confirm-recall-button" style={{ ...buttonBase, width: 'auto', padding: '0.75rem 1.5rem', background: '#ef4444', color: '#fff' }} onClick={confirmRecall}>
                             Confirm Recall
                         </button>
                     </div>
@@ -348,25 +440,39 @@ const ManufacturerPortal = () => {
     );
 
     const renderShipment = () => (
-        <div style={{ ...panelStyle, padding: '1.2rem' }}>
-            <SectionTitle title="Create Shipment" subtitle="Fill shipment ID, destination, batch, quantity, date, and status." />
-            <form onSubmit={(event) => submitMessage(event, 'Shipment created successfully.', resetShipmentForm)} style={{ display: 'grid', gap: '0.9rem' }}>
-                <div className="medguard-two-col" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '0.9rem' }}>
-                    <input value={shipmentForm.shipmentId} onChange={(e) => setShipmentForm((current) => ({ ...current, shipmentId: e.target.value }))} placeholder="Shipment ID" style={inputStyle} required />
-                    <input value={shipmentForm.destination} onChange={(e) => setShipmentForm((current) => ({ ...current, destination: e.target.value }))} placeholder="Destination" style={inputStyle} required />
-                    <select value={shipmentForm.batchId} onChange={(e) => setShipmentForm((current) => ({ ...current, batchId: e.target.value }))} style={inputStyle} required>
-                        <option value="">Batch ID</option>
-                        {activeBatches.map((batch) => <option key={batch.id} value={batch.id}>{batch.id}</option>)}
-                    </select>
-                    <input type="number" value={shipmentForm.quantity} onChange={(e) => setShipmentForm((current) => ({ ...current, quantity: e.target.value }))} placeholder="Quantity" style={inputStyle} required />
-                    <input type="date" value={shipmentForm.shipmentDate} onChange={(e) => setShipmentForm((current) => ({ ...current, shipmentDate: e.target.value }))} style={inputStyle} required />
-                    <select value={shipmentForm.status} onChange={(e) => setShipmentForm((current) => ({ ...current, status: e.target.value }))} style={inputStyle}>
-                        <option value="Preparing">Status: Preparing</option>
-                        <option value="In Transit">Status: In Transit</option>
-                        <option value="Delivered">Status: Delivered</option>
-                    </select>
+        <div className="glass-panel" style={{ padding: '2rem' }}>
+            <SectionTitle title="Shipment Record" subtitle="Create a traceable outbound shipment linked to a production batch." />
+            <form onSubmit={(event) => submitMessage(event, 'Shipment created successfully.', resetShipmentForm)} style={{ display: 'grid', gap: '1.5rem' }}>
+                <div className="medguard-two-col" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '1.25rem' }}>
+                    <Field label="Shipment ID">
+                        <input value={shipmentForm.shipmentId} onChange={(e) => setShipmentForm((current) => ({ ...current, shipmentId: e.target.value }))} placeholder="e.g. SH-24009" style={inputStyle} required />
+                    </Field>
+                    <Field label="Destination">
+                        <input value={shipmentForm.destination} onChange={(e) => setShipmentForm((current) => ({ ...current, destination: e.target.value }))} placeholder="e.g. Dhaka Central Depot" style={inputStyle} required />
+                    </Field>
+                    <Field label="Batch ID">
+                        <select value={shipmentForm.batchId} onChange={(e) => setShipmentForm((current) => ({ ...current, batchId: e.target.value }))} style={inputStyle} required>
+                            <option value="">Select batch</option>
+                            {activeBatches.map((batch) => <option key={batch.id} value={batch.id}>{batch.id}</option>)}
+                        </select>
+                    </Field>
+                    <Field label="Quantity">
+                        <input type="number" value={shipmentForm.quantity} onChange={(e) => setShipmentForm((current) => ({ ...current, quantity: e.target.value }))} placeholder="e.g. 5000" style={inputStyle} required />
+                    </Field>
+                    <Field label="Shipment Date">
+                        <input type="date" value={shipmentForm.shipmentDate} onChange={(e) => setShipmentForm((current) => ({ ...current, shipmentDate: e.target.value }))} style={inputStyle} required />
+                    </Field>
+                    <Field label="Status">
+                        <select value={shipmentForm.status} onChange={(e) => setShipmentForm((current) => ({ ...current, status: e.target.value }))} style={inputStyle}>
+                            <option value="Preparing">Preparing</option>
+                            <option value="In Transit">In Transit</option>
+                            <option value="Delivered">Delivered</option>
+                        </select>
+                    </Field>
                 </div>
-                <button type="submit" style={{ ...buttonBase, width: 'auto', padding: '0.95rem 1.2rem', background: 'var(--primary-color)', color: '#fff' }}>Create Shipment</button>
+                <div className="manufacturer-action-row" style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
+                    <button type="submit" style={{ ...buttonBase, width: 'auto', padding: '0.75rem 1.5rem', background: 'var(--primary-color)', color: '#fff' }}><Send size={18} />Create Shipment</button>
+                </div>
             </form>
         </div>
     );
@@ -389,122 +495,83 @@ const ManufacturerPortal = () => {
     };
 
     return (
-        <div className="medguard-shell" style={shellStyle}>
-            <aside
-                className="medguard-sidebar"
-                style={{
-                    ...sidebarStyle,
-                    display: sidebarOpen ? 'flex' : 'none',
-                }}
-            >
-                <div style={{ ...panelStyle, padding: '1rem', background: 'rgba(255, 255, 255, 0.03)', color: '#fff', borderColor: 'rgba(148, 163, 184, 0.18)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-                        <div style={{ width: '42px', height: '42px', borderRadius: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(59, 130, 246, 0.18)', color: '#93c5fd' }}>
-                            <Building2 size={20} />
+        <div className="manufacturer-page" style={{ maxWidth: '1120px', margin: '0 auto', display: 'grid', gap: '1rem' }}>
+            <PageHeader {...viewMeta[activeView]} />
+
+            {message && <div className="glass-panel" style={{ padding: '1rem 1.25rem', borderLeft: '4px solid var(--primary-color)', color: 'var(--text-light)' }}>{message}</div>}
+
+            {renderView()}
+
+            {recallConfirmation && (
+                <div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="recall-confirmation-title"
+                    style={{
+                        position: 'fixed',
+                        inset: 0,
+                        zIndex: 50,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '1rem',
+                        background: 'rgba(15, 23, 42, 0.62)',
+                        backdropFilter: 'blur(8px)',
+                    }}
+                >
+                    <div
+                        className="medguard-confirmation-card"
+                        style={{
+                            ...panelStyle,
+                            width: 'min(440px, 100%)',
+                            padding: '1.35rem',
+                            textAlign: 'center',
+                            boxShadow: '0 24px 80px rgba(15, 23, 42, 0.28)',
+                        }}
+                    >
+                        <div
+                            style={{
+                                width: '54px',
+                                height: '54px',
+                                margin: '0 auto 0.9rem',
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                background: 'rgba(16, 185, 129, 0.14)',
+                                color: '#10b981',
+                            }}
+                        >
+                            <CheckCircle2 size={28} />
                         </div>
-                        <div>
-                            <div style={{ fontSize: '1.05rem', fontWeight: 800 }}>MedGuard 4.0</div>
-                            <div style={{ fontSize: '0.8rem', color: 'rgba(226, 232, 240, 0.72)' }}>Pharmaceutical Traceability</div>
+                        <h2 id="recall-confirmation-title" style={{ margin: 0, fontSize: '1.25rem' }}>
+                            Recall Confirmed
+                        </h2>
+                        <p style={{ margin: '0.55rem 0 0', color: 'var(--text-muted)' }}>
+                            Batch {recallConfirmation.batchId} has been marked for recall.
+                        </p>
+                        <div style={{ marginTop: '1rem', padding: '0.85rem', borderRadius: '0.85rem', background: 'rgba(239, 68, 68, 0.08)', color: 'var(--text-light)', textAlign: 'left' }}>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Reason</div>
+                            <div style={{ fontWeight: 700, wordBreak: 'break-word' }}>{recallConfirmation.reason}</div>
                         </div>
+                        <button
+                            type="button"
+                            className="medguard-confirmation-ok"
+                            onClick={closeRecallConfirmation}
+                            style={{ ...buttonBase, width: '100%', marginTop: '1.1rem', padding: '0.95rem 1rem', background: 'var(--primary-color)', color: '#fff' }}
+                        >
+                            OK
+                        </button>
                     </div>
                 </div>
-
-                <nav style={{ display: 'grid', gap: '0.55rem' }}>
-                    {navItems.map((item) => {
-                        const active = activeView === item.id;
-                        return (
-                            <button
-                                key={item.id}
-                                type="button"
-                                onClick={() => openView(item.id)}
-                                style={{
-                                    ...buttonBase,
-                                    width: '100%',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.85rem',
-                                    padding: '0.95rem 1rem',
-                                    textAlign: 'left',
-                                    background: active ? 'rgba(59, 130, 246, 0.22)' : 'rgba(255, 255, 255, 0.03)',
-                                    color: active ? '#fff' : 'rgba(226, 232, 240, 0.84)',
-                                    border: active ? '1px solid rgba(147, 197, 253, 0.4)' : '1px solid rgba(148, 163, 184, 0.12)',
-                                }}
-                            >
-                                <span style={{ width: '22px', display: 'flex', justifyContent: 'center' }}>{item.icon}</span>
-                                <span style={{ flex: 1 }}>{item.label}</span>
-                                {active ? <ChevronRight size={16} /> : <ChevronLeft size={16} style={{ opacity: 0.4 }} />}
-                            </button>
-                        );
-                    })}
-                </nav>
-
-                <div style={{ marginTop: 'auto', display: 'grid', gap: '0.85rem' }}>
-                    <button type="button" onClick={toggleTheme} style={{ ...buttonBase, width: '100%', padding: '0.95rem 1rem', background: 'rgba(255, 255, 255, 0.04)', color: '#fff', border: '1px solid rgba(148, 163, 184, 0.14)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
-                        {isDarkMode ? 'Day mode' : 'Night mode'}
-                    </button>
-                    <div style={{ ...panelStyle, padding: '0.95rem 1rem', background: 'rgba(255, 255, 255, 0.03)', color: '#fff', borderColor: 'rgba(148, 163, 184, 0.16)' }}>
-                        <div style={{ fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(226, 232, 240, 0.62)' }}>Status</div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginTop: '0.55rem', fontWeight: 700 }}>
-                            <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#10b981' }} />
-                            All core tools ready
-                        </div>
-                    </div>
-                </div>
-            </aside>
-
-            <main className="medguard-main" style={{ minWidth: 0, padding: '1rem 1rem 1rem 0', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <header className="medguard-topbar" style={{ ...panelStyle, padding: '1rem 1.2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-                        <button type="button" onClick={() => setSidebarOpen((current) => !current)} aria-hidden="true" style={{ ...buttonBase, width: '42px', height: '42px', background: 'rgba(59, 130, 246, 0.08)', color: 'var(--primary-color)', display: 'none', alignItems: 'center', justifyContent: 'center' }}>
-                            <Menu size={18} />
-                        </button>
-                        <div>
-                            <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Manufacturer Hub</div>
-                            <h1 style={{ margin: '0.15rem 0 0', fontSize: '1.45rem' }}>{viewLabel}</h1>
-                        </div>
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <button type="button" onClick={toggleTheme} style={{ ...buttonBase, width: 'auto', padding: '0.8rem 1rem', background: 'rgba(59, 130, 246, 0.08)', color: 'var(--primary-color)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
-                            {isDarkMode ? 'Day mode' : 'Night mode'}
-                        </button>
-                        <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'rgba(59, 130, 246, 0.12)', color: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <Factory size={18} />
-                        </div>
-                    </div>
-                </header>
-
-                {message && <div style={{ ...panelStyle, padding: '0.95rem 1.1rem', borderLeft: '4px solid var(--primary-color)' }}>{message}</div>}
-
-                {renderView()}
-            </main>
+            )}
 
             <style>{`
-                @media (max-width: 1100px) {
-                    .medguard-shell {
-                        grid-template-columns: 1fr !important;
-                    }
-
-                    .medguard-sidebar {
-                        position: relative !important;
-                        height: auto !important;
-                        border-right: none !important;
-                        border-bottom: 1px solid var(--border-color) !important;
-                    }
-
-                    .medguard-main {
-                        padding: 1rem !important;
-                    }
-
-                    .medguard-topbar button[aria-hidden="true"],
-                    .medguard-topbar button:first-child {
-                        display: inline-flex !important;
-                    }
-                }
-
                 @media (max-width: 900px) {
+                    .manufacturer-page {
+                        max-width: 100% !important;
+                    }
+
                     .medguard-metric-grid {
                         grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
                     }
@@ -515,12 +582,43 @@ const ManufacturerPortal = () => {
                 }
 
                 @media (max-width: 640px) {
+                    .manufacturer-page-header {
+                        flex-direction: column !important;
+                        margin-bottom: 1.5rem !important;
+                    }
+
+                    .manufacturer-page-header h1 {
+                        font-size: 1.55rem !important;
+                    }
+
                     .medguard-metric-grid {
                         grid-template-columns: 1fr !important;
                     }
 
-                    .medguard-sidebar {
-                        padding: 0.85rem !important;
+                    .medguard-recall-row {
+                        align-items: stretch !important;
+                        flex-direction: column !important;
+                    }
+
+                    .medguard-recall-button,
+                    .medguard-confirm-recall-button {
+                        width: 100% !important;
+                    }
+
+                    .medguard-recall-actions {
+                        justify-content: stretch !important;
+                    }
+
+                    .manufacturer-action-row {
+                        justify-content: stretch !important;
+                    }
+
+                    .manufacturer-action-row button {
+                        width: 100% !important;
+                    }
+
+                    .medguard-confirmation-card {
+                        padding: 1.1rem !important;
                     }
                 }
             `}</style>
