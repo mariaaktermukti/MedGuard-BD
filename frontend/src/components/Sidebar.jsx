@@ -1,97 +1,93 @@
 import React, { useContext } from 'react';
 import { NavLink } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { LayoutDashboard, Activity, AlertTriangle, Package, Users, Settings, QrCode, Pill, MessageSquare, MapPin, Factory, Plus, ScanLine, BellRing, Truck } from 'lucide-react';
+import { House, QrCode, Pill, WarningCircle, MapPin, ChatText, Bell, Gear, UserCircle, Phone } from '@phosphor-icons/react';
 
-const Sidebar = () => {
+const Sidebar = ({ isTablet }) => {
     const { user } = useContext(AuthContext);
 
-    // Dynamic menu items based on role
-    const getMenuItems = () => {
-        const baseMenu = [
-            { path: '/dashboard', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
-        ];
-
-        switch (user?.role) {
-            case 'citizen':
-                return [...baseMenu, 
-                    { path: '/dashboard/drug-passport', icon: <QrCode size={20} />, label: 'Drug Passport' },
-                    { path: '/dashboard/my-medicines', icon: <Pill size={20} />, label: 'My Medicines' },
-                    { path: '/dashboard/report-adr', icon: <AlertTriangle size={20} />, label: 'Report ADR' },
-                    { path: '/dashboard/ai-assistant', icon: <MessageSquare size={20} />, label: 'AI Assistant' },
-                    { path: '/dashboard/find-pharmacy', icon: <MapPin size={20} />, label: 'Find Pharmacy' }
-                ];
-            case 'manufacturer':
-                return [
-                    { path: '/dashboard/manufacturer', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
-                    { path: '/dashboard/manufacturer/register', icon: <Plus size={20} />, label: 'Register New Medicine' },
-                    { path: '/dashboard/manufacturer/batch', icon: <Factory size={20} />, label: 'Create New Batch' },
-                    { path: '/dashboard/manufacturer/verify', icon: <ScanLine size={20} />, label: 'Scan QR / Verify Batch' },
-                    { path: '/dashboard/manufacturer/recall', icon: <BellRing size={20} />, label: 'Start a Recall' },
-                    { path: '/dashboard/manufacturer/shipment', icon: <Truck size={20} />, label: 'Create Shipment' }
-                ];
-            case 'pharmacy':
-                return [...baseMenu, 
-                    { path: '/sales', icon: <Activity size={20} />, label: 'Sales' },
-                    { path: '/inventory', icon: <Package size={20} />, label: 'Inventory' }
-                ];
-            case 'dgda':
-                return [...baseMenu, 
-                    { path: '/inspections', icon: <Users size={20} />, label: 'Inspections' },
-                    { path: '/recalls', icon: <AlertTriangle size={20} />, label: 'Drug Recalls' }
-                ];
-            default:
-                return baseMenu;
-        }
-    };
+    const navItems = [
+        { path: '/dashboard', icon: <House size={24} weight="duotone" />, label: 'Home' },
+        { path: '/dashboard/drug-passport', icon: <QrCode size={24} weight="duotone" />, label: 'QR Scan' },
+        { path: '/dashboard/my-medicines', icon: <Pill size={24} weight="duotone" />, label: 'My Medicines' },
+        { path: '/dashboard/report-adr', icon: <WarningCircle size={24} weight="duotone" />, label: 'ADR Report' },
+        { path: '/dashboard/find-pharmacy', icon: <MapPin size={24} weight="duotone" />, label: 'Pharmacy' },
+        { path: '/dashboard/ai-assistant', icon: <ChatText size={24} weight="duotone" />, label: 'AI Assistant' },
+        { path: '/dashboard/notifications', icon: <Bell size={24} weight="duotone" />, label: 'Notifications' },
+        { path: '/dashboard/settings', icon: <Gear size={24} weight="duotone" />, label: 'Settings' }
+    ];
 
     return (
-        <div className="glass-panel" style={{
-            width: '260px',
-            margin: '1rem 0 1rem 1rem',
-            padding: '2rem 1rem',
+        <div style={{
             display: 'flex',
             flexDirection: 'column',
-            gap: '0.5rem'
+            height: '100%',
+            color: 'white',
+            padding: '1.5rem 0'
         }}>
-            <div style={{ padding: '0 1rem 2rem 1rem', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.05em' }}>
-                Main Menu
+            {/* User Card */}
+            <div style={{ 
+                display: 'flex', alignItems: 'center', gap: '1rem', 
+                padding: '0 1.5rem 1.5rem 1.5rem', 
+                borderBottom: '1px solid rgba(255,255,255,0.1)',
+                marginBottom: '1rem'
+            }}>
+                <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <UserCircle size={36} weight="fill" color="white" />
+                </div>
+                {!isTablet && (
+                    <div>
+                        <div style={{ fontWeight: 600, fontSize: '1.1rem', marginBottom: '0.25rem' }}>{user?.username || 'Rakib Hasan'}</div>
+                        <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)' }}>+880 1711-000000</div>
+                    </div>
+                )}
             </div>
             
-            {getMenuItems().map((item, index) => (
-                <NavLink 
-                    key={index} 
-                    to={item.path}
-                    style={({ isActive }) => ({
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '1rem',
-                        padding: '0.875rem 1rem',
-                        borderRadius: '0.5rem',
-                        textDecoration: 'none',
-                        color: isActive ? 'var(--text-light)' : 'var(--text-muted)',
-                        background: isActive ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
-                        fontWeight: isActive ? 600 : 500,
-                        borderLeft: isActive ? '3px solid var(--primary-color)' : '3px solid transparent',
-                        transition: 'all 0.2s ease'
-                    })}
-                >
-                    <span style={{ color: 'inherit' }}>{item.icon}</span>
-                    {item.label}
-                </NavLink>
-            ))}
+            {/* Nav Items */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                {navItems.map((item, index) => (
+                    <NavLink 
+                        key={index} 
+                        to={item.path}
+                        end={item.path === '/dashboard'}
+                        style={({ isActive }) => ({
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '1rem',
+                            padding: '1rem 1.5rem',
+                            textDecoration: 'none',
+                            color: isActive ? 'white' : 'rgba(255,255,255,0.7)',
+                            background: isActive ? 'rgba(255,255,255,0.12)' : 'transparent',
+                            fontWeight: isActive ? 600 : 500,
+                            borderLeft: isActive ? '4px solid var(--success)' : '4px solid transparent',
+                            transition: 'all 0.2s ease'
+                        })}
+                    >
+                        <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{item.icon}</span>
+                        {!isTablet && <span>{item.label}</span>}
+                    </NavLink>
+                ))}
+            </div>
 
-            <div style={{ marginTop: 'auto' }}>
-                <NavLink 
-                    to="/settings"
-                    style={{
-                        display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.875rem 1rem',
-                        textDecoration: 'none', color: 'var(--text-muted)', fontWeight: 500
-                    }}
-                >
-                    <Settings size={20} />
-                    Settings
-                </NavLink>
+            {/* Footer Helpline */}
+            <div style={{ padding: '1.5rem', marginTop: 'auto' }}>
+                <div style={{ 
+                    background: 'rgba(255,255,255,0.1)', 
+                    borderRadius: '1rem', 
+                    padding: '1rem', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: isTablet ? 'center' : 'flex-start',
+                    gap: '1rem' 
+                }}>
+                    <Phone size={24} weight="fill" color="var(--success)" />
+                    {!isTablet && (
+                        <div>
+                            <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Helpline</div>
+                            <div style={{ fontWeight: 700, fontSize: '1.25rem' }}>১৬২৬৩</div>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );

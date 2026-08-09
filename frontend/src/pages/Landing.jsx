@@ -1,12 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Pill, Building2, Building, ShieldCheck, Truck, Stethoscope, FlaskConical, ArrowRight } from 'lucide-react';
+import { Pill, User, Bank, Storefront, Factory, Truck, Stethoscope, Flask, ArrowRight, ShieldCheck } from '@phosphor-icons/react';
 import './landing.css';
 
-const ParticipantCard = ({ num, icon, title, desc, color }) => (
+const ParticipantCard = ({ num, icon, title, desc }) => (
     <div className="landing-card">
         <div className="card-header">
-            <div className="icon-wrapper" style={{ color: color }}>
+            <div className="icon-wrapper">
                 {icon}
             </div>
             <span className="card-num">{num}</span>
@@ -30,7 +30,7 @@ const Landing = () => {
             <nav className="landing-nav">
                 <div className="logo-container">
                     <div className="logo-icon">
-                        <Pill size={20} />
+                        <Pill size={24} weight="fill" />
                     </div>
                     <div className="logo-text">
                         <span className="main-title">MedGuard_BD</span>
@@ -51,7 +51,7 @@ const Landing = () => {
                     </div>
                     <h1>
                         The complete platform for<br />
-                        the <span className="text-highlight">pharmaceutical<br />ecosystem</span>
+                        the <span className="text-highlight">pharmaceutical ecosystem</span>
                     </h1>
                     <p className="hero-desc">
                         Track every drug from manufacturer to patient. A unified platform connecting 7 key stakeholders
@@ -73,46 +73,39 @@ const Landing = () => {
 
                 <div className="participants-grid">
                     <ParticipantCard
-                        num="01" icon={<div style={{ background: 'rgba(168, 85, 247, 0.2)', padding: '0.75rem', borderRadius: '50%', color: '#a855f7' }}><Building2 size={24} /></div>}
+                        num="01" icon={<User size={32} weight="duotone" />}
                         title="Citizen / Patient"
                         desc="View prescriptions, purchase history & verify drug authenticity."
-                        color="#a855f7"
                     />
                     <ParticipantCard
-                        num="02" icon={<div style={{ background: 'rgba(209, 213, 219, 0.2)', padding: '0.75rem', borderRadius: '50%', color: '#d1d5db' }}><Building size={24} /></div>}
+                        num="02" icon={<Bank size={32} weight="duotone" />}
                         title="Government Regulator"
                         desc="Audit the supply chain, monitor compliance & generate reports."
-                        color="#d1d5db"
                     />
                     <ParticipantCard
-                        num="03" icon={<div style={{ background: 'rgba(239, 68, 68, 0.2)', padding: '0.75rem', borderRadius: '50%', color: '#ef4444' }}><Pill size={24} /></div>}
+                        num="03" icon={<Storefront size={32} weight="duotone" />}
                         title="Pharmacy"
                         desc="Manage inventory, fulfill prescriptions & record patient sales."
-                        color="#ef4444"
                     />
                     <ParticipantCard
-                        num="04" icon={<div style={{ background: 'rgba(248, 113, 113, 0.2)', padding: '0.75rem', borderRadius: '50%', color: '#f87171' }}><Building2 size={24} /></div>}
+                        num="04" icon={<Factory size={32} weight="duotone" />}
                         title="Manufacturer"
                         desc="Register products, create batches & ship to distributors."
-                        color="#f87171"
                     />
                     <ParticipantCard
-                        num="05" icon={<div style={{ background: 'rgba(251, 146, 60, 0.2)', padding: '0.75rem', borderRadius: '50%', color: '#fb923c' }}><Truck size={24} /></div>}
+                        num="05" icon={<Truck size={32} weight="duotone" />}
                         title="Distributor"
                         desc="Receive batches & transfer to pharmacies across the network."
-                        color="#fb923c"
                     />
                     <ParticipantCard
-                        num="06" icon={<div style={{ background: 'rgba(59, 130, 246, 0.2)', padding: '0.75rem', borderRadius: '50%', color: '#3b82f6' }}><Stethoscope size={24} /></div>}
+                        num="06" icon={<Stethoscope size={32} weight="duotone" />}
                         title="Doctor"
                         desc="Write digital prescriptions for citizens and track fulfillment."
-                        color="#3b82f6"
                     />
                     <ParticipantCard
-                        num="07" icon={<div style={{ background: 'rgba(167, 139, 250, 0.2)', padding: '0.75rem', borderRadius: '50%', color: '#a78bfa' }}><FlaskConical size={24} /></div>}
+                        num="07" icon={<Flask size={32} weight="duotone" />}
                         title="Researcher"
                         desc="Access aggregated anonymized data for drug research."
-                        color="#a78bfa"
                     />
                 </div>
             </section>
@@ -121,20 +114,20 @@ const Landing = () => {
             <section className="flow-section">
                 <h2>How the supply chain flows</h2>
                 <div className="flow-container">
-                    <FlowNode icon={<Building2 size={18} color="#f87171" />} label="Manufacturer" />
-                    <ArrowRight size={16} className="flow-arrow" />
-                    <FlowNode icon={<Truck size={18} color="#fb923c" />} label="Distributor" />
-                    <ArrowRight size={16} className="flow-arrow" />
-                    <FlowNode icon={<Pill size={18} color="#ef4444" />} label="Pharmacy" />
-                    <ArrowRight size={16} className="flow-arrow" />
-                    <FlowNode icon={<Building2 size={18} color="#a855f7" />} label="Citizen" />
+                    <FlowNode icon={<Factory size={20} weight="fill" />} label="Manufacturer" />
+                    <ArrowRight size={20} weight="bold" className="flow-arrow" />
+                    <FlowNode icon={<Truck size={20} weight="fill" />} label="Distributor" />
+                    <ArrowRight size={20} weight="bold" className="flow-arrow" />
+                    <FlowNode icon={<Storefront size={20} weight="fill" />} label="Pharmacy" />
+                    <ArrowRight size={20} weight="bold" className="flow-arrow" />
+                    <FlowNode icon={<User size={20} weight="fill" />} label="Citizen" />
                 </div>
                 <div className="flow-footer">
-                    <span><Stethoscope size={14} color="#3b82f6" /> Doctors prescribe</span>
+                    <span><Stethoscope size={18} weight="fill" style={{ color: 'var(--safety-green)' }} /> Doctors prescribe</span>
                     <span className="dot">•</span>
-                    <span><ShieldCheck size={14} color="#d1d5db" /> Govt audits</span>
+                    <span><ShieldCheck size={18} weight="fill" style={{ color: 'var(--trust-blue)' }} /> Govt audits</span>
                     <span className="dot">•</span>
-                    <span><FlaskConical size={14} color="#a78bfa" /> Researchers analyze</span>
+                    <span><Flask size={18} weight="fill" style={{ color: 'var(--alert-red)' }} /> Researchers analyze</span>
                 </div>
             </section>
 

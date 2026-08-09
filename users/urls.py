@@ -1,5 +1,6 @@
 # pyrefly: ignore [missing-import]
 from django.urls import path
+# pyrefly: ignore [missing-import]
 from .views import (
     CitizenPortalView, PharmacyPortalView, ManufacturerPortalView,
     DistributorPortalView, DGDAPortalView, DoctorPortalView, ResearcherPortalView

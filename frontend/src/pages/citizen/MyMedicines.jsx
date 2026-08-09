@@ -1,106 +1,127 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { Pill, Clock, Plus, AlertTriangle, ShieldAlert } from 'lucide-react';
+import { Pill, Alarm, Trash, Clock, Plus, BookBookmark } from '@phosphor-icons/react';
+import { SwipeableList, SwipeableListItem, SwipeAction, TrailingActions, Type as ListType } from 'react-swipeable-list';
+import 'react-swipeable-list/dist/styles.css';
+import api from '../../services/api';
 
 const MyMedicines = () => {
-    const [schedules, setSchedules] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [interactionResult, setInteractionResult] = useState(null);
-    const [checking, setChecking] = useState(false);
+    const [activeTab, setActiveTab] = useState('present');
+    const [medicines, setMedicines] = useState([]);
 
     useEffect(() => {
-        fetchSchedules();
+        const fetchMedicines = async () => {
+            try {
+                const response = await api.get('core/medicines/personal/');
+                // Map API data to component state structure
+                const mappedMeds = response.data.map(med => ({
+                    id: med.id,
+                    name: med.medicine_details?.name || 'Unknown',
+                    type: med.medicine_details?.dosage_form || 'Medicine',
+                    dosage: med.dosage,
+                    nextDose: med.reminder_times?.length > 0 ? med.reminder_times[0] : 'N/A',
+                    status: med.is_active ? 'present' : 'past'
+                }));
+                setMedicines(mappedMeds);
+            } catch (error) {
+                console.error("Failed to fetch medicines:", error);
+            }
+        };
+        fetchMedicines();
     }, []);
 
-    const fetchSchedules = async () => {
+    const filteredMeds = medicines.filter(m => m.status === activeTab);
+
+    const handleDelete = async (id) => {
         try {
-            const res = await axios.get('http://localhost:8000/api/core/medicines/personal/', {
-                headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('access')}` }
-            });
-            setSchedules(res.data);
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setLoading(false);
+            await api.delete(`core/medicines/personal/${id}/`);
+            setMedicines(prev => prev.filter(m => m.id !== id));
+        } catch (error) {
+            console.error("Failed to delete medicine:", error);
         }
     };
 
-    const handleCheckInteractions = async () => {
-        if (schedules.length < 2) {
-            alert('You need at least 2 medicines to check for interactions.');
-            return;
-        }
-        setChecking(true);
-        const medNames = schedules.map(s => s.medicine_details?.name).filter(Boolean);
-        try {
-            const res = await axios.post('http://localhost:8000/api/core/interaction-checker/', { medicines: medNames }, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('access')}` }
-            });
-            setInteractionResult(res.data.response);
-        } catch (err) {
-            console.error(err);
-            alert('Failed to check interactions.');
-        } finally {
-            setChecking(false);
-        }
-    };
+    const trailingActions = (id) => (
+        <TrailingActions>
+            <SwipeAction
+                destructive={true}
+                onClick={() => handleDelete(id)}
+            >
+                <div style={{ background: 'var(--danger)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 1.5rem', borderRadius: '0 1rem 1rem 0', cursor: 'pointer' }}>
+                    <Trash size={24} weight="bold" />
+                </div>
+            </SwipeAction>
+        </TrailingActions>
+    );
 
     return (
-        <div style={{ padding: '2rem', maxWidth: '1000px', margin: '0 auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                <h1 style={{ fontSize: '2rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Pill className="text-primary" size={32} />
-                    My Medicines
-                </h1>
-                <div style={{ display: 'flex', gap: '1rem' }}>
-                    <button onClick={handleCheckInteractions} disabled={checking || schedules.length < 2} className="btn" style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
-                        <ShieldAlert size={18} />
-                        {checking ? 'Checking...' : 'Check Interactions'}
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <div style={{ marginBottom: '2rem' }}>
+                <h1 style={{ fontSize: '1.75rem', margin: '0 0 1.5rem 0', color: 'var(--primary-color)' }}>Personal Medicine Record</h1>
+                
+                {/* Segmented Control */}
+                <div style={{ display: 'flex', background: 'rgba(27, 79, 114, 0.1)', padding: '0.25rem', borderRadius: '1rem' }}>
+                    <button 
+                        onClick={() => setActiveTab('present')}
+                        style={{ flex: 1, padding: '0.75rem', border: 'none', background: activeTab === 'present' ? 'var(--bg-card)' : 'transparent', borderRadius: '0.75rem', fontWeight: 600, color: activeTab === 'present' ? 'var(--primary-color)' : 'var(--text-muted)', boxShadow: activeTab === 'present' ? '0 2px 8px rgba(0,0,0,0.05)' : 'none', cursor: 'pointer', transition: 'all 0.2s ease' }}
+                    >
+                        Present (বর্তমান)
                     </button>
-                    <button className="btn btn-primary">
-                        <Plus size={18} /> Add Medicine
+                    <button 
+                        onClick={() => setActiveTab('past')}
+                        style={{ flex: 1, padding: '0.75rem', border: 'none', background: activeTab === 'past' ? 'var(--bg-card)' : 'transparent', borderRadius: '0.75rem', fontWeight: 600, color: activeTab === 'past' ? 'var(--primary-color)' : 'var(--text-muted)', boxShadow: activeTab === 'past' ? '0 2px 8px rgba(0,0,0,0.05)' : 'none', cursor: 'pointer', transition: 'all 0.2s ease' }}
+                    >
+                        Past (অতীত)
                     </button>
                 </div>
             </div>
 
-            {interactionResult && (
-                <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '2rem', borderLeft: '4px solid #f59e0b', background: 'rgba(245, 158, 11, 0.05)' }}>
-                    <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-                        <AlertTriangle size={20} /> AI Interaction Analysis
-                    </h3>
-                    <p style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>{interactionResult}</p>
+            {filteredMeds.length === 0 ? (
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0.6 }}>
+                    <BookBookmark size={64} weight="duotone" color="var(--primary-color)" style={{ marginBottom: '1rem' }} />
+                    <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-light)' }}>এখনো কোনো ওষুধ সংরক্ষণ করেননি</h3>
+                    <p style={{ color: 'var(--text-muted)' }}>(You haven't saved any medicines yet)</p>
+                </div>
+            ) : (
+                <div style={{ flex: 1 }}>
+                    <SwipeableList type={ListType.IOS} fullSwipe={true}>
+                        {filteredMeds.map(med => (
+                            <SwipeableListItem
+                                key={med.id}
+                                trailingActions={trailingActions(med.id)}
+                            >
+                                <div className="glass-panel" style={{ width: '100%', padding: '1.25rem', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                                        <div style={{ background: 'rgba(27, 79, 114, 0.1)', color: 'var(--primary-color)', padding: '0.75rem', borderRadius: '0.75rem' }}>
+                                            <Pill size={28} weight="duotone" />
+                                        </div>
+                                        <div>
+                                            <h3 style={{ margin: '0 0 0.25rem 0', fontSize: '1.2rem', color: 'var(--text-light)' }}>{med.name}</h3>
+                                            <div style={{ display: 'flex', gap: '1rem', fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 500 }}>
+                                                <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Clock size={16} /> Dosage: {med.dosage}</span>
+                                                {med.status === 'present' && <span style={{ color: 'var(--success)' }}>Next: {med.nextDose}</span>}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    {med.status === 'present' && (
+                                        <button title="Set Alarm" style={{ background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--primary-color)', padding: '0.75rem', borderRadius: '50%', cursor: 'pointer', transition: 'all 0.2s ease' }} onMouseOver={e => e.currentTarget.style.background = 'rgba(27, 79, 114, 0.1)'} onMouseOut={e => e.currentTarget.style.background = 'transparent'}>
+                                            <Alarm size={24} weight="fill" />
+                                        </button>
+                                    )}
+                                </div>
+                            </SwipeableListItem>
+                        ))}
+                    </SwipeableList>
                 </div>
             )}
 
-            {loading ? (
-                <p>Loading your medicines...</p>
-            ) : schedules.length === 0 ? (
-                <div className="glass-panel" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                    <Pill size={48} style={{ margin: '0 auto 1rem', opacity: 0.5 }} />
-                    <h3>No medicines tracked yet.</h3>
-                    <p>Add your current prescriptions to keep track of dosages and check for interactions.</p>
-                </div>
-            ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
-                    {schedules.map(schedule => (
-                        <div key={schedule.id} className="glass-panel" style={{ padding: '1.5rem', position: 'relative' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                <div>
-                                    <h3 style={{ fontSize: '1.25rem', fontWeight: 600 }}>{schedule.medicine_details?.name || 'Unknown Medicine'}</h3>
-                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>{schedule.dosage} • {schedule.frequency}</p>
-                                </div>
-                                <div style={{ background: schedule.is_active ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)', color: schedule.is_active ? '#10b981' : '#ef4444', padding: '0.25rem 0.75rem', borderRadius: '1rem', fontSize: '0.75rem', fontWeight: 600 }}>
-                                    {schedule.is_active ? 'Active' : 'Inactive'}
-                                </div>
-                            </div>
-                            <div style={{ marginTop: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                                <Clock size={16} />
-                                Reminders: {schedule.reminder_times?.length > 0 ? schedule.reminder_times.join(', ') : 'None set'}
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
+            <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'var(--bg-card)', padding: '1rem', borderTop: '1px solid var(--border-color)', zIndex: 50, display: 'flex', justifyContent: 'center' }}>
+                <button className="btn-primary" style={{ maxWidth: '400px' }}>
+                    <Plus size={20} weight="bold" /> Add Medicine Record
+                </button>
+            </div>
+            {/* Pad the bottom so the fixed button doesn't cover content */}
+            <div style={{ height: '80px' }} />
         </div>
     );
 };

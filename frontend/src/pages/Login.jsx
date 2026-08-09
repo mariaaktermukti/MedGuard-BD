@@ -1,7 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
-import { Shield } from 'lucide-react';
+import { Shield } from '@phosphor-icons/react';
 
 const Login = () => {
     const { login } = useContext(AuthContext);

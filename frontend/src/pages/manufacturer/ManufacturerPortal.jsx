@@ -1,25 +1,25 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-    AlertTriangle,
-    CalendarDays,
-    CheckCircle2,
-    ClipboardPlus,
+    Warning,
+    CalendarBlank,
+    CheckCircle,
+    ClipboardText,
     Factory,
     Package,
     QrCode,
-    Send,
+    PaperPlaneRight,
     ShieldCheck,
     Upload,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 const metrics = [
     { label: 'Total Registered Medicines', value: '2', icon: <Package size={18} /> },
     { label: 'Active Batches', value: '0', icon: <Factory size={18} /> },
     { label: 'QC Pass Rate', value: '0%', icon: <ShieldCheck size={18} /> },
-    { label: 'Recalled Batches', value: '0', icon: <AlertTriangle size={18} /> },
-    { label: 'Compliance Score', value: 'A+ (100/100)', icon: <ClipboardPlus size={18} /> },
-    { label: 'Pending Reviews', value: '3', icon: <CalendarDays size={18} /> },
+    { label: 'Recalled Batches', value: '0', icon: <Warning size={18} /> },
+    { label: 'Compliance Score', value: 'A+ (100/100)', icon: <ClipboardText size={18} /> },
+    { label: 'Pending Reviews', value: '3', icon: <CalendarBlank size={18} /> },
 ];
 
 const sampleBatches = [
@@ -37,7 +37,7 @@ const viewMeta = {
     register: {
         title: 'Register New Medicine',
         subtitle: 'Create a verified medicine record with the required identity, dosage, and date information.',
-        icon: <ClipboardPlus size={30} />,
+        icon: <ClipboardText size={30} />,
     },
     batch: {
         title: 'Create New Batch',
@@ -52,7 +52,7 @@ const viewMeta = {
     recall: {
         title: 'Start a Recall',
         subtitle: 'Select an affected batch, provide a reason, and confirm the recall action.',
-        icon: <AlertTriangle size={30} />,
+        icon: <Warning size={30} />,
     },
     shipment: {
         title: 'Create Shipment',
@@ -311,7 +311,7 @@ const ManufacturerPortal = () => {
                     </Field>
                 </div>
                 <div className="manufacturer-action-row" style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
-                    <button type="submit" style={{ ...buttonBase, width: 'auto', padding: '0.75rem 1.5rem', background: 'var(--primary-color)', color: '#fff' }}><Send size={18} />Register Medicine</button>
+                    <button type="submit" style={{ ...buttonBase, width: 'auto', padding: '0.75rem 1.5rem', background: 'var(--primary-color)', color: '#fff' }}><PaperPlaneRight size={18} />Register Medicine</button>
                 </div>
             </form>
         </div>
@@ -351,7 +351,7 @@ const ManufacturerPortal = () => {
                     </Field>
                 </div>
                 <div className="manufacturer-action-row" style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
-                    <button type="submit" style={{ ...buttonBase, width: 'auto', padding: '0.75rem 1.5rem', background: 'var(--primary-color)', color: '#fff' }}><Send size={18} />Create Batch</button>
+                    <button type="submit" style={{ ...buttonBase, width: 'auto', padding: '0.75rem 1.5rem', background: 'var(--primary-color)', color: '#fff' }}><PaperPlaneRight size={18} />Create Batch</button>
                 </div>
             </form>
         </div>
@@ -380,7 +380,7 @@ const ManufacturerPortal = () => {
                 <div className="medguard-two-col" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '1.25rem' }}>
                     <div><div style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>Batch ID</div><div style={{ fontWeight: 700 }}>B-24001</div></div>
                     <div><div style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>Medicine</div><div style={{ fontWeight: 700 }}>Paracetamol 500mg</div></div>
-                    <div><div style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>Status</div><StatusPill tone="green"><CheckCircle2 size={14} />Verified</StatusPill></div>
+                    <div><div style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>Status</div><StatusPill tone="green"><CheckCircle size={14} />Verified</StatusPill></div>
                     <div><div style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>Expiry</div><div style={{ fontWeight: 700 }}>2027-03-12</div></div>
                 </div>
             </div>
@@ -471,7 +471,7 @@ const ManufacturerPortal = () => {
                     </Field>
                 </div>
                 <div className="manufacturer-action-row" style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
-                    <button type="submit" style={{ ...buttonBase, width: 'auto', padding: '0.75rem 1.5rem', background: 'var(--primary-color)', color: '#fff' }}><Send size={18} />Create Shipment</button>
+                    <button type="submit" style={{ ...buttonBase, width: 'auto', padding: '0.75rem 1.5rem', background: 'var(--primary-color)', color: '#fff' }}><PaperPlaneRight size={18} />Create Shipment</button>
                 </div>
             </form>
         </div>
@@ -542,7 +542,7 @@ const ManufacturerPortal = () => {
                                 color: '#10b981',
                             }}
                         >
-                            <CheckCircle2 size={28} />
+                            <CheckCircle size={28} />
                         </div>
                         <h2 id="recall-confirmation-title" style={{ margin: 0, fontSize: '1.25rem' }}>
                             Recall Confirmed

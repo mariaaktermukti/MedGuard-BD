@@ -20,6 +20,7 @@ from .views import (
     PersonalMedicineRecordDetailView,
     PersonalMedicineRecordView,
     RecallListCreateView,
+    CitizenDashboardView,
 )
 
 urlpatterns = [
@@ -32,6 +33,7 @@ urlpatterns = [
     path('notifications/<int:pk>/read/', NotificationMarkReadView.as_view(), name='notification-mark-read'),
     path('ai-assistant/', AIAssistantView.as_view(), name='ai-assistant'),
     path('interaction-checker/', InteractionCheckerView.as_view(), name='interaction-checker'),
+    path('citizen/dashboard/', CitizenDashboardView.as_view(), name='citizen-dashboard'),
     path('manufacturer/dashboard/', ManufacturerDashboardView.as_view(), name='manufacturer-dashboard'),
     path('manufacturer/medicines/', ManufacturerMedicineListCreateView.as_view(), name='manufacturer-medicines'),
     path('manufacturer/batches/', ManufacturerBatchListCreateView.as_view(), name='manufacturer-batches'),

@@ -410,27 +410,39 @@ class AIAssistantView(views.APIView):
         if not prompt:
             return Response({"error": "Prompt is required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        api_key = os.environ.get("GEMINI_API_KEY")
+        api_key = os.environ.get("OPENROUTER_API_KEY") or os.environ.get("NVIDIA_API_KEY")
         if not api_key:
-            return Response({"error": "AI service unavailable (missing API key)"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+            return Response({"error": "OPENROUTER_API_KEY is missing in backend/.env. Please add OPENROUTER_API_KEY to your .env file to enable AI responses."}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
         try:
-            client = genai.Client(api_key=api_key)
+            from openai import OpenAI
+            client = OpenAI(
+                base_url="https://openrouter.ai/api/v1",
+                api_key=api_key
+            )
             
-            # Fetch user context for better answers
             schedules = DosageSchedule.objects.filter(citizen=request.user, is_active=True)
             meds_list = ", ".join([s.medicine.name for s in schedules])
             context = f"User is currently taking: {meds_list if meds_list else 'No current medications'}. "
-            
-            full_prompt = f"You are a helpful AI Medicine Assistant. Context: {context}\n\nUser Question: {prompt}\n\nPlease provide a safe, clear answer. If the question implies an emergency or serious medical condition, advise them to consult a real doctor."
-
-            response = client.models.generate_content(
-                model='gemini-2.5-flash',
-                contents=full_prompt,
+            system_prompt = (
+                "You are an expert Medical Doctor and Clinical Assistant. "
+                "YOUR PRIMARY TASK: You MUST FIRST provide direct, helpful HEALTH ADVICE addressing the patient's problem, symptoms, and immediate care steps. Write this health advice clearly and FIRST before anything else. "
+                "THEN, provide recommended medicines, dosages, side effects, and estimated prices in Bangladesh. "
+                "CRITICAL LANGUAGE RULE: You MUST reply in the EXACT SAME LANGUAGE that the user used. If the user asks in Bangla (বাংলা), reply completely in Bangla. If the user asks in English, reply in English. "
+                "If the user asks about ANY topic outside of medicine, health, or prescriptions, reply EXACTLY with: 'Sorry, I cannot answer it.' (or 'দুঃখিত, আমি এর উত্তর দিতে পারছি না।' if in Bangla). "
+                "Always be professional, fast, clear, and empathetic. Remind them to consult a registered doctor for severe conditions."
             )
-            return Response({"response": response.text})
+            full_prompt = f"{system_prompt}\nContext: {context}\n\nUser Question: {prompt}"
+            
+            response = client.chat.completions.create(
+                model='nvidia/nemotron-3-ultra-550b-a55b:free',
+                messages=[{"role": "user", "content": full_prompt}],
+                temperature=0.2,
+                max_tokens=1024,
+            )
+            return Response({"response": response.choices[0].message.content})
         except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"error": f"NVIDIA API Error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class InteractionCheckerView(views.APIView):
     permission_classes = [permissions.IsAuthenticated, IsCitizen]
@@ -440,20 +452,89 @@ class InteractionCheckerView(views.APIView):
         if len(medicines) < 2:
             return Response({"error": "Please provide at least two medicines to check for interactions"}, status=status.HTTP_400_BAD_REQUEST)
 
-        api_key = os.environ.get("GEMINI_API_KEY")
+        api_key = os.environ.get("OPENROUTER_API_KEY") or os.environ.get("NVIDIA_API_KEY")
         if not api_key:
-            return Response({"error": "AI service unavailable (missing API key)"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+            return Response({"error": "OPENROUTER_API_KEY is missing in backend/.env. Please add OPENROUTER_API_KEY to your .env file."}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
         try:
-            client = genai.Client(api_key=api_key)
+            from openai import OpenAI
+            client = OpenAI(
+                base_url="https://openrouter.ai/api/v1",
+                api_key=api_key
+            )
             
             meds_str = ", ".join(medicines)
             full_prompt = f"Please analyze potential drug interactions between the following medicines: {meds_str}. Provide a summary of severity (None, Minor, Moderate, Major) and a brief explanation. Structure your response clearly."
 
-            response = client.models.generate_content(
-                model='gemini-2.5-flash',
-                contents=full_prompt,
+            response = client.chat.completions.create(
+                model='nvidia/nemotron-3-ultra-550b-a55b:free',
+                messages=[{"role": "user", "content": full_prompt}],
+                temperature=0.2,
+                max_tokens=1024,
             )
-            return Response({"response": response.text})
+            return Response({"response": response.choices[0].message.content})
         except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"error": f"NVIDIA API Error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class CitizenDashboardView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, IsCitizen]
+
+    def get(self, request):
+        user = request.user
+        
+        # 1. Total Scans (Proxy: Number of ADR reports + medicines in schedule)
+        total_scans = ADRReport.objects.filter(citizen=user).count() * 3 + DosageSchedule.objects.filter(citizen=user).count() * 5
+        if total_scans == 0: total_scans = 24 # Mock initial if empty
+        
+        # 2. Active Medicines
+        active_medicines = DosageSchedule.objects.filter(citizen=user, is_active=True).count()
+        if active_medicines == 0: active_medicines = 5
+
+        # 3. Reports Submitted
+        reports_submitted = ADRReport.objects.filter(citizen=user).count()
+
+        # 4. Pharmacy Visits
+        pharmacy_visits = Sale.objects.filter(citizen=user).values('pharmacy').distinct().count()
+        if pharmacy_visits == 0: pharmacy_visits = 8
+
+        # Recent Activity (Mocks combined with real data if available)
+        recent_activity = [
+            {'id': 1, 'type': 'scan', 'desc': 'Napa Extra স্ক্যান করা হয়েছে', 'time': '২ ঘন্টা আগে', 'status': 'verified'},
+            {'id': 2, 'type': 'pharmacy', 'desc': 'Lazz Pharma ভিজিট', 'time': 'গতকাল', 'status': 'completed'},
+            {'id': 3, 'type': 'adr', 'desc': 'পার্শ্বপ্রতিক্রিয়া রিপোর্ট', 'time': '৫ আগস্ট', 'status': 'pending'},
+        ]
+        
+        # Upcoming Dose
+        upcoming_dose = None
+        schedules = DosageSchedule.objects.filter(citizen=user, is_active=True).select_related('medicine')
+        if schedules.exists():
+            sched = schedules.first()
+            upcoming_dose = {
+                'medicine_name': sched.medicine.name,
+                'time': 'দুপুর ২:০০ টায়' if 'দুপুর' not in str(sched.reminder_times) else sched.reminder_times[0] if sched.reminder_times else 'রাত ৮:০০ টায়'
+            }
+
+        # Recall Alerts
+        recalls_data = []
+        # Find active recalls for any batch of a medicine the user is taking
+        user_med_ids = schedules.values_list('medicine_id', flat=True)
+        active_recalls = Recall.objects.filter(status='active', batch__medicine_id__in=user_med_ids).select_related('batch')
+        for recall in active_recalls:
+            recalls_data.append({
+                'batch_number': recall.batch.batch_number,
+                'medicine_name': recall.batch.medicine.name,
+                'reason': recall.reason
+            })
+
+        return Response({
+            'stats': {
+                'total_scans': total_scans,
+                'active_medicines': active_medicines,
+                'reports_submitted': reports_submitted,
+                'pharmacy_visits': pharmacy_visits,
+            },
+            'recent_activity': recent_activity,
+            'upcoming_dose': upcoming_dose,
+            'recalls': recalls_data
+        })
+

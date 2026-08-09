@@ -12,6 +12,8 @@ import MyMedicines from './pages/citizen/MyMedicines';
 import ReportADR from './pages/citizen/ReportADR';
 import AIAssistant from './pages/citizen/AIAssistant';
 import PharmacyFinder from './pages/citizen/PharmacyFinder';
+import InteractionChecker from './pages/citizen/InteractionChecker';
+import Notifications from './pages/citizen/Notifications';
 import ManufacturerPortal from './pages/manufacturer/ManufacturerPortal';
 
 function App() {
@@ -32,6 +34,8 @@ function App() {
             <Route path="report-adr" element={<ReportADR />} />
             <Route path="ai-assistant" element={<AIAssistant />} />
             <Route path="find-pharmacy" element={<PharmacyFinder />} />
+            <Route path="interaction-checker" element={<InteractionChecker />} />
+            <Route path="notifications" element={<Notifications />} />
             <Route path="manufacturer" element={<ManufacturerPortal />} />
             <Route path="manufacturer/register" element={<ManufacturerPortal />} />
             <Route path="manufacturer/batch" element={<ManufacturerPortal />} />

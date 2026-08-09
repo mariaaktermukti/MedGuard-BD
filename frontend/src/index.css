@@ -1,34 +1,37 @@
 :root {
-  --primary-color: #2563eb; /* Stronger blue for light theme */
-  --primary-hover: #1d4ed8;
-  --bg-dark: #f8fafc; /* Now it's a light background */
-  --bg-card: #ffffff; /* Solid white cards */
-  --text-light: #0f172a; /* Slate 900 for main text */
-  --text-muted: #64748b; /* Slate 500 for secondary text */
-  --border-color: #e2e8f0; /* Slate 200 for borders */
-  --danger: #ef4444;
-  --success: #10b981;
-  --bg-glass: rgba(255, 255, 255, 0.85);
+  --primary-color: #1B4F72; /* Trust Blue */
+  --primary-hover: #154360;
+  --bg-dark: #F5F7FA; /* Page BG */
+  --bg-card: #FFFFFF; /* Card BG */
+  --text-light: #1A1A2E; /* Text Dark */
+  --text-muted: #64748B; /* Text Grey */
+  --border-color: rgba(27, 79, 114, 0.1);
+  --danger: #E74C3C; /* Alert Red */
+  --success: #27AE60; /* Safety Green */
+  --warning: #F59E0B; /* Warning Amber */
+  --bg-glass: rgba(255, 255, 255, 0.95);
   --bg-input: #ffffff;
 }
 
 [data-theme="dark"] {
-  --primary-color: #3b82f6; 
-  --primary-hover: #60a5fa;
+  --primary-color: #3498db; 
+  --primary-hover: #5dade2;
   --bg-dark: #0f172a; 
   --bg-card: #1e293b; 
   --text-light: #f8fafc; 
   --text-muted: #94a3b8; 
   --border-color: #334155; 
-  --bg-glass: rgba(30, 41, 59, 0.85);
+  --danger: #ef4444;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --bg-glass: rgba(30, 41, 59, 0.95);
   --bg-input: #1e293b;
 }
 
 [data-theme="dark"] body {
-  background: radial-gradient(circle at 15% 50%, rgba(59, 130, 246, 0.1), transparent 25%),
-              radial-gradient(circle at 85% 30%, rgba(16, 185, 129, 0.1), transparent 25%),
-              var(--bg-dark);
+  background: var(--bg-dark);
 }
+
 
 * {
   margin: 0;
@@ -94,7 +97,7 @@ body {
   background: var(--primary-color);
   color: white;
   border: none;
-  padding: 0.75rem 1.5rem;
+  padding: 0.875rem 1.5rem;
   border-radius: 0.5rem;
   font-weight: 600;
   cursor: pointer;
@@ -104,6 +107,7 @@ body {
   justify-content: center;
   align-items: center;
   gap: 0.5rem;
+  min-height: 48px;
 }
 
 .btn-primary:hover {
