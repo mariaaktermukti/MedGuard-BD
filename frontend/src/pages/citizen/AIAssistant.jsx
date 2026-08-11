@@ -36,12 +36,13 @@ const AIAssistant = () => {
             const response = await api.post('core/ai-assistant/', { prompt: text });
             const aiMsg = { 
                 role: 'assistant', 
-                content: response.data.response 
+                content: response.data.response || response.data.error || "Sorry, I could not generate a response."
             };
             setMessages(prev => [...prev, aiMsg]);
         } catch (error) {
             console.error("AI Assistant request failed:", error);
-            setMessages(prev => [...prev, { role: 'assistant', content: "দুঃখিত, একটি সমস্যা হয়েছে।" }]);
+            const errorMessage = error.response?.data?.response || error.response?.data?.error || "Sorry, something went wrong. Please try again.";
+            setMessages(prev => [...prev, { role: 'assistant', content: errorMessage }]);
         } finally {
             setLoading(false);
         }

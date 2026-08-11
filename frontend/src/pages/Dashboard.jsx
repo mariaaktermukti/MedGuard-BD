@@ -7,15 +7,15 @@ const StatCard = ({ icon, label, value, color }) => (
     <motion.div 
         whileHover={{ y: -2, boxShadow: '0px 8px 24px rgba(0,0,0,0.1)' }}
         className="glass-panel" 
-        style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', transition: 'all 0.3s ease' }}
+        style={{ padding: '1.5rem', display: 'flex', gap: '1rem', transition: 'all 0.3s ease' }}
     >
+      
         <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: `${color}15`, color: color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {icon}
         </div>
-        <div>
             <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--text-light)', lineHeight: 1, marginBottom: '0.5rem' }}>{value}</div>
             <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>{label}</div>
-        </div>
+        
     </motion.div>
 );
 
@@ -23,7 +23,7 @@ const ActionCard = ({ icon, label }) => (
     <motion.div 
         whileHover={{ y: -2, boxShadow: '0px 8px 24px rgba(0,0,0,0.1)' }}
         className="glass-panel"
-        style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', cursor: 'pointer', transition: 'all 0.3s ease', textAlign: 'center' }}
+        style={{ padding: '1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', cursor: 'pointer', transition: 'all 0.3s ease', textAlign: 'center' }}
     >
         <div style={{ color: 'var(--primary-color)' }}>{icon}</div>
         <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-light)' }}>{label}</div>
