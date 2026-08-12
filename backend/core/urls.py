@@ -7,6 +7,8 @@ from .views import (
     BatchReleaseView,
     ComplianceDashboardView,
     PharmacyBatchVerifyView,
+    PharmacyCitizenLookupView,
+    PharmacySaleListCreateView,
     DemandForecastView,
     DistributionEventListCreateView,
     DrugPassportView,
@@ -55,4 +57,6 @@ urlpatterns = [
     path('pharmacy/shipments/', PharmacyShipmentListView.as_view(), name='pharmacy-shipments'),
     path('pharmacy/shipments/<int:pk>/receive/', PharmacyShipmentReceiveView.as_view(), name='pharmacy-shipment-receive'),
     path('pharmacy/verify/<str:qr_code>/', PharmacyBatchVerifyView.as_view(), name='pharmacy-batch-verify'),
+    path('pharmacy/citizens/lookup/', PharmacyCitizenLookupView.as_view(), name='pharmacy-citizen-lookup'),
+    path('pharmacy/sales/', PharmacySaleListCreateView.as_view(), name='pharmacy-sales'),
 ]

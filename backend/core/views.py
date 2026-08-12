@@ -1,9 +1,11 @@
 from collections import defaultdict
 from datetime import date, timedelta
 
+from django.contrib.auth import get_user_model
 from django.db.models import Sum
 from django.utils import timezone
 from rest_framework import generics, views, status, permissions
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from .models import (
@@ -37,6 +39,7 @@ from .serializers import (
     QualityTestSerializer,
     RecallSerializer,
     PharmacyProfileSerializer,
+    SaleSerializer,
 )
 from users.permissions import IsCitizen, IsDGDA, IsDistributor, IsManufacturer, IsPharmacy
 import os
@@ -673,4 +676,52 @@ class PharmacyBatchVerifyView(views.APIView):
             'recall_reason': active_recall.reason if active_recall else None,
             'batch': DrugPassportSerializer(batch).data,
         })
+
+
+class PharmacyCitizenLookupView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, IsPharmacy]
+
+    def get(self, request):
+        phone = request.query_params.get('phone', '').strip()
+        if not phone:
+            return Response({'detail': 'A phone number is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        User = get_user_model()
+        matches = User.objects.filter(role='citizen', phone=phone)
+        return Response([
+            {'id': citizen.id, 'username': citizen.username, 'full_name': citizen.full_name, 'phone': citizen.phone}
+            for citizen in matches
+        ])
+
+
+class PharmacySaleListCreateView(generics.ListCreateAPIView):
+    serializer_class = SaleSerializer
+    permission_classes = [permissions.IsAuthenticated, IsPharmacy]
+
+    def get_queryset(self):
+        return Sale.objects.filter(pharmacy=self.request.user).select_related(
+            'batch', 'batch__medicine', 'citizen'
+        ).order_by('-sale_date')
+
+    def perform_create(self, serializer):
+        batch = serializer.validated_data['batch']
+        quantity = serializer.validated_data['quantity']
+
+        if Recall.objects.filter(batch=batch, status='active').exists():
+            raise ValidationError('This batch has an active recall and cannot be sold.')
+        if batch.expiry_date < date.today():
+            raise ValidationError('This batch has expired and cannot be sold.')
+        if batch.status != 'active' or batch.release_blocked:
+            raise ValidationError('This batch is not released for sale.')
+
+        inventory = Inventory.objects.filter(
+            entity_type='pharmacy', entity_id=self.request.user.id, batch=batch
+        ).first()
+        if not inventory or inventory.quantity < quantity:
+            raise ValidationError('Not enough stock of this batch to complete the sale.')
+
+        inventory.quantity -= quantity
+        inventory.save(update_fields=['quantity', 'last_updated'])
+
+        serializer.save(pharmacy=self.request.user)
 

@@ -1,7 +1,7 @@
 import React, { useContext } from 'react';
 import { NavLink } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { House, QrCode, Pill, WarningCircle, MapPin, ChatText, Bell, Gear, UserCircle, Phone, Package, Truck } from '@phosphor-icons/react';
+import { House, QrCode, Pill, WarningCircle, MapPin, ChatText, Bell, Gear, UserCircle, Phone, Package, Truck, Receipt } from '@phosphor-icons/react';
 
 const Sidebar = ({ isTablet }) => {
     const { user } = useContext(AuthContext);
@@ -21,6 +21,7 @@ const Sidebar = ({ isTablet }) => {
         { path: '/dashboard', icon: <House size={24} weight="duotone" />, label: 'Home' },
         { path: '/dashboard/pharmacy/inventory', icon: <Package size={24} weight="duotone" />, label: 'Inventory' },
         { path: '/dashboard/pharmacy/verify', icon: <QrCode size={24} weight="duotone" />, label: 'Verify Batch' },
+        { path: '/dashboard/pharmacy/sales', icon: <Receipt size={24} weight="duotone" />, label: 'Log Sale' },
         { path: '/dashboard/pharmacy/suppliers', icon: <Truck size={24} weight="duotone" />, label: 'Suppliers' },
         { path: '/dashboard/notifications', icon: <Bell size={24} weight="duotone" />, label: 'Notifications' },
         { path: '/dashboard/settings', icon: <Gear size={24} weight="duotone" />, label: 'Settings' }

@@ -18,6 +18,7 @@ import ManufacturerPortal from './pages/manufacturer/ManufacturerPortal';
 import Inventory from './pages/pharmacy/Inventory';
 import Suppliers from './pages/pharmacy/Suppliers';
 import BatchVerify from './pages/pharmacy/BatchVerify';
+import SaleLogging from './pages/pharmacy/SaleLogging';
 
 function App() {
   return (
@@ -48,6 +49,7 @@ function App() {
             <Route path="pharmacy/inventory" element={<Inventory />} />
             <Route path="pharmacy/suppliers" element={<Suppliers />} />
             <Route path="pharmacy/verify" element={<BatchVerify />} />
+            <Route path="pharmacy/sales" element={<SaleLogging />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
