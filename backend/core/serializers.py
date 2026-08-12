@@ -21,6 +21,8 @@ from .models import (
     Warehouse,
 )
 
+LOW_STOCK_THRESHOLD = 20
+
 
 class MedicineSerializer(serializers.ModelSerializer):
     class Meta:
@@ -150,11 +152,15 @@ class DosageScheduleSerializer(serializers.ModelSerializer):
 class InventorySerializer(serializers.ModelSerializer):
     batch = serializers.PrimaryKeyRelatedField(queryset=Batch.objects.all())
     batch_details = serializers.SerializerMethodField(read_only=True)
+    is_low_stock = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Inventory
-        fields = ['id', 'batch', 'batch_details', 'entity_type', 'entity_id', 'quantity', 'last_updated']
+        fields = ['id', 'batch', 'batch_details', 'entity_type', 'entity_id', 'quantity', 'is_low_stock', 'last_updated']
         read_only_fields = ['entity_type', 'entity_id', 'last_updated']
+
+    def get_is_low_stock(self, obj):
+        return obj.quantity <= LOW_STOCK_THRESHOLD
 
     def get_batch_details(self, obj):
         return {

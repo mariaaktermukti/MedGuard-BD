@@ -12,6 +12,7 @@ from .models import (
     DemandForecast,
     DistributionEvent,
     DosageSchedule,
+    Inventory,
     Medicine,
     Notification,
     QualityTest,
@@ -28,13 +29,15 @@ from .serializers import (
     DistributionEventSerializer,
     DrugPassportSerializer,
     DosageScheduleSerializer,
+    InventorySerializer,
+    LOW_STOCK_THRESHOLD,
     MedicineSerializer,
     NotificationSerializer,
     QualityTestSerializer,
     RecallSerializer,
     PharmacyProfileSerializer,
 )
-from users.permissions import IsCitizen, IsDGDA, IsDistributor, IsManufacturer
+from users.permissions import IsCitizen, IsDGDA, IsDistributor, IsManufacturer, IsPharmacy
 import os
 import logging
 import json
@@ -575,4 +578,38 @@ class CitizenDashboardView(views.APIView):
             'upcoming_dose': upcoming_dose,
             'recalls': recalls_data
         })
+
+
+# Pharmacy Portal Views
+
+class PharmacyInventoryListCreateView(generics.ListCreateAPIView):
+    serializer_class = InventorySerializer
+    permission_classes = [permissions.IsAuthenticated, IsPharmacy]
+
+    def get_queryset(self):
+        return Inventory.objects.filter(
+            entity_type='pharmacy', entity_id=self.request.user.id
+        ).select_related('batch', 'batch__medicine').order_by('-last_updated')
+
+    def perform_create(self, serializer):
+        batch = serializer.validated_data['batch']
+        existing = Inventory.objects.filter(
+            entity_type='pharmacy', entity_id=self.request.user.id, batch=batch
+        ).first()
+        if existing:
+            existing.quantity += serializer.validated_data.get('quantity', 0)
+            existing.save(update_fields=['quantity', 'last_updated'])
+            serializer.instance = existing
+        else:
+            serializer.save(entity_type='pharmacy', entity_id=self.request.user.id)
+
+
+class PharmacyInventoryDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = InventorySerializer
+    permission_classes = [permissions.IsAuthenticated, IsPharmacy]
+
+    def get_queryset(self):
+        return Inventory.objects.filter(
+            entity_type='pharmacy', entity_id=self.request.user.id
+        ).select_related('batch', 'batch__medicine')
 

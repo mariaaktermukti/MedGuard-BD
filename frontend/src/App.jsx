@@ -15,6 +15,7 @@ import PharmacyFinder from './pages/citizen/PharmacyFinder';
 import InteractionChecker from './pages/citizen/InteractionChecker';
 import Notifications from './pages/citizen/Notifications';
 import ManufacturerPortal from './pages/manufacturer/ManufacturerPortal';
+import Inventory from './pages/pharmacy/Inventory';
 
 function App() {
   return (
@@ -42,6 +43,7 @@ function App() {
             <Route path="manufacturer/verify" element={<ManufacturerPortal />} />
             <Route path="manufacturer/recall" element={<ManufacturerPortal />} />
             <Route path="manufacturer/shipment" element={<ManufacturerPortal />} />
+            <Route path="pharmacy/inventory" element={<Inventory />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
