@@ -21,6 +21,7 @@ import BatchVerify from './pages/pharmacy/BatchVerify';
 import SaleLogging from './pages/pharmacy/SaleLogging';
 import Alerts from './pages/pharmacy/Alerts';
 import StockForecast from './pages/pharmacy/StockForecast';
+import Complaints from './pages/pharmacy/Complaints';
 
 function App() {
   return (
@@ -54,6 +55,7 @@ function App() {
             <Route path="pharmacy/sales" element={<SaleLogging />} />
             <Route path="pharmacy/alerts" element={<Alerts />} />
             <Route path="pharmacy/forecast" element={<StockForecast />} />
+            <Route path="pharmacy/complaints" element={<Complaints />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

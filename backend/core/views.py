@@ -11,6 +11,7 @@ from django.shortcuts import get_object_or_404
 from .models import (
     Batch,
     ComplianceItem,
+    Complaint,
     DemandForecast,
     DistributionEvent,
     DosageSchedule,
@@ -26,6 +27,7 @@ from users.models import PharmacyProfile
 from .serializers import (
     ADRReportSerializer,
     BatchSerializer,
+    ComplaintSerializer,
     ComplianceItemSerializer,
     DemandForecastSerializer,
     DistributionEventSerializer,
@@ -784,4 +786,27 @@ class PharmacyDemandForecastView(views.APIView):
             notes='Heuristic pharmacy demand forecast based on sales velocity and current stock.',
         )
         return Response(DemandForecastSerializer(forecast).data)
+
+
+class PharmacyComplaintListView(generics.ListAPIView):
+    serializer_class = ComplaintSerializer
+    permission_classes = [permissions.IsAuthenticated, IsPharmacy]
+
+    def get_queryset(self):
+        return Complaint.objects.filter(pharmacy=self.request.user).select_related('citizen').order_by('-date_submitted')
+
+
+class PharmacyComplaintResolveView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, IsPharmacy]
+
+    def post(self, request, pk):
+        complaint = get_object_or_404(Complaint, pk=pk, pharmacy=request.user)
+        resolution_text = request.data.get('resolution_text', '').strip()
+        if not resolution_text:
+            return Response({'detail': 'A resolution note is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        complaint.status = 'resolved'
+        complaint.resolution_text = resolution_text
+        complaint.save(update_fields=['status', 'resolution_text'])
+        return Response(ComplaintSerializer(complaint).data)
 

@@ -1,7 +1,7 @@
 import React, { useContext } from 'react';
 import { NavLink } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { House, QrCode, Pill, WarningCircle, MapPin, ChatText, Bell, Gear, UserCircle, Phone, Package, Truck, Receipt, ChartLineUp } from '@phosphor-icons/react';
+import { House, QrCode, Pill, WarningCircle, MapPin, ChatText, Bell, Gear, UserCircle, Phone, Package, Truck, Receipt, ChartLineUp, ChatCenteredText } from '@phosphor-icons/react';
 
 const Sidebar = ({ isTablet }) => {
     const { user } = useContext(AuthContext);
@@ -24,6 +24,7 @@ const Sidebar = ({ isTablet }) => {
         { path: '/dashboard/pharmacy/sales', icon: <Receipt size={24} weight="duotone" />, label: 'Log Sale' },
         { path: '/dashboard/pharmacy/alerts', icon: <WarningCircle size={24} weight="duotone" />, label: 'Alerts' },
         { path: '/dashboard/pharmacy/forecast', icon: <ChartLineUp size={24} weight="duotone" />, label: 'Forecast' },
+        { path: '/dashboard/pharmacy/complaints', icon: <ChatCenteredText size={24} weight="duotone" />, label: 'Complaints' },
         { path: '/dashboard/pharmacy/suppliers', icon: <Truck size={24} weight="duotone" />, label: 'Suppliers' },
         { path: '/dashboard/notifications', icon: <Bell size={24} weight="duotone" />, label: 'Notifications' },
         { path: '/dashboard/settings', icon: <Gear size={24} weight="duotone" />, label: 'Settings' }
