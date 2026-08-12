@@ -6,6 +6,7 @@ from .views import (
     BatchQRExportView,
     BatchReleaseView,
     ComplianceDashboardView,
+    PharmacyBatchVerifyView,
     DemandForecastView,
     DistributionEventListCreateView,
     DrugPassportView,
@@ -53,4 +54,5 @@ urlpatterns = [
     path('pharmacy/inventory/<int:pk>/', PharmacyInventoryDetailView.as_view(), name='pharmacy-inventory-detail'),
     path('pharmacy/shipments/', PharmacyShipmentListView.as_view(), name='pharmacy-shipments'),
     path('pharmacy/shipments/<int:pk>/receive/', PharmacyShipmentReceiveView.as_view(), name='pharmacy-shipment-receive'),
+    path('pharmacy/verify/<str:qr_code>/', PharmacyBatchVerifyView.as_view(), name='pharmacy-batch-verify'),
 ]

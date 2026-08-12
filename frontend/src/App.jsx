@@ -17,6 +17,7 @@ import Notifications from './pages/citizen/Notifications';
 import ManufacturerPortal from './pages/manufacturer/ManufacturerPortal';
 import Inventory from './pages/pharmacy/Inventory';
 import Suppliers from './pages/pharmacy/Suppliers';
+import BatchVerify from './pages/pharmacy/BatchVerify';
 
 function App() {
   return (
@@ -46,6 +47,7 @@ function App() {
             <Route path="manufacturer/shipment" element={<ManufacturerPortal />} />
             <Route path="pharmacy/inventory" element={<Inventory />} />
             <Route path="pharmacy/suppliers" element={<Suppliers />} />
+            <Route path="pharmacy/verify" element={<BatchVerify />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

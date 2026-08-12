@@ -646,3 +646,31 @@ class PharmacyShipmentReceiveView(views.APIView):
 
         return Response(PharmacyShipmentSerializer(shipment).data)
 
+
+class PharmacyBatchVerifyView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, IsPharmacy]
+
+    def get(self, request, qr_code):
+        batch = Batch.objects.filter(qr_code=qr_code).select_related('medicine').first()
+        if not batch:
+            return Response({'verified': False, 'verdict': 'unknown', 'detail': 'QR code not recognized.'}, status=status.HTTP_404_NOT_FOUND)
+
+        active_recall = Recall.objects.filter(batch=batch, status='active').first()
+        is_expired = batch.expiry_date < date.today()
+
+        if active_recall:
+            verdict = 'recalled'
+        elif is_expired:
+            verdict = 'expired'
+        elif batch.status != 'active' or batch.release_blocked:
+            verdict = 'blocked'
+        else:
+            verdict = 'authentic'
+
+        return Response({
+            'verified': verdict == 'authentic',
+            'verdict': verdict,
+            'recall_reason': active_recall.reason if active_recall else None,
+            'batch': DrugPassportSerializer(batch).data,
+        })
+
