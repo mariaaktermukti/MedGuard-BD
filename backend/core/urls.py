@@ -8,6 +8,7 @@ from .views import (
     ComplianceDashboardView,
     PharmacyBatchVerifyView,
     PharmacyCitizenLookupView,
+    PharmacyDemandForecastView,
     PharmacyExpiryAlertsView,
     PharmacyRecallAlertsView,
     PharmacySaleListCreateView,
@@ -63,4 +64,5 @@ urlpatterns = [
     path('pharmacy/sales/', PharmacySaleListCreateView.as_view(), name='pharmacy-sales'),
     path('pharmacy/recalls/', PharmacyRecallAlertsView.as_view(), name='pharmacy-recall-alerts'),
     path('pharmacy/expiry-alerts/', PharmacyExpiryAlertsView.as_view(), name='pharmacy-expiry-alerts'),
+    path('pharmacy/demand-forecast/', PharmacyDemandForecastView.as_view(), name='pharmacy-demand-forecast'),
 ]

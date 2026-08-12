@@ -758,3 +758,30 @@ class PharmacyExpiryAlertsView(views.APIView):
             for item in inventory
         ])
 
+
+class PharmacyDemandForecastView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, IsPharmacy]
+
+    def get(self, request):
+        region = request.query_params.get('region', 'Bangladesh')
+        recent_sales = Sale.objects.filter(
+            pharmacy=request.user, sale_date__gte=timezone.now() - timedelta(days=90)
+        )
+        units_sold_90d = recent_sales.aggregate(total=Sum('quantity'))['total'] or 0
+        current_stock = Inventory.objects.filter(
+            entity_type='pharmacy', entity_id=request.user.id
+        ).aggregate(total=Sum('quantity'))['total'] or 0
+        predicted_demand = max(units_sold_90d // 3, current_stock // 4, 20)
+
+        forecast = DemandForecast.objects.create(
+            region=region,
+            forecast_date=date.today() + timedelta(days=30),
+            predicted_demand=predicted_demand,
+            confidence_score=0.70,
+            seasonal_signal='Auto-generated from recent pharmacy sales and current stock levels',
+            source_summary=[f'{recent_sales.count()} sales in last 90 days', f'{current_stock} units in current stock'],
+            created_by=request.user,
+            notes='Heuristic pharmacy demand forecast based on sales velocity and current stock.',
+        )
+        return Response(DemandForecastSerializer(forecast).data)
+
