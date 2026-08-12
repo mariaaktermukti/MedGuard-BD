@@ -19,6 +19,8 @@ from .views import (
     PharmacyFinderView,
     PharmacyInventoryDetailView,
     PharmacyInventoryListCreateView,
+    PharmacyShipmentListView,
+    PharmacyShipmentReceiveView,
     PersonalMedicineRecordDetailView,
     PersonalMedicineRecordView,
     RecallListCreateView,
@@ -49,4 +51,6 @@ urlpatterns = [
     path('manufacturer/demand-forecast/', DemandForecastView.as_view(), name='manufacturer-demand-forecast'),
     path('pharmacy/inventory/', PharmacyInventoryListCreateView.as_view(), name='pharmacy-inventory'),
     path('pharmacy/inventory/<int:pk>/', PharmacyInventoryDetailView.as_view(), name='pharmacy-inventory-detail'),
+    path('pharmacy/shipments/', PharmacyShipmentListView.as_view(), name='pharmacy-shipments'),
+    path('pharmacy/shipments/<int:pk>/receive/', PharmacyShipmentReceiveView.as_view(), name='pharmacy-shipment-receive'),
 ]

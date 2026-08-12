@@ -204,6 +204,29 @@ class ComplaintSerializer(serializers.ModelSerializer):
         read_only_fields = ['citizen', 'pharmacy', 'complaint_text', 'date_submitted']
 
 
+class PharmacyShipmentSerializer(serializers.ModelSerializer):
+    batch_details = serializers.SerializerMethodField(read_only=True)
+    from_details = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = Shipment
+        fields = '__all__'
+
+    def get_batch_details(self, obj):
+        return {
+            'id': obj.batch_id,
+            'batch_number': obj.batch.batch_number,
+            'medicine': obj.batch.medicine.name,
+            'status': obj.batch.status,
+        }
+
+    def get_from_details(self, obj):
+        return {
+            'id': obj.from_user_id,
+            'username': obj.from_user.username,
+        }
+
+
 class PharmacyProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = PharmacyProfile

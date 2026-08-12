@@ -33,6 +33,7 @@ from .serializers import (
     LOW_STOCK_THRESHOLD,
     MedicineSerializer,
     NotificationSerializer,
+    PharmacyShipmentSerializer,
     QualityTestSerializer,
     RecallSerializer,
     PharmacyProfileSerializer,
@@ -612,4 +613,36 @@ class PharmacyInventoryDetailView(generics.RetrieveUpdateDestroyAPIView):
         return Inventory.objects.filter(
             entity_type='pharmacy', entity_id=self.request.user.id
         ).select_related('batch', 'batch__medicine')
+
+
+class PharmacyShipmentListView(generics.ListAPIView):
+    serializer_class = PharmacyShipmentSerializer
+    permission_classes = [permissions.IsAuthenticated, IsPharmacy]
+
+    def get_queryset(self):
+        return Shipment.objects.filter(to_user=self.request.user).select_related(
+            'batch', 'batch__medicine', 'from_user'
+        ).order_by('-created_at')
+
+
+class PharmacyShipmentReceiveView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, IsPharmacy]
+
+    def post(self, request, pk):
+        shipment = get_object_or_404(Shipment, pk=pk, to_user=request.user)
+        if shipment.status == 'delivered':
+            return Response({'detail': 'Shipment already received.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        shipment.status = 'delivered'
+        shipment.delivery_date = date.today()
+        shipment.save(update_fields=['status', 'delivery_date', 'updated_at'])
+
+        inventory, _ = Inventory.objects.get_or_create(
+            entity_type='pharmacy', entity_id=request.user.id, batch=shipment.batch,
+            defaults={'quantity': 0},
+        )
+        inventory.quantity += shipment.quantity
+        inventory.save(update_fields=['quantity', 'last_updated'])
+
+        return Response(PharmacyShipmentSerializer(shipment).data)
 
