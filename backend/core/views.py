@@ -810,3 +810,40 @@ class PharmacyComplaintResolveView(views.APIView):
         complaint.save(update_fields=['status', 'resolution_text'])
         return Response(ComplaintSerializer(complaint).data)
 
+
+class PharmacyRiskAlertsView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, IsPharmacy]
+
+    def get(self, request):
+        inventory = Inventory.objects.filter(
+            entity_type='pharmacy', entity_id=request.user.id
+        ).select_related('batch', 'batch__medicine')
+
+        alerts = []
+        for item in inventory:
+            batch = item.batch
+            if batch.release_blocked or batch.status != 'active':
+                alerts.append({
+                    'type': 'danger',
+                    'title': f'Unreleased batch in stock: {batch.batch_number}',
+                    'message': f'{batch.medicine.name} is marked "{batch.status}" (release_blocked={batch.release_blocked}) but is in your inventory. Re-verify its QR code before selling.',
+                })
+            if batch.qc_status == 'failed':
+                alerts.append({
+                    'type': 'danger',
+                    'title': f'QC-failed batch in stock: {batch.batch_number}',
+                    'message': f'{batch.medicine.name} failed quality control checks. Consider quarantining this stock.',
+                })
+
+        large_sales = Sale.objects.filter(
+            pharmacy=request.user, quantity__gte=50
+        ).select_related('batch', 'batch__medicine', 'citizen').order_by('-sale_date')[:5]
+        for sale in large_sales:
+            alerts.append({
+                'type': 'warning',
+                'title': f'Unusually large sale: {sale.quantity} units',
+                'message': f'{sale.batch.medicine.name} sold to {sale.citizen.username} in a single transaction. Review for possible stockpiling or misuse.',
+            })
+
+        return Response(alerts[:10])
+
