@@ -725,3 +725,36 @@ class PharmacySaleListCreateView(generics.ListCreateAPIView):
 
         serializer.save(pharmacy=self.request.user)
 
+
+class PharmacyRecallAlertsView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, IsPharmacy]
+
+    def get(self, request):
+        batch_ids = Inventory.objects.filter(
+            entity_type='pharmacy', entity_id=request.user.id
+        ).values_list('batch_id', flat=True)
+        recalls = Recall.objects.filter(batch_id__in=batch_ids, status='active').select_related('batch', 'batch__medicine')
+        return Response(RecallSerializer(recalls, many=True).data)
+
+
+class PharmacyExpiryAlertsView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, IsPharmacy]
+
+    def get(self, request):
+        horizon = date.today() + timedelta(days=90)
+        inventory = Inventory.objects.filter(
+            entity_type='pharmacy', entity_id=request.user.id, batch__expiry_date__lte=horizon
+        ).select_related('batch', 'batch__medicine').order_by('batch__expiry_date')
+
+        return Response([
+            {
+                'inventory_id': item.id,
+                'batch_number': item.batch.batch_number,
+                'medicine': item.batch.medicine.name,
+                'expiry_date': item.batch.expiry_date,
+                'quantity': item.quantity,
+                'is_expired': item.batch.expiry_date < date.today(),
+            }
+            for item in inventory
+        ])
+

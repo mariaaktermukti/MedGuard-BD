@@ -22,6 +22,7 @@ const Sidebar = ({ isTablet }) => {
         { path: '/dashboard/pharmacy/inventory', icon: <Package size={24} weight="duotone" />, label: 'Inventory' },
         { path: '/dashboard/pharmacy/verify', icon: <QrCode size={24} weight="duotone" />, label: 'Verify Batch' },
         { path: '/dashboard/pharmacy/sales', icon: <Receipt size={24} weight="duotone" />, label: 'Log Sale' },
+        { path: '/dashboard/pharmacy/alerts', icon: <WarningCircle size={24} weight="duotone" />, label: 'Alerts' },
         { path: '/dashboard/pharmacy/suppliers', icon: <Truck size={24} weight="duotone" />, label: 'Suppliers' },
         { path: '/dashboard/notifications', icon: <Bell size={24} weight="duotone" />, label: 'Notifications' },
         { path: '/dashboard/settings', icon: <Gear size={24} weight="duotone" />, label: 'Settings' }
