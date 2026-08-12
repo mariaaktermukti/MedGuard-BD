@@ -10,6 +10,7 @@ from .views import (
     PharmacyCitizenLookupView,
     PharmacyComplaintListView,
     PharmacyComplaintResolveView,
+    PharmacyDashboardView,
     PharmacyDemandForecastView,
     PharmacyExpiryAlertsView,
     PharmacyRecallAlertsView,
@@ -71,4 +72,5 @@ urlpatterns = [
     path('pharmacy/complaints/', PharmacyComplaintListView.as_view(), name='pharmacy-complaints'),
     path('pharmacy/complaints/<int:pk>/resolve/', PharmacyComplaintResolveView.as_view(), name='pharmacy-complaint-resolve'),
     path('pharmacy/risk-alerts/', PharmacyRiskAlertsView.as_view(), name='pharmacy-risk-alerts'),
+    path('pharmacy/dashboard/', PharmacyDashboardView.as_view(), name='pharmacy-dashboard'),
 ]

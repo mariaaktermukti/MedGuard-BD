@@ -847,3 +847,73 @@ class PharmacyRiskAlertsView(views.APIView):
 
         return Response(alerts[:10])
 
+
+class PharmacyDashboardView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, IsPharmacy]
+
+    def get(self, request):
+        inventory = Inventory.objects.filter(
+            entity_type='pharmacy', entity_id=request.user.id
+        ).select_related('batch', 'batch__medicine')
+        low_stock_count = sum(1 for item in inventory if item.quantity <= LOW_STOCK_THRESHOLD)
+        expiring_count = inventory.filter(batch__expiry_date__lte=date.today() + timedelta(days=90)).count()
+        expired_count = inventory.filter(batch__expiry_date__lt=date.today()).count()
+
+        recall_batch_ids = inventory.values_list('batch_id', flat=True)
+        active_recalls = Recall.objects.filter(batch_id__in=recall_batch_ids, status='active')
+
+        complaints = Complaint.objects.filter(pharmacy=request.user)
+        pending_complaints = complaints.filter(status='pending').count()
+
+        sales_30d = Sale.objects.filter(pharmacy=request.user, sale_date__gte=timezone.now() - timedelta(days=30))
+        sales_90d = Sale.objects.filter(pharmacy=request.user, sale_date__gte=timezone.now() - timedelta(days=90))
+        revenue_30d = sales_30d.aggregate(total=Sum('price'))['total'] or 0
+
+        trust_score = 100
+        trust_score -= expired_count * 5
+        trust_score -= active_recalls.count() * 10
+        trust_score -= pending_complaints * 4
+        trust_score -= low_stock_count * 1
+        trust_score = max(0, min(100, trust_score))
+
+        if trust_score >= 95:
+            trust_grade = 'A+'
+        elif trust_score >= 85:
+            trust_grade = 'A'
+        elif trust_score >= 70:
+            trust_grade = 'B'
+        else:
+            trust_grade = 'C'
+
+        PharmacyProfile.objects.filter(user=request.user).update(trust_score=trust_score)
+
+        monthly_sales = defaultdict(int)
+        medicine_sales = defaultdict(int)
+        for sale in sales_90d.select_related('batch', 'batch__medicine'):
+            monthly_sales[sale.sale_date.strftime('%Y-%m')] += sale.quantity
+            medicine_sales[sale.batch.medicine.name] += sale.quantity
+
+        top_selling_medicines = [
+            {'medicine': medicine, 'units': quantity}
+            for medicine, quantity in sorted(medicine_sales.items(), key=lambda item: item[1], reverse=True)[:5]
+        ]
+
+        return Response({
+            'summary': {
+                'total_stock_items': inventory.count(),
+                'low_stock_items': low_stock_count,
+                'expiring_items': expiring_count,
+                'expired_items': expired_count,
+                'active_recalls': active_recalls.count(),
+                'pending_complaints': pending_complaints,
+                'sales_30d': sales_30d.count(),
+                'revenue_30d': str(revenue_30d),
+                'trust_score': trust_score,
+                'trust_grade': trust_grade,
+            },
+            'charts': {
+                'monthly_sales': [{'month': month, 'units_sold': units} for month, units in sorted(monthly_sales.items())],
+                'top_selling_medicines': top_selling_medicines,
+            },
+        })
+

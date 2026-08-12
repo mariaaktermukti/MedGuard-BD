@@ -22,6 +22,7 @@ import SaleLogging from './pages/pharmacy/SaleLogging';
 import Alerts from './pages/pharmacy/Alerts';
 import StockForecast from './pages/pharmacy/StockForecast';
 import Complaints from './pages/pharmacy/Complaints';
+import PharmacyDashboard from './pages/pharmacy/PharmacyDashboard';
 
 function App() {
   return (
@@ -49,6 +50,7 @@ function App() {
             <Route path="manufacturer/verify" element={<ManufacturerPortal />} />
             <Route path="manufacturer/recall" element={<ManufacturerPortal />} />
             <Route path="manufacturer/shipment" element={<ManufacturerPortal />} />
+            <Route path="pharmacy" element={<PharmacyDashboard />} />
             <Route path="pharmacy/inventory" element={<Inventory />} />
             <Route path="pharmacy/suppliers" element={<Suppliers />} />
             <Route path="pharmacy/verify" element={<BatchVerify />} />

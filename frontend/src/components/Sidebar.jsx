@@ -18,7 +18,7 @@ const Sidebar = ({ isTablet }) => {
     ];
 
     const pharmacyNavItems = [
-        { path: '/dashboard', icon: <House size={24} weight="duotone" />, label: 'Home' },
+        { path: '/dashboard/pharmacy', icon: <House size={24} weight="duotone" />, label: 'Home' },
         { path: '/dashboard/pharmacy/inventory', icon: <Package size={24} weight="duotone" />, label: 'Inventory' },
         { path: '/dashboard/pharmacy/verify', icon: <QrCode size={24} weight="duotone" />, label: 'Verify Batch' },
         { path: '/dashboard/pharmacy/sales', icon: <Receipt size={24} weight="duotone" />, label: 'Log Sale' },
@@ -64,7 +64,7 @@ const Sidebar = ({ isTablet }) => {
                     <NavLink 
                         key={index} 
                         to={item.path}
-                        end={item.path === '/dashboard'}
+                        end={item.path === '/dashboard' || item.path === '/dashboard/pharmacy'}
                         style={({ isActive }) => ({
                             display: 'flex',
                             alignItems: 'center',
