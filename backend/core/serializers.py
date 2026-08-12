@@ -6,6 +6,7 @@ from .models import (
     ADRReport,
     Batch,
     ComplianceItem,
+    Complaint,
     DemandForecast,
     DistributionEvent,
     DosageSchedule,
@@ -15,6 +16,7 @@ from .models import (
     Notification,
     QualityTest,
     Recall,
+    Sale,
     Shipment,
     Warehouse,
 )
@@ -143,6 +145,57 @@ class DosageScheduleSerializer(serializers.ModelSerializer):
         model = DosageSchedule
         fields = '__all__'
         read_only_fields = ['citizen', 'created_at']
+
+
+class InventorySerializer(serializers.ModelSerializer):
+    batch = serializers.PrimaryKeyRelatedField(queryset=Batch.objects.all())
+    batch_details = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = Inventory
+        fields = ['id', 'batch', 'batch_details', 'entity_type', 'entity_id', 'quantity', 'last_updated']
+        read_only_fields = ['entity_type', 'entity_id', 'last_updated']
+
+    def get_batch_details(self, obj):
+        return {
+            'id': obj.batch_id,
+            'batch_number': obj.batch.batch_number,
+            'medicine': obj.batch.medicine.name,
+            'expiry_date': obj.batch.expiry_date,
+            'status': obj.batch.status,
+            'qc_status': obj.batch.qc_status,
+        }
+
+
+class SaleSerializer(serializers.ModelSerializer):
+    batch = serializers.PrimaryKeyRelatedField(queryset=Batch.objects.all())
+    batch_details = serializers.SerializerMethodField(read_only=True)
+    citizen_username = serializers.CharField(source='citizen.username', read_only=True)
+
+    class Meta:
+        model = Sale
+        fields = [
+            'id', 'pharmacy', 'batch', 'batch_details', 'citizen', 'citizen_username',
+            'quantity', 'sale_date', 'price', 'payment_method'
+        ]
+        read_only_fields = ['pharmacy', 'sale_date']
+
+    def get_batch_details(self, obj):
+        return {
+            'id': obj.batch_id,
+            'batch_number': obj.batch.batch_number,
+            'medicine': obj.batch.medicine.name,
+            'status': obj.batch.status,
+        }
+
+
+class ComplaintSerializer(serializers.ModelSerializer):
+    citizen_username = serializers.CharField(source='citizen.username', read_only=True)
+
+    class Meta:
+        model = Complaint
+        fields = '__all__'
+        read_only_fields = ['citizen', 'pharmacy', 'complaint_text', 'date_submitted']
 
 
 class PharmacyProfileSerializer(serializers.ModelSerializer):
