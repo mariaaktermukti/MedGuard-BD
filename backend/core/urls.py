@@ -8,6 +8,8 @@ from .views import (
     ComplianceDashboardView,
     DemandForecastView,
     DistributionEventListCreateView,
+    DistributorWarehouseDetailView,
+    DistributorWarehouseListCreateView,
     DrugPassportView,
     ManufacturerBatchDetailView,
     ManufacturerBatchListCreateView,
@@ -45,4 +47,6 @@ urlpatterns = [
     path('manufacturer/recalls/', RecallListCreateView.as_view(), name='manufacturer-recalls'),
     path('manufacturer/compliance/', ComplianceDashboardView.as_view(), name='manufacturer-compliance'),
     path('manufacturer/demand-forecast/', DemandForecastView.as_view(), name='manufacturer-demand-forecast'),
+    path('distributor/warehouses/', DistributorWarehouseListCreateView.as_view(), name='distributor-warehouses'),
+    path('distributor/warehouses/<int:pk>/', DistributorWarehouseDetailView.as_view(), name='distributor-warehouse-detail'),
 ]

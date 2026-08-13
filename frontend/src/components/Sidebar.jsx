@@ -1,12 +1,12 @@
 import React, { useContext } from 'react';
 import { NavLink } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { House, QrCode, Pill, WarningCircle, MapPin, ChatText, Bell, Gear, UserCircle, Phone } from '@phosphor-icons/react';
+import { House, QrCode, Pill, WarningCircle, MapPin, ChatText, Bell, Gear, UserCircle, Phone, Warehouse } from '@phosphor-icons/react';
 
 const Sidebar = ({ isTablet }) => {
     const { user } = useContext(AuthContext);
 
-    const navItems = [
+    const citizenNavItems = [
         { path: '/dashboard', icon: <House size={24} weight="duotone" />, label: 'Home' },
         { path: '/dashboard/drug-passport', icon: <QrCode size={24} weight="duotone" />, label: 'QR Scan' },
         { path: '/dashboard/my-medicines', icon: <Pill size={24} weight="duotone" />, label: 'My Medicines' },
@@ -16,6 +16,15 @@ const Sidebar = ({ isTablet }) => {
         { path: '/dashboard/notifications', icon: <Bell size={24} weight="duotone" />, label: 'Notifications' },
         { path: '/dashboard/settings', icon: <Gear size={24} weight="duotone" />, label: 'Settings' }
     ];
+
+    const distributorNavItems = [
+        { path: '/dashboard', icon: <House size={24} weight="duotone" />, label: 'Home' },
+        { path: '/dashboard/distributor/warehouses', icon: <Warehouse size={24} weight="duotone" />, label: 'Warehouses' },
+        { path: '/dashboard/notifications', icon: <Bell size={24} weight="duotone" />, label: 'Notifications' },
+        { path: '/dashboard/settings', icon: <Gear size={24} weight="duotone" />, label: 'Settings' }
+    ];
+
+    const navItems = user?.role === 'distributor' ? distributorNavItems : citizenNavItems;
 
     return (
         <div style={{

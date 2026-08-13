@@ -145,6 +145,13 @@ class DosageScheduleSerializer(serializers.ModelSerializer):
         read_only_fields = ['citizen', 'created_at']
 
 
+class WarehouseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Warehouse
+        fields = '__all__'
+        read_only_fields = ['distributor']
+
+
 class PharmacyProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = PharmacyProfile

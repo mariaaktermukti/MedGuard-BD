@@ -18,6 +18,7 @@ from .models import (
     Recall,
     Sale,
     Shipment,
+    Warehouse,
 )
 from users.models import PharmacyProfile
 from .serializers import (
@@ -33,6 +34,7 @@ from .serializers import (
     QualityTestSerializer,
     RecallSerializer,
     PharmacyProfileSerializer,
+    WarehouseSerializer,
 )
 from users.permissions import IsCitizen, IsDGDA, IsDistributor, IsManufacturer
 import os
@@ -575,4 +577,25 @@ class CitizenDashboardView(views.APIView):
             'upcoming_dose': upcoming_dose,
             'recalls': recalls_data
         })
+
+
+# Distributor Portal Views
+
+class DistributorWarehouseListCreateView(generics.ListCreateAPIView):
+    serializer_class = WarehouseSerializer
+    permission_classes = [permissions.IsAuthenticated, IsDistributor]
+
+    def get_queryset(self):
+        return Warehouse.objects.filter(distributor=self.request.user).order_by('name')
+
+    def perform_create(self, serializer):
+        serializer.save(distributor=self.request.user)
+
+
+class DistributorWarehouseDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = WarehouseSerializer
+    permission_classes = [permissions.IsAuthenticated, IsDistributor]
+
+    def get_queryset(self):
+        return Warehouse.objects.filter(distributor=self.request.user)
 
