@@ -44,6 +44,12 @@ class DistributorShipmentSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ['from_user']
 
+    def validate(self, attrs):
+        to_user = attrs.get('to_user') or getattr(self.instance, 'to_user', None)
+        if to_user and getattr(to_user, 'role', None) != 'pharmacy':
+            raise serializers.ValidationError('The receiving account must be a registered pharmacy.')
+        return attrs
+
     def get_batch_details(self, obj):
         return {
             'id': obj.batch_id,
