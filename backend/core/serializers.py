@@ -6,6 +6,7 @@ from .models import (
     ADRReport,
     Batch,
     ComplianceItem,
+    Complaint,
     DemandForecast,
     DistributionEvent,
     DosageSchedule,
@@ -15,9 +16,12 @@ from .models import (
     Notification,
     QualityTest,
     Recall,
+    Sale,
     Shipment,
     Warehouse,
 )
+
+LOW_STOCK_THRESHOLD = 20
 
 
 class MedicineSerializer(serializers.ModelSerializer):
@@ -181,6 +185,84 @@ class DosageScheduleSerializer(serializers.ModelSerializer):
         model = DosageSchedule
         fields = '__all__'
         read_only_fields = ['citizen', 'created_at']
+
+
+class InventorySerializer(serializers.ModelSerializer):
+    batch = serializers.PrimaryKeyRelatedField(queryset=Batch.objects.all())
+    batch_details = serializers.SerializerMethodField(read_only=True)
+    is_low_stock = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = Inventory
+        fields = ['id', 'batch', 'batch_details', 'entity_type', 'entity_id', 'quantity', 'is_low_stock', 'last_updated']
+        read_only_fields = ['entity_type', 'entity_id', 'last_updated']
+
+    def get_is_low_stock(self, obj):
+        return obj.quantity <= LOW_STOCK_THRESHOLD
+
+    def get_batch_details(self, obj):
+        return {
+            'id': obj.batch_id,
+            'batch_number': obj.batch.batch_number,
+            'medicine': obj.batch.medicine.name,
+            'expiry_date': obj.batch.expiry_date,
+            'status': obj.batch.status,
+            'qc_status': obj.batch.qc_status,
+        }
+
+
+class SaleSerializer(serializers.ModelSerializer):
+    batch = serializers.PrimaryKeyRelatedField(queryset=Batch.objects.all())
+    batch_details = serializers.SerializerMethodField(read_only=True)
+    citizen_username = serializers.CharField(source='citizen.username', read_only=True)
+
+    class Meta:
+        model = Sale
+        fields = [
+            'id', 'pharmacy', 'batch', 'batch_details', 'citizen', 'citizen_username',
+            'quantity', 'sale_date', 'price', 'payment_method'
+        ]
+        read_only_fields = ['pharmacy', 'sale_date']
+
+    def get_batch_details(self, obj):
+        return {
+            'id': obj.batch_id,
+            'batch_number': obj.batch.batch_number,
+            'medicine': obj.batch.medicine.name,
+            'status': obj.batch.status,
+        }
+
+
+class ComplaintSerializer(serializers.ModelSerializer):
+    citizen_username = serializers.CharField(source='citizen.username', read_only=True)
+
+    class Meta:
+        model = Complaint
+        fields = '__all__'
+        read_only_fields = ['citizen', 'pharmacy', 'complaint_text', 'date_submitted']
+
+
+class PharmacyShipmentSerializer(serializers.ModelSerializer):
+    batch_details = serializers.SerializerMethodField(read_only=True)
+    from_details = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = Shipment
+        fields = '__all__'
+
+    def get_batch_details(self, obj):
+        return {
+            'id': obj.batch_id,
+            'batch_number': obj.batch.batch_number,
+            'medicine': obj.batch.medicine.name,
+            'status': obj.batch.status,
+        }
+
+    def get_from_details(self, obj):
+        return {
+            'id': obj.from_user_id,
+            'username': obj.from_user.username,
+        }
 
 
 class WarehouseSerializer(serializers.ModelSerializer):

@@ -15,6 +15,14 @@ import PharmacyFinder from './pages/citizen/PharmacyFinder';
 import InteractionChecker from './pages/citizen/InteractionChecker';
 import Notifications from './pages/citizen/Notifications';
 import ManufacturerPortal from './pages/manufacturer/ManufacturerPortal';
+import Inventory from './pages/pharmacy/Inventory';
+import Suppliers from './pages/pharmacy/Suppliers';
+import BatchVerify from './pages/pharmacy/BatchVerify';
+import SaleLogging from './pages/pharmacy/SaleLogging';
+import Alerts from './pages/pharmacy/Alerts';
+import StockForecast from './pages/pharmacy/StockForecast';
+import Complaints from './pages/pharmacy/Complaints';
+import PharmacyDashboard from './pages/pharmacy/PharmacyDashboard';
 import Warehouses from './pages/distributor/Warehouses';
 import Shipments from './pages/distributor/Shipments';
 import Analytics from './pages/distributor/Analytics';
@@ -48,6 +56,14 @@ function App() {
             <Route path="manufacturer/verify" element={<ManufacturerPortal />} />
             <Route path="manufacturer/recall" element={<ManufacturerPortal />} />
             <Route path="manufacturer/shipment" element={<ManufacturerPortal />} />
+            <Route path="pharmacy" element={<PharmacyDashboard />} />
+            <Route path="pharmacy/inventory" element={<Inventory />} />
+            <Route path="pharmacy/suppliers" element={<Suppliers />} />
+            <Route path="pharmacy/verify" element={<BatchVerify />} />
+            <Route path="pharmacy/sales" element={<SaleLogging />} />
+            <Route path="pharmacy/alerts" element={<Alerts />} />
+            <Route path="pharmacy/forecast" element={<StockForecast />} />
+            <Route path="pharmacy/complaints" element={<Complaints />} />
             <Route path="distributor/warehouses" element={<Warehouses />} />
             <Route path="distributor/shipments" element={<Shipments />} />
             <Route path="distributor/analytics" element={<Analytics />} />

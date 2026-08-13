@@ -1,7 +1,7 @@
 import React, { useContext } from 'react';
 import { NavLink } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { House, QrCode, Pill, WarningCircle, MapPin, ChatText, Bell, Gear, UserCircle, Phone, Warehouse, Truck, ChartBar } from '@phosphor-icons/react';
+import { House, QrCode, Pill, WarningCircle, MapPin, ChatText, Bell, Gear, UserCircle, Phone, Package, Truck, Receipt, ChartLineUp, ChatCenteredText, Warehouse, ChartBar } from '@phosphor-icons/react';
 
 const Sidebar = ({ isTablet }) => {
     const { user } = useContext(AuthContext);
@@ -13,6 +13,19 @@ const Sidebar = ({ isTablet }) => {
         { path: '/dashboard/report-adr', icon: <WarningCircle size={24} weight="duotone" />, label: 'ADR Report' },
         { path: '/dashboard/find-pharmacy', icon: <MapPin size={24} weight="duotone" />, label: 'Pharmacy' },
         { path: '/dashboard/ai-assistant', icon: <ChatText size={24} weight="duotone" />, label: 'AI Assistant' },
+        { path: '/dashboard/notifications', icon: <Bell size={24} weight="duotone" />, label: 'Notifications' },
+        { path: '/dashboard/settings', icon: <Gear size={24} weight="duotone" />, label: 'Settings' }
+    ];
+
+    const pharmacyNavItems = [
+        { path: '/dashboard/pharmacy', icon: <House size={24} weight="duotone" />, label: 'Home' },
+        { path: '/dashboard/pharmacy/inventory', icon: <Package size={24} weight="duotone" />, label: 'Inventory' },
+        { path: '/dashboard/pharmacy/verify', icon: <QrCode size={24} weight="duotone" />, label: 'Verify Batch' },
+        { path: '/dashboard/pharmacy/sales', icon: <Receipt size={24} weight="duotone" />, label: 'Log Sale' },
+        { path: '/dashboard/pharmacy/alerts', icon: <WarningCircle size={24} weight="duotone" />, label: 'Alerts' },
+        { path: '/dashboard/pharmacy/forecast', icon: <ChartLineUp size={24} weight="duotone" />, label: 'Forecast' },
+        { path: '/dashboard/pharmacy/complaints', icon: <ChatCenteredText size={24} weight="duotone" />, label: 'Complaints' },
+        { path: '/dashboard/pharmacy/suppliers', icon: <Truck size={24} weight="duotone" />, label: 'Suppliers' },
         { path: '/dashboard/notifications', icon: <Bell size={24} weight="duotone" />, label: 'Notifications' },
         { path: '/dashboard/settings', icon: <Gear size={24} weight="duotone" />, label: 'Settings' }
     ];
@@ -29,7 +42,7 @@ const Sidebar = ({ isTablet }) => {
         { path: '/dashboard/settings', icon: <Gear size={24} weight="duotone" />, label: 'Settings' }
     ];
 
-    const navItems = user?.role === 'distributor' ? distributorNavItems : citizenNavItems;
+    const navItems = user?.role === 'pharmacy' ? pharmacyNavItems : user?.role === 'distributor' ? distributorNavItems : citizenNavItems;
 
     return (
         <div style={{
@@ -63,7 +76,7 @@ const Sidebar = ({ isTablet }) => {
                     <NavLink 
                         key={index} 
                         to={item.path}
-                        end={item.path === '/dashboard'}
+                        end={item.path === '/dashboard' || item.path === '/dashboard/pharmacy'}
                         style={({ isActive }) => ({
                             display: 'flex',
                             alignItems: 'center',

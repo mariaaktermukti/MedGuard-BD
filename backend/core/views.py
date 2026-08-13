@@ -1,17 +1,21 @@
 from collections import defaultdict
 from datetime import date, timedelta
 
+from django.contrib.auth import get_user_model
 from django.db.models import Sum
 from django.utils import timezone
 from rest_framework import generics, views, status, permissions
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from .models import (
     Batch,
     ComplianceItem,
+    Complaint,
     DemandForecast,
     DistributionEvent,
     DosageSchedule,
+    Inventory,
     Medicine,
     Notification,
     QualityTest,
@@ -24,20 +28,25 @@ from users.models import PharmacyProfile
 from .serializers import (
     ADRReportSerializer,
     BatchSerializer,
+    ComplaintSerializer,
     ComplianceItemSerializer,
     DemandForecastSerializer,
     DistributionEventSerializer,
     DistributorShipmentSerializer,
     DrugPassportSerializer,
     DosageScheduleSerializer,
+    InventorySerializer,
+    LOW_STOCK_THRESHOLD,
     MedicineSerializer,
     NotificationSerializer,
+    PharmacyShipmentSerializer,
     QualityTestSerializer,
     RecallSerializer,
     PharmacyProfileSerializer,
+    SaleSerializer,
     WarehouseSerializer,
 )
-from users.permissions import IsCitizen, IsDGDA, IsDistributor, IsManufacturer
+from users.permissions import IsCitizen, IsDGDA, IsDistributor, IsManufacturer, IsPharmacy
 import os
 import logging
 import json
@@ -577,6 +586,338 @@ class CitizenDashboardView(views.APIView):
             'recent_activity': recent_activity,
             'upcoming_dose': upcoming_dose,
             'recalls': recalls_data
+        })
+
+
+# Pharmacy Portal Views
+
+class PharmacyInventoryListCreateView(generics.ListCreateAPIView):
+    serializer_class = InventorySerializer
+    permission_classes = [permissions.IsAuthenticated, IsPharmacy]
+
+    def get_queryset(self):
+        return Inventory.objects.filter(
+            entity_type='pharmacy', entity_id=self.request.user.id
+        ).select_related('batch', 'batch__medicine').order_by('-last_updated')
+
+    def perform_create(self, serializer):
+        batch = serializer.validated_data['batch']
+        existing = Inventory.objects.filter(
+            entity_type='pharmacy', entity_id=self.request.user.id, batch=batch
+        ).first()
+        if existing:
+            existing.quantity += serializer.validated_data.get('quantity', 0)
+            existing.save(update_fields=['quantity', 'last_updated'])
+            serializer.instance = existing
+        else:
+            serializer.save(entity_type='pharmacy', entity_id=self.request.user.id)
+
+
+class PharmacyInventoryDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = InventorySerializer
+    permission_classes = [permissions.IsAuthenticated, IsPharmacy]
+
+    def get_queryset(self):
+        return Inventory.objects.filter(
+            entity_type='pharmacy', entity_id=self.request.user.id
+        ).select_related('batch', 'batch__medicine')
+
+
+class PharmacyShipmentListView(generics.ListAPIView):
+    serializer_class = PharmacyShipmentSerializer
+    permission_classes = [permissions.IsAuthenticated, IsPharmacy]
+
+    def get_queryset(self):
+        return Shipment.objects.filter(to_user=self.request.user).select_related(
+            'batch', 'batch__medicine', 'from_user'
+        ).order_by('-created_at')
+
+
+class PharmacyShipmentReceiveView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, IsPharmacy]
+
+    def post(self, request, pk):
+        shipment = get_object_or_404(Shipment, pk=pk, to_user=request.user)
+        if shipment.status == 'delivered':
+            return Response({'detail': 'Shipment already received.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        shipment.status = 'delivered'
+        shipment.delivery_date = date.today()
+        shipment.save(update_fields=['status', 'delivery_date', 'updated_at'])
+
+        inventory, _ = Inventory.objects.get_or_create(
+            entity_type='pharmacy', entity_id=request.user.id, batch=shipment.batch,
+            defaults={'quantity': 0},
+        )
+        inventory.quantity += shipment.quantity
+        inventory.save(update_fields=['quantity', 'last_updated'])
+
+        return Response(PharmacyShipmentSerializer(shipment).data)
+
+
+class PharmacyBatchVerifyView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, IsPharmacy]
+
+    def get(self, request, qr_code):
+        batch = Batch.objects.filter(qr_code=qr_code).select_related('medicine').first()
+        if not batch:
+            return Response({'verified': False, 'verdict': 'unknown', 'detail': 'QR code not recognized.'}, status=status.HTTP_404_NOT_FOUND)
+
+        active_recall = Recall.objects.filter(batch=batch, status='active').first()
+        is_expired = batch.expiry_date < date.today()
+
+        if active_recall:
+            verdict = 'recalled'
+        elif is_expired:
+            verdict = 'expired'
+        elif batch.status != 'active' or batch.release_blocked:
+            verdict = 'blocked'
+        else:
+            verdict = 'authentic'
+
+        return Response({
+            'verified': verdict == 'authentic',
+            'verdict': verdict,
+            'recall_reason': active_recall.reason if active_recall else None,
+            'batch': DrugPassportSerializer(batch).data,
+        })
+
+
+class PharmacyCitizenLookupView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, IsPharmacy]
+
+    def get(self, request):
+        phone = request.query_params.get('phone', '').strip()
+        if not phone:
+            return Response({'detail': 'A phone number is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        User = get_user_model()
+        matches = User.objects.filter(role='citizen', phone=phone)
+        return Response([
+            {'id': citizen.id, 'username': citizen.username, 'full_name': citizen.full_name, 'phone': citizen.phone}
+            for citizen in matches
+        ])
+
+
+class PharmacySaleListCreateView(generics.ListCreateAPIView):
+    serializer_class = SaleSerializer
+    permission_classes = [permissions.IsAuthenticated, IsPharmacy]
+
+    def get_queryset(self):
+        return Sale.objects.filter(pharmacy=self.request.user).select_related(
+            'batch', 'batch__medicine', 'citizen'
+        ).order_by('-sale_date')
+
+    def perform_create(self, serializer):
+        batch = serializer.validated_data['batch']
+        quantity = serializer.validated_data['quantity']
+
+        if Recall.objects.filter(batch=batch, status='active').exists():
+            raise ValidationError('This batch has an active recall and cannot be sold.')
+        if batch.expiry_date < date.today():
+            raise ValidationError('This batch has expired and cannot be sold.')
+        if batch.status != 'active' or batch.release_blocked:
+            raise ValidationError('This batch is not released for sale.')
+
+        inventory = Inventory.objects.filter(
+            entity_type='pharmacy', entity_id=self.request.user.id, batch=batch
+        ).first()
+        if not inventory or inventory.quantity < quantity:
+            raise ValidationError('Not enough stock of this batch to complete the sale.')
+
+        inventory.quantity -= quantity
+        inventory.save(update_fields=['quantity', 'last_updated'])
+
+        serializer.save(pharmacy=self.request.user)
+
+
+class PharmacyRecallAlertsView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, IsPharmacy]
+
+    def get(self, request):
+        batch_ids = Inventory.objects.filter(
+            entity_type='pharmacy', entity_id=request.user.id
+        ).values_list('batch_id', flat=True)
+        recalls = Recall.objects.filter(batch_id__in=batch_ids, status='active').select_related('batch', 'batch__medicine')
+        return Response(RecallSerializer(recalls, many=True).data)
+
+
+class PharmacyExpiryAlertsView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, IsPharmacy]
+
+    def get(self, request):
+        horizon = date.today() + timedelta(days=90)
+        inventory = Inventory.objects.filter(
+            entity_type='pharmacy', entity_id=request.user.id, batch__expiry_date__lte=horizon
+        ).select_related('batch', 'batch__medicine').order_by('batch__expiry_date')
+
+        return Response([
+            {
+                'inventory_id': item.id,
+                'batch_number': item.batch.batch_number,
+                'medicine': item.batch.medicine.name,
+                'expiry_date': item.batch.expiry_date,
+                'quantity': item.quantity,
+                'is_expired': item.batch.expiry_date < date.today(),
+            }
+            for item in inventory
+        ])
+
+
+class PharmacyDemandForecastView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, IsPharmacy]
+
+    def get(self, request):
+        region = request.query_params.get('region', 'Bangladesh')
+        recent_sales = Sale.objects.filter(
+            pharmacy=request.user, sale_date__gte=timezone.now() - timedelta(days=90)
+        )
+        units_sold_90d = recent_sales.aggregate(total=Sum('quantity'))['total'] or 0
+        current_stock = Inventory.objects.filter(
+            entity_type='pharmacy', entity_id=request.user.id
+        ).aggregate(total=Sum('quantity'))['total'] or 0
+        predicted_demand = max(units_sold_90d // 3, current_stock // 4, 20)
+
+        forecast = DemandForecast.objects.create(
+            region=region,
+            forecast_date=date.today() + timedelta(days=30),
+            predicted_demand=predicted_demand,
+            confidence_score=0.70,
+            seasonal_signal='Auto-generated from recent pharmacy sales and current stock levels',
+            source_summary=[f'{recent_sales.count()} sales in last 90 days', f'{current_stock} units in current stock'],
+            created_by=request.user,
+            notes='Heuristic pharmacy demand forecast based on sales velocity and current stock.',
+        )
+        return Response(DemandForecastSerializer(forecast).data)
+
+
+class PharmacyComplaintListView(generics.ListAPIView):
+    serializer_class = ComplaintSerializer
+    permission_classes = [permissions.IsAuthenticated, IsPharmacy]
+
+    def get_queryset(self):
+        return Complaint.objects.filter(pharmacy=self.request.user).select_related('citizen').order_by('-date_submitted')
+
+
+class PharmacyComplaintResolveView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, IsPharmacy]
+
+    def post(self, request, pk):
+        complaint = get_object_or_404(Complaint, pk=pk, pharmacy=request.user)
+        resolution_text = request.data.get('resolution_text', '').strip()
+        if not resolution_text:
+            return Response({'detail': 'A resolution note is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        complaint.status = 'resolved'
+        complaint.resolution_text = resolution_text
+        complaint.save(update_fields=['status', 'resolution_text'])
+        return Response(ComplaintSerializer(complaint).data)
+
+
+class PharmacyRiskAlertsView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, IsPharmacy]
+
+    def get(self, request):
+        inventory = Inventory.objects.filter(
+            entity_type='pharmacy', entity_id=request.user.id
+        ).select_related('batch', 'batch__medicine')
+
+        alerts = []
+        for item in inventory:
+            batch = item.batch
+            if batch.release_blocked or batch.status != 'active':
+                alerts.append({
+                    'type': 'danger',
+                    'title': f'Unreleased batch in stock: {batch.batch_number}',
+                    'message': f'{batch.medicine.name} is marked "{batch.status}" (release_blocked={batch.release_blocked}) but is in your inventory. Re-verify its QR code before selling.',
+                })
+            if batch.qc_status == 'failed':
+                alerts.append({
+                    'type': 'danger',
+                    'title': f'QC-failed batch in stock: {batch.batch_number}',
+                    'message': f'{batch.medicine.name} failed quality control checks. Consider quarantining this stock.',
+                })
+
+        large_sales = Sale.objects.filter(
+            pharmacy=request.user, quantity__gte=50
+        ).select_related('batch', 'batch__medicine', 'citizen').order_by('-sale_date')[:5]
+        for sale in large_sales:
+            alerts.append({
+                'type': 'warning',
+                'title': f'Unusually large sale: {sale.quantity} units',
+                'message': f'{sale.batch.medicine.name} sold to {sale.citizen.username} in a single transaction. Review for possible stockpiling or misuse.',
+            })
+
+        return Response(alerts[:10])
+
+
+class PharmacyDashboardView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, IsPharmacy]
+
+    def get(self, request):
+        inventory = Inventory.objects.filter(
+            entity_type='pharmacy', entity_id=request.user.id
+        ).select_related('batch', 'batch__medicine')
+        low_stock_count = sum(1 for item in inventory if item.quantity <= LOW_STOCK_THRESHOLD)
+        expiring_count = inventory.filter(batch__expiry_date__lte=date.today() + timedelta(days=90)).count()
+        expired_count = inventory.filter(batch__expiry_date__lt=date.today()).count()
+
+        recall_batch_ids = inventory.values_list('batch_id', flat=True)
+        active_recalls = Recall.objects.filter(batch_id__in=recall_batch_ids, status='active')
+
+        complaints = Complaint.objects.filter(pharmacy=request.user)
+        pending_complaints = complaints.filter(status='pending').count()
+
+        sales_30d = Sale.objects.filter(pharmacy=request.user, sale_date__gte=timezone.now() - timedelta(days=30))
+        sales_90d = Sale.objects.filter(pharmacy=request.user, sale_date__gte=timezone.now() - timedelta(days=90))
+        revenue_30d = sales_30d.aggregate(total=Sum('price'))['total'] or 0
+
+        trust_score = 100
+        trust_score -= expired_count * 5
+        trust_score -= active_recalls.count() * 10
+        trust_score -= pending_complaints * 4
+        trust_score -= low_stock_count * 1
+        trust_score = max(0, min(100, trust_score))
+
+        if trust_score >= 95:
+            trust_grade = 'A+'
+        elif trust_score >= 85:
+            trust_grade = 'A'
+        elif trust_score >= 70:
+            trust_grade = 'B'
+        else:
+            trust_grade = 'C'
+
+        PharmacyProfile.objects.filter(user=request.user).update(trust_score=trust_score)
+
+        monthly_sales = defaultdict(int)
+        medicine_sales = defaultdict(int)
+        for sale in sales_90d.select_related('batch', 'batch__medicine'):
+            monthly_sales[sale.sale_date.strftime('%Y-%m')] += sale.quantity
+            medicine_sales[sale.batch.medicine.name] += sale.quantity
+
+        top_selling_medicines = [
+            {'medicine': medicine, 'units': quantity}
+            for medicine, quantity in sorted(medicine_sales.items(), key=lambda item: item[1], reverse=True)[:5]
+        ]
+
+        return Response({
+            'summary': {
+                'total_stock_items': inventory.count(),
+                'low_stock_items': low_stock_count,
+                'expiring_items': expiring_count,
+                'expired_items': expired_count,
+                'active_recalls': active_recalls.count(),
+                'pending_complaints': pending_complaints,
+                'sales_30d': sales_30d.count(),
+                'revenue_30d': str(revenue_30d),
+                'trust_score': trust_score,
+                'trust_grade': trust_grade,
+            },
+            'charts': {
+                'monthly_sales': [{'month': month, 'units_sold': units} for month, units in sorted(monthly_sales.items())],
+                'top_selling_medicines': top_selling_medicines,
+            },
         })
 
 
