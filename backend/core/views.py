@@ -647,3 +647,44 @@ class DistributorOutgoingShipmentDetailView(generics.RetrieveUpdateAPIView):
             'batch', 'batch__medicine', 'to_user'
         )
 
+
+class DistributorAnalyticsView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, IsDistributor]
+
+    def get(self, request):
+        shipments = Shipment.objects.filter(from_user=request.user).select_related('to_user')
+        delivered = shipments.filter(status='delivered')
+
+        transit_days = [
+            (shipment.delivery_date - shipment.shipment_date).days
+            for shipment in delivered
+            if shipment.delivery_date and shipment.shipment_date
+        ]
+        avg_transit_days = round(sum(transit_days) / len(transit_days), 1) if transit_days else None
+
+        monthly_volume = defaultdict(int)
+        pharmacy_volume = defaultdict(int)
+        for shipment in shipments:
+            monthly_volume[shipment.shipment_date.strftime('%Y-%m')] += shipment.quantity
+            pharmacy_volume[shipment.to_user.username] += shipment.quantity
+
+        top_destinations = [
+            {'pharmacy': username, 'units': units}
+            for username, units in sorted(pharmacy_volume.items(), key=lambda item: item[1], reverse=True)[:5]
+        ]
+
+        return Response({
+            'summary': {
+                'total_shipments': shipments.count(),
+                'delivered': delivered.count(),
+                'in_transit': shipments.filter(status='in_transit').count(),
+                'pending': shipments.filter(status='pending').count(),
+                'cancelled': shipments.filter(status='cancelled').count(),
+                'avg_transit_days': avg_transit_days,
+            },
+            'charts': {
+                'monthly_volume': [{'month': month, 'units': units} for month, units in sorted(monthly_volume.items())],
+                'top_destinations': top_destinations,
+            },
+        })
+

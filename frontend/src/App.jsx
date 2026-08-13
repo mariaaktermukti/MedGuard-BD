@@ -17,6 +17,7 @@ import Notifications from './pages/citizen/Notifications';
 import ManufacturerPortal from './pages/manufacturer/ManufacturerPortal';
 import Warehouses from './pages/distributor/Warehouses';
 import Shipments from './pages/distributor/Shipments';
+import Analytics from './pages/distributor/Analytics';
 
 function App() {
   return (
@@ -46,6 +47,7 @@ function App() {
             <Route path="manufacturer/shipment" element={<ManufacturerPortal />} />
             <Route path="distributor/warehouses" element={<Warehouses />} />
             <Route path="distributor/shipments" element={<Shipments />} />
+            <Route path="distributor/analytics" element={<Analytics />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
