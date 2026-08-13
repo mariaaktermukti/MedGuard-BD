@@ -729,3 +729,28 @@ class DistributorRouteOptimizationView(views.APIView):
             'suggestions': suggestions,
         })
 
+
+class DistributorFleetMonitoringView(generics.ListAPIView):
+    serializer_class = DistributorShipmentSerializer
+    permission_classes = [permissions.IsAuthenticated, IsDistributor]
+
+    def get_queryset(self):
+        return Shipment.objects.filter(
+            from_user=self.request.user, status='in_transit'
+        ).select_related('batch', 'batch__medicine', 'to_user').order_by('-geo_timestamp')
+
+
+class DistributorShipmentLocationUpdateView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, IsDistributor]
+
+    def post(self, request, pk):
+        shipment = get_object_or_404(Shipment, pk=pk, from_user=request.user, status='in_transit')
+        geo_location = request.data.get('geo_location', '').strip()
+        if not geo_location:
+            return Response({'detail': 'A location is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        shipment.geo_location = geo_location
+        shipment.geo_timestamp = timezone.now()
+        shipment.save(update_fields=['geo_location', 'geo_timestamp', 'updated_at'])
+        return Response(DistributorShipmentSerializer(shipment).data)
+

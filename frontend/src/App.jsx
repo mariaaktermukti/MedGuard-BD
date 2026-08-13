@@ -19,6 +19,7 @@ import Warehouses from './pages/distributor/Warehouses';
 import Shipments from './pages/distributor/Shipments';
 import Analytics from './pages/distributor/Analytics';
 import RouteOptimization from './pages/distributor/RouteOptimization';
+import FleetMonitoring from './pages/distributor/FleetMonitoring';
 
 function App() {
   return (
@@ -50,6 +51,7 @@ function App() {
             <Route path="distributor/shipments" element={<Shipments />} />
             <Route path="distributor/analytics" element={<Analytics />} />
             <Route path="distributor/route-optimization" element={<RouteOptimization />} />
+            <Route path="distributor/fleet-monitoring" element={<FleetMonitoring />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
