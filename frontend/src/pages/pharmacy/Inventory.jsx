@@ -6,15 +6,15 @@ const inputStyle = {
     width: '100%',
     padding: '0.75rem 1rem',
     borderRadius: '0.5rem',
-    border: '1px solid var(--border-color)',
+    border: '1px solid var(--border)',
     background: 'var(--bg-input)',
-    color: 'var(--text-light)',
+    color: 'var(--text-main)',
     fontSize: '1rem',
     boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.05)',
 };
 
 const StatusPill = ({ children, tone = 'blue' }) => {
-    const color = tone === 'green' ? 'var(--success)' : tone === 'red' ? 'var(--danger)' : 'var(--primary-color)';
+    const color = tone === 'green' ? 'var(--success)' : tone === 'red' ? 'var(--danger)' : 'var(--primary)';
     const bg = tone === 'green' ? 'rgba(16, 185, 129, 0.1)' : tone === 'red' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)';
     return (
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.35rem 0.75rem', borderRadius: '999px', background: bg, color, fontSize: '0.8rem', fontWeight: 700 }}>
@@ -75,7 +75,7 @@ const Inventory = () => {
     return (
         <div style={{ maxWidth: '1000px', margin: '0 auto', display: 'grid', gap: '1.5rem' }}>
             <div>
-                <h1 style={{ fontSize: '1.75rem', margin: 0, color: 'var(--primary-color)' }}>Inventory Management</h1>
+                <h1 style={{ fontSize: '1.75rem', margin: 0, color: 'var(--primary)' }}>Inventory Management</h1>
                 <p style={{ color: 'var(--text-muted)', margin: '0.35rem 0 0' }}>Track stock levels and receive batches by scanning their QR code.</p>
             </div>
 
@@ -90,7 +90,7 @@ const Inventory = () => {
                         <label>Quantity</label>
                         <input type="number" min="1" value={quantity} onChange={(e) => setQuantity(e.target.value)} placeholder="e.g. 100" style={inputStyle} />
                     </div>
-                    <button type="submit" className="btn-primary" disabled={submitting} style={{ width: 'auto', padding: '0.75rem 1.25rem' }}>
+                    <button type="submit" className="ui-btn ui-btn-primary" disabled={submitting} style={{ width: 'auto', padding: '0.75rem 1.25rem' }}>
                         <Plus size={18} weight="bold" /> Add
                     </button>
                 </form>
@@ -109,7 +109,7 @@ const Inventory = () => {
                 ) : (
                     <div style={{ display: 'grid', gap: '0.75rem' }}>
                         {items.map((item) => (
-                            <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.25rem', borderRadius: '0.85rem', border: '1px solid var(--border-color)' }}>
+                            <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.25rem', borderRadius: '0.85rem', border: '1px solid var(--border)' }}>
                                 <div>
                                     <div style={{ fontWeight: 700 }}>{item.batch_details.medicine}</div>
                                     <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>

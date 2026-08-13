@@ -35,7 +35,7 @@ const RouteRisk = () => {
     return (
         <div style={{ maxWidth: '900px', margin: '0 auto', display: 'grid', gap: '1.5rem' }}>
             <div>
-                <h1 style={{ fontSize: '1.75rem', margin: 0, color: 'var(--primary-color)' }}>AI Route Risk Detection</h1>
+                <h1 style={{ fontSize: '1.75rem', margin: 0, color: 'var(--primary)' }}>AI Route Risk Detection</h1>
                 <p style={{ color: 'var(--text-muted)', margin: '0.35rem 0 0' }}>Delay and hazard-keyword flags for pending/in-transit shipments.</p>
             </div>
 
@@ -55,7 +55,7 @@ const RouteRisk = () => {
                 ) : (
                     <div style={{ display: 'grid', gap: '0.75rem' }}>
                         {alerts.map((alert, index) => (
-                            <div key={index} style={{ padding: '1rem 1.25rem', borderRadius: '0.85rem', border: '1px solid var(--border-color)' }}>
+                            <div key={index} style={{ padding: '1rem 1.25rem', borderRadius: '0.85rem', border: '1px solid var(--border)' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.35rem' }}>
                                     <StatusPill tone={alert.type === 'danger' ? 'red' : 'amber'}><Warning size={14} />{alert.type}</StatusPill>
                                     <div style={{ fontWeight: 700 }}>{alert.title}</div>

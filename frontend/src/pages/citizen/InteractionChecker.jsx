@@ -47,7 +47,7 @@ const InteractionChecker = () => {
     return (
         <div style={{ maxWidth: '600px', margin: '0 auto' }}>
             <div style={{ marginBottom: '2rem' }}>
-                <h1 style={{ fontSize: '1.75rem', margin: '0 0 0.5rem 0', color: 'var(--primary-color)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <h1 style={{ fontSize: '1.75rem', margin: '0 0 0.5rem 0', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <ShieldWarning size={32} weight="duotone" /> Medicine Interaction Checker
                 </h1>
                 <p style={{ color: 'var(--text-muted)' }}>একাধিক ওষুধ একসাথে সেবন করা নিরাপদ কিনা যাচাই করুন।</p>
@@ -62,7 +62,7 @@ const InteractionChecker = () => {
                         onChange={(e) => setInputValue(e.target.value)}
                         onKeyPress={handleAdd}
                         placeholder="ওষুধের নাম লিখুন এবং এন্টার চাপুন..."
-                        style={{ width: '100%', padding: '1rem', paddingRight: '3rem', borderRadius: '1rem', border: '1px solid var(--border-color)', background: 'var(--bg-input)', fontSize: '1rem' }}
+                        style={{ width: '100%', padding: '1rem', paddingRight: '3rem', borderRadius: '1rem', border: '1px solid var(--border)', background: 'var(--bg-input)', fontSize: '1rem' }}
                     />
                     <Plus size={24} style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                 </div>
@@ -73,9 +73,9 @@ const InteractionChecker = () => {
                             <motion.div 
                                 key={med.id} 
                                 initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-                                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(27, 79, 114, 0.05)', padding: '0.75rem 1.25rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)' }}
+                                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(27, 79, 114, 0.05)', padding: '0.75rem 1.25rem', borderRadius: '0.75rem', border: '1px solid var(--border)' }}
                             >
-                                <span style={{ fontWeight: 500, color: 'var(--text-light)' }}>{med.name}</span>
+                                <span style={{ fontWeight: 500, color: 'var(--text-main)' }}>{med.name}</span>
                                 <button onClick={() => handleRemove(med.id)} style={{ background: 'transparent', border: 'none', color: 'var(--danger)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
                                     <Trash size={20} weight="fill" />
                                 </button>
@@ -88,7 +88,7 @@ const InteractionChecker = () => {
                     <button 
                         onClick={handleCheck}
                         disabled={isChecking || medicines.length < 2}
-                        className="btn-primary" 
+                        className="ui-btn ui-btn-primary" 
                         style={{ marginTop: '1.5rem', opacity: (isChecking || medicines.length < 2) ? 0.6 : 1 }}
                     >
                         {isChecking ? 'চেক করা হচ্ছে...' : 'চেক করুন'}
@@ -112,7 +112,7 @@ const InteractionChecker = () => {
                             {result.message}
                         </p>
                         
-                        <a href="/dashboard/ai-assistant" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(27, 79, 114, 0.1)', color: 'var(--primary-color)', padding: '0.75rem 1.25rem', borderRadius: '2rem', textDecoration: 'none', fontWeight: 600 }}>
+                        <a href="/dashboard/ai-assistant" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(27, 79, 114, 0.1)', color: 'var(--primary)', padding: '0.75rem 1.25rem', borderRadius: '2rem', textDecoration: 'none', fontWeight: 600 }}>
                             <ChatText size={20} weight="fill" /> AI সহায়ককে জিজ্ঞাসা করুন
                         </a>
                     </motion.div>

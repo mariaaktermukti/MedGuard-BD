@@ -138,7 +138,7 @@ const AIAssistant = () => {
                             alignItems: 'flex-start'
                         }}>
                             <div style={{
-                                background: msg.role === 'user' ? 'var(--primary-color)' : 'rgba(56, 189, 248, 0.15)',
+                                background: msg.role === 'user' ? 'var(--primary)' : 'rgba(56, 189, 248, 0.15)',
                                 color: msg.role === 'user' ? '#FFFFFF' : '#38BDF8',
                                 padding: '0.75rem',
                                 borderRadius: '50%',
@@ -154,14 +154,14 @@ const AIAssistant = () => {
                             </div>
                             
                             <div style={{
-                                background: msg.role === 'user' ? 'var(--primary-color)' : 'var(--bg-card)',
+                                background: msg.role === 'user' ? 'var(--primary)' : 'var(--bg-card)',
                                 color: msg.role === 'user' ? '#FFFFFF' : '#FFFFFF',
                                 padding: '1rem 1.25rem',
                                 borderRadius: '1rem',
                                 borderTopRightRadius: msg.role === 'user' ? 0 : '1rem',
                                 borderTopLeftRadius: msg.role === 'user' ? '1rem' : 0,
                                 maxWidth: '75%',
-                                border: msg.role === 'assistant' ? '1px solid var(--border-color)' : 'none',
+                                border: msg.role === 'assistant' ? '1px solid var(--border)' : 'none',
                                 boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
                                 position: 'relative'
                             }}>
@@ -192,7 +192,7 @@ const AIAssistant = () => {
                                     <path d="M12.001 0c6.627 0 11.999 5.372 11.999 11.999 0 6.627-5.372 12-11.999 12-6.626 0-12-5.373-12-12C0 5.372 5.375 0 12.001 0zM7.228 17.51h1.564V6.444H7.228v11.065zm2.747 0h1.564V6.444H9.975v11.065zm2.747 0h1.565V6.444h-1.565v11.065zm2.745 0h1.563V6.444h-1.563v11.065zM6.16 8.362v7.24l-3.327.91v-9.155l3.327 1.005zm14.776-.913v9.157l-3.329-.913V8.451l3.329-1.002z"/>
                                 </svg>
                             </div>
-                            <div style={{ padding: '1rem', background: 'var(--bg-card)', borderRadius: '1rem', borderTopLeftRadius: 0, color: 'var(--text-muted)', border: '1px solid var(--border-color)' }}>
+                            <div style={{ padding: '1rem', background: 'var(--bg-card)', borderRadius: '1rem', borderTopLeftRadius: 0, color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
                                 Assistant is typing...
                             </div>
                         </div>
@@ -200,7 +200,7 @@ const AIAssistant = () => {
                     <div ref={messagesEndRef} />
                 </div>
                 
-                <form onSubmit={handleSend} style={{ padding: '1rem', borderTop: '1px solid var(--border-color)', display: 'flex', gap: '1rem' }}>
+                <form onSubmit={handleSend} style={{ padding: '1rem', borderTop: '1px solid var(--border)', display: 'flex', gap: '1rem' }}>
                     <input
                         type="text"
                         value={input}
@@ -210,7 +210,7 @@ const AIAssistant = () => {
                         style={{ flex: 1 }}
                         disabled={loading}
                     />
-                    <button type="submit" className="btn btn-primary" disabled={!input.trim() || loading} style={{ width: '50px', padding: '0', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                    <button type="submit" className="btn ui-btn ui-btn-primary" disabled={!input.trim() || loading} style={{ width: '50px', padding: '0', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                         <PaperPlaneRight size={18} />
                     </button>
                 </form>

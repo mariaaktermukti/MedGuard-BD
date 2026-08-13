@@ -68,7 +68,7 @@ const DrugPassport = () => {
                 <p style={{ margin: '0 0 1.5rem 0', opacity: 0.8, fontSize: '0.9rem' }}>Align the QR code on the packaging within the frame</p>
                 <button 
                     onClick={handleSimulateScan}
-                    className="btn-primary" 
+                    className="ui-btn ui-btn-primary" 
                     style={{ background: 'var(--success)', color: 'white' }}
                 >
                     <Camera size={20} weight="fill" /> Simulate Scan
@@ -82,12 +82,12 @@ const DrugPassport = () => {
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
             style={{ paddingBottom: '5rem' }}
         >
-            <button onClick={() => setScanned(false)} style={{ background: 'transparent', border: 'none', color: 'var(--trust-blue)', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', cursor: 'pointer', fontWeight: 600 }}>
+            <button onClick={() => setScanned(false)} style={{ background: 'transparent', border: 'none', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', cursor: 'pointer', fontWeight: 600 }}>
                 <ArrowLeft size={20} weight="bold" /> Scan Another
             </button>
 
             {/* Header */}
-            <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '1rem', background: 'var(--trust-blue)', color: 'white' }}>
+            <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '1rem', background: 'var(--primary)', color: 'white' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
                         <h2 style={{ margin: '0 0 0.25rem 0', fontSize: '1.5rem', color: 'white' }}>{batchData?.medicine?.name}</h2>
@@ -95,7 +95,7 @@ const DrugPassport = () => {
                         <p style={{ margin: '0.25rem 0 0 0', fontWeight: 600, fontSize: '0.85rem' }}>Beximco Pharmaceuticals Ltd.</p>
                     </div>
                     <div style={{ background: 'white', padding: '0.5rem', borderRadius: '0.5rem' }}>
-                        <QrCode size={40} color="var(--trust-blue)" />
+                        <QrCode size={40} color="var(--primary)" />
                     </div>
                 </div>
             </div>
@@ -123,7 +123,7 @@ const DrugPassport = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 {/* General Info */}
                 <div className="glass-panel" style={{ padding: '1.25rem' }}>
-                    <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--trust-blue)', fontSize: '1.1rem', margin: '0 0 1rem 0' }}>
+                    <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary)', fontSize: '1.1rem', margin: '0 0 1rem 0' }}>
                         <Pill size={24} weight="duotone" /> General Information
                     </h3>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', fontSize: '0.9rem' }}>
@@ -136,31 +136,31 @@ const DrugPassport = () => {
 
                 {/* Quality */}
                 <div className="glass-panel" style={{ padding: '1.25rem' }}>
-                    <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--trust-blue)', fontSize: '1.1rem', margin: '0 0 1rem 0' }}>
+                    <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary)', fontSize: '1.1rem', margin: '0 0 1rem 0' }}>
                         <Thermometer size={24} weight="duotone" /> Quality & Storage
                     </h3>
                     <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: 'var(--text-muted)' }}>Storage Condition: Keep in a cool, dry place below 30°C.</p>
-                    <a href="#" style={{ color: 'var(--trust-blue)', fontWeight: 600, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <a href="#" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                         <ShieldCheck size={18} /> View QC Certificate
                     </a>
                 </div>
 
                 {/* Verification History */}
                 <div className="glass-panel" style={{ padding: '1.25rem' }}>
-                    <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--trust-blue)', fontSize: '1.1rem', margin: '0 0 1rem 0' }}>
+                    <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary)', fontSize: '1.1rem', margin: '0 0 1rem 0' }}>
                         <MapPinLine size={24} weight="duotone" /> Traceability
                     </h3>
-                    <div style={{ borderLeft: '2px solid var(--border-color)', marginLeft: '0.5rem', paddingLeft: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div style={{ borderLeft: '2px solid var(--border)', marginLeft: '0.5rem', paddingLeft: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                         <div style={{ position: 'relative' }}>
                             <div style={{ position: 'absolute', left: '-1.45rem', top: '0.25rem', width: '12px', height: '12px', borderRadius: '50%', background: 'var(--success)' }} />
                             <strong>Scanned by you</strong><br/><span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Just now • Dhaka</span>
                         </div>
                         <div style={{ position: 'relative' }}>
-                            <div style={{ position: 'absolute', left: '-1.45rem', top: '0.25rem', width: '12px', height: '12px', borderRadius: '50%', background: 'var(--border-color)' }} />
+                            <div style={{ position: 'absolute', left: '-1.45rem', top: '0.25rem', width: '12px', height: '12px', borderRadius: '50%', background: 'var(--border)' }} />
                             <strong>Lazz Pharma</strong><br/><span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>2 days ago • Pharmacy</span>
                         </div>
                         <div style={{ position: 'relative' }}>
-                            <div style={{ position: 'absolute', left: '-1.45rem', top: '0.25rem', width: '12px', height: '12px', borderRadius: '50%', background: 'var(--border-color)' }} />
+                            <div style={{ position: 'absolute', left: '-1.45rem', top: '0.25rem', width: '12px', height: '12px', borderRadius: '50%', background: 'var(--border)' }} />
                             <strong>Beximco Pharma</strong><br/><span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Oct 15, 2023 • Manufacturer</span>
                         </div>
                     </div>
@@ -175,7 +175,7 @@ const DrugPassport = () => {
             </div>
             
             <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'center' }}>
-                <button className="btn-primary" style={{ maxWidth: '400px' }}>
+                <button className="ui-btn ui-btn-primary" style={{ maxWidth: '400px' }}>
                     <Plus size={20} weight="bold" /> Add to My Medicines
                 </button>
             </div>

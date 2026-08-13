@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { LanguageProvider } from './context/LanguageContext';
 import DashboardLayout from './components/DashboardLayout';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -29,18 +30,20 @@ import Analytics from './pages/distributor/Analytics';
 import RouteOptimization from './pages/distributor/RouteOptimization';
 import FleetMonitoring from './pages/distributor/FleetMonitoring';
 import RouteRisk from './pages/distributor/RouteRisk';
+import DGDAPortal from './pages/dgda/DGDAPortal';
 
 function App() {
   return (
     <Router>
       <ThemeProvider>
-        <AuthProvider>
-          <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          
-          <Route path="/dashboard" element={<DashboardLayout />}>
+        <LanguageProvider>
+          <AuthProvider>
+            <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            
+            <Route path="/dashboard" element={<DashboardLayout />}>
             <Route index element={<Dashboard />} />
             {/* Additional protected routes can go here */}
             <Route path="drug-passport" element={<DrugPassport />} />
@@ -58,6 +61,7 @@ function App() {
             <Route path="manufacturer/shipment" element={<ManufacturerPortal />} />
             <Route path="pharmacy" element={<PharmacyDashboard />} />
             <Route path="pharmacy/inventory" element={<Inventory />} />
+            <Route path="dgda/*" element={<DGDAPortal />} />
             <Route path="pharmacy/suppliers" element={<Suppliers />} />
             <Route path="pharmacy/verify" element={<BatchVerify />} />
             <Route path="pharmacy/sales" element={<SaleLogging />} />
@@ -75,6 +79,7 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         </AuthProvider>
+        </LanguageProvider>
       </ThemeProvider>
     </Router>
   );

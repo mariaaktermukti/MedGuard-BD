@@ -6,7 +6,7 @@ import api from '../../services/api';
 
 const MetricCard = ({ icon, label, value }) => (
     <div className="glass-panel" style={{ padding: '1.5rem', minHeight: '132px', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <div style={{ width: '48px', height: '48px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(59, 130, 246, 0.1)', color: 'var(--primary-color)', flex: '0 0 auto' }}>
+        <div style={{ width: '48px', height: '48px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(59, 130, 246, 0.1)', color: 'var(--primary)', flex: '0 0 auto' }}>
             {icon}
         </div>
         <div>
@@ -44,7 +44,7 @@ const PharmacyDashboard = () => {
     return (
         <div style={{ maxWidth: '1120px', margin: '0 auto', display: 'grid', gap: '1.5rem' }}>
             <div>
-                <h1 style={{ fontSize: '1.75rem', margin: 0, color: 'var(--primary-color)' }}>Pharmacy Trust Dashboard</h1>
+                <h1 style={{ fontSize: '1.75rem', margin: 0, color: 'var(--primary)' }}>Pharmacy Trust Dashboard</h1>
                 <p style={{ color: 'var(--text-muted)', margin: '0.35rem 0 0' }}>Operational overview across stock, sales, recalls, and complaints.</p>
             </div>
 
@@ -65,7 +65,7 @@ const PharmacyDashboard = () => {
                     ) : (
                         <div style={{ display: 'grid', gap: '0.6rem' }}>
                             {topSelling.map((row) => (
-                                <div key={row.medicine} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.6rem 0', borderBottom: '1px solid var(--border-color)' }}>
+                                <div key={row.medicine} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.6rem 0', borderBottom: '1px solid var(--border)' }}>
                                     <span>{row.medicine}</span>
                                     <span style={{ fontWeight: 700 }}>{row.units} units</span>
                                 </div>
@@ -76,11 +76,11 @@ const PharmacyDashboard = () => {
 
                 <div className="glass-panel" style={{ padding: '1.5rem', textAlign: 'center' }}>
                     <h2 style={{ margin: '0 0 1rem', fontSize: '1.1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-                        <ShieldCheck size={20} color="var(--primary-color)" /> Trust Score
+                        <ShieldCheck size={20} color="var(--primary)" /> Trust Score
                     </h2>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
-                        <div style={{ width: '160px', height: '160px', borderRadius: '50%', background: `conic-gradient(var(--primary-color) 0% ${summary.trust_score ?? 0}%, rgba(148, 163, 184, 0.16) ${summary.trust_score ?? 0}% 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <div style={{ width: '110px', height: '110px', borderRadius: '50%', background: 'var(--bg-card)', boxShadow: 'inset 0 0 0 1px var(--border-color)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                        <div style={{ width: '160px', height: '160px', borderRadius: '50%', background: `conic-gradient(var(--primary) 0% ${summary.trust_score ?? 0}%, rgba(148, 163, 184, 0.16) ${summary.trust_score ?? 0}% 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <div style={{ width: '110px', height: '110px', borderRadius: '50%', background: 'var(--bg-card)', boxShadow: 'inset 0 0 0 1px var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                                 <div style={{ fontSize: '1.6rem', fontWeight: 800 }}>{summary.trust_score ?? 0}</div>
                                 <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{summary.trust_grade ?? '-'}</div>
                             </div>
@@ -93,9 +93,9 @@ const PharmacyDashboard = () => {
             </div>
 
             <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                <Link to="/dashboard/pharmacy/inventory" className="btn-primary" style={{ width: 'auto', padding: '0.65rem 1.1rem', textDecoration: 'none' }}>Manage Inventory</Link>
-                <Link to="/dashboard/pharmacy/sales" className="btn-primary" style={{ width: 'auto', padding: '0.65rem 1.1rem', textDecoration: 'none' }}>Log a Sale</Link>
-                <Link to="/dashboard/pharmacy/alerts" className="btn-primary" style={{ width: 'auto', padding: '0.65rem 1.1rem', textDecoration: 'none' }}>View Alerts</Link>
+                <Link to="/dashboard/pharmacy/inventory" className="ui-btn ui-btn-primary" style={{ width: 'auto', padding: '0.65rem 1.1rem', textDecoration: 'none' }}>Manage Inventory</Link>
+                <Link to="/dashboard/pharmacy/sales" className="ui-btn ui-btn-primary" style={{ width: 'auto', padding: '0.65rem 1.1rem', textDecoration: 'none' }}>Log a Sale</Link>
+                <Link to="/dashboard/pharmacy/alerts" className="ui-btn ui-btn-primary" style={{ width: 'auto', padding: '0.65rem 1.1rem', textDecoration: 'none' }}>View Alerts</Link>
             </div>
         </div>
     );

@@ -6,9 +6,9 @@ const inputStyle = {
     width: '100%',
     padding: '0.75rem 1rem',
     borderRadius: '0.5rem',
-    border: '1px solid var(--border-color)',
+    border: '1px solid var(--border)',
     background: 'var(--bg-input)',
-    color: 'var(--text-light)',
+    color: 'var(--text-main)',
     fontSize: '1rem',
     boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.05)',
 };
@@ -118,7 +118,7 @@ const SaleLogging = () => {
     return (
         <div style={{ maxWidth: '900px', margin: '0 auto', display: 'grid', gap: '1.5rem' }}>
             <div>
-                <h1 style={{ fontSize: '1.75rem', margin: 0, color: 'var(--primary-color)' }}>QR-based Sale Logging</h1>
+                <h1 style={{ fontSize: '1.75rem', margin: 0, color: 'var(--primary)' }}>QR-based Sale Logging</h1>
                 <p style={{ color: 'var(--text-muted)', margin: '0.35rem 0 0' }}>Verify the batch, find the buyer, then log the sale.</p>
             </div>
 
@@ -126,7 +126,7 @@ const SaleLogging = () => {
                 <h2 style={{ margin: '0 0 1rem', fontSize: '1.1rem' }}>1. Verify Batch</h2>
                 <form onSubmit={handleCheckBatch} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '1rem' }}>
                     <input value={qrCode} onChange={(e) => setQrCode(e.target.value)} placeholder="Scan or paste batch QR code" style={inputStyle} />
-                    <button type="submit" className="btn-primary" disabled={checkingBatch} style={{ width: 'auto', padding: '0.75rem 1.25rem' }}>
+                    <button type="submit" className="ui-btn ui-btn-primary" disabled={checkingBatch} style={{ width: 'auto', padding: '0.75rem 1.25rem' }}>
                         <QrCode size={18} /> Check
                     </button>
                 </form>
@@ -148,7 +148,7 @@ const SaleLogging = () => {
                 <h2 style={{ margin: '0 0 1rem', fontSize: '1.1rem' }}>2. Find Buyer</h2>
                 <form onSubmit={handleLookupCitizen} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '1rem' }}>
                     <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Citizen's registered phone number" style={inputStyle} />
-                    <button type="submit" className="btn-primary" disabled={lookingUp} style={{ width: 'auto', padding: '0.75rem 1.25rem' }}>
+                    <button type="submit" className="ui-btn ui-btn-primary" disabled={lookingUp} style={{ width: 'auto', padding: '0.75rem 1.25rem' }}>
                         <MagnifyingGlass size={18} /> Lookup
                     </button>
                 </form>
@@ -161,7 +161,7 @@ const SaleLogging = () => {
                                 onClick={() => setSelectedCitizen(citizen)}
                                 style={{
                                     padding: '0.75rem 1rem', borderRadius: '0.75rem', cursor: 'pointer',
-                                    border: selectedCitizen?.id === citizen.id ? '1px solid var(--primary-color)' : '1px solid var(--border-color)',
+                                    border: selectedCitizen?.id === citizen.id ? '1px solid var(--primary)' : '1px solid var(--border)',
                                     background: selectedCitizen?.id === citizen.id ? 'rgba(59, 130, 246, 0.08)' : 'transparent',
                                 }}
                             >
@@ -192,7 +192,7 @@ const SaleLogging = () => {
                         </Field>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                        <button type="submit" className="btn-primary" disabled={submitting} style={{ width: 'auto', padding: '0.75rem 1.5rem' }}>
+                        <button type="submit" className="ui-btn ui-btn-primary" disabled={submitting} style={{ width: 'auto', padding: '0.75rem 1.5rem' }}>
                             <Receipt size={18} /> Log Sale
                         </button>
                     </div>

@@ -45,13 +45,13 @@ const PharmacyFinder = () => {
                         <MagnifyingGlass size={20} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                         <input type="text" placeholder="Search specific medicine..." style={{ width: '100%', padding: '0.875rem 1rem 0.875rem 2.5rem', borderRadius: '2rem', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', background: 'var(--bg-card)', fontSize: '0.9rem' }} />
                     </div>
-                    <button style={{ background: 'var(--bg-card)', border: 'none', padding: '0.875rem', borderRadius: '50%', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', color: 'var(--trust-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <button style={{ background: 'var(--bg-card)', border: 'none', padding: '0.875rem', borderRadius: '50%', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Funnel size={20} weight="fill" />
                     </button>
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
-                    <span style={{ background: 'var(--trust-blue)', color: 'white', padding: '0.5rem 1rem', borderRadius: '2rem', fontSize: '0.85rem', fontWeight: 600, whiteSpace: 'nowrap' }}>Trust Score ৪+</span>
-                    <span style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', color: 'var(--text-light)', padding: '0.5rem 1rem', borderRadius: '2rem', fontSize: '0.85rem', fontWeight: 600, whiteSpace: 'nowrap' }}>Open Now</span>
+                    <span style={{ background: 'var(--primary)', color: 'white', padding: '0.5rem 1rem', borderRadius: '2rem', fontSize: '0.85rem', fontWeight: 600, whiteSpace: 'nowrap' }}>Trust Score ৪+</span>
+                    <span style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-main)', padding: '0.5rem 1rem', borderRadius: '2rem', fontSize: '0.85rem', fontWeight: 600, whiteSpace: 'nowrap' }}>Open Now</span>
                 </div>
             </div>
 
@@ -72,7 +72,7 @@ const PharmacyFinder = () => {
 
             {/* Bottom Sheet List */}
             <div style={{ background: 'var(--bg-card)', borderTopLeftRadius: '1.5rem', borderTopRightRadius: '1.5rem', padding: '1.5rem', boxShadow: '0 -4px 20px rgba(0,0,0,0.1)', zIndex: 20, maxHeight: '50%', overflowY: 'auto' }}>
-                <div style={{ width: '40px', height: '4px', background: 'var(--border-color)', borderRadius: '2px', margin: '0 auto 1.5rem auto' }} />
+                <div style={{ width: '40px', height: '4px', background: 'var(--border)', borderRadius: '2px', margin: '0 auto 1.5rem auto' }} />
                 
                 <h3 style={{ margin: '0 0 1rem 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     Nearby Pharmacies
@@ -81,7 +81,7 @@ const PharmacyFinder = () => {
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     {pharmacies.map(pharm => (
-                        <div key={pharm.id} onClick={() => setSelectedPharmacy(pharm)} style={{ display: 'flex', gap: '1rem', padding: '1rem', borderRadius: '1rem', border: '1px solid var(--border-color)', cursor: 'pointer' }}>
+                        <div key={pharm.id} onClick={() => setSelectedPharmacy(pharm)} style={{ display: 'flex', gap: '1rem', padding: '1rem', borderRadius: '1rem', border: '1px solid var(--border)', cursor: 'pointer' }}>
                             <div style={{ background: 'rgba(27, 79, 114, 0.05)', padding: '0.75rem', borderRadius: '0.75rem', color: getTrustColor(pharm.trustScore), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                 <MapPin size={28} weight="fill" />
                             </div>
@@ -112,9 +112,9 @@ const PharmacyFinder = () => {
                 {selectedPharmacy && (
                     <motion.div 
                         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'var(--bg-dark)', zIndex: 30, display: 'flex', flexDirection: 'column' }}
+                        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'var(--bg-page)', zIndex: 30, display: 'flex', flexDirection: 'column' }}
                     >
-                        <div style={{ position: 'relative', height: '200px', background: 'var(--trust-blue)' }}>
+                        <div style={{ position: 'relative', height: '200px', background: 'var(--primary)' }}>
                             <button onClick={() => setSelectedPharmacy(null)} style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', background: 'rgba(255,255,255,0.2)', border: 'none', color: 'white', padding: '0.5rem', borderRadius: '50%', cursor: 'pointer' }}>
                                 <X size={24} weight="bold" />
                             </button>
@@ -136,17 +136,17 @@ const PharmacyFinder = () => {
 
                             {/* Trust Score Breakdown */}
                             <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
-                                <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', color: 'var(--trust-blue)' }}>Trust Score Breakdown</h3>
+                                <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', color: 'var(--primary)' }}>Trust Score Breakdown</h3>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginBottom: '1rem' }}>
                                     <div style={{ fontSize: '3rem', fontWeight: 800, color: getTrustColor(selectedPharmacy.trustScore), lineHeight: 1 }}>
                                         {selectedPharmacy.trustScore}
                                     </div>
                                     <div style={{ flex: 1 }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem' }}><span>Authentic Medicines</span><span>98%</span></div>
-                                        <div style={{ width: '100%', height: '6px', background: 'var(--border-color)', borderRadius: '3px' }}><div style={{ width: '98%', height: '100%', background: 'var(--success)', borderRadius: '3px' }} /></div>
+                                        <div style={{ width: '100%', height: '6px', background: 'var(--border)', borderRadius: '3px' }}><div style={{ width: '98%', height: '100%', background: 'var(--success)', borderRadius: '3px' }} /></div>
                                         
                                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem', marginTop: '0.75rem' }}><span>Fair Pricing</span><span>95%</span></div>
-                                        <div style={{ width: '100%', height: '6px', background: 'var(--border-color)', borderRadius: '3px' }}><div style={{ width: '95%', height: '100%', background: 'var(--success)', borderRadius: '3px' }} /></div>
+                                        <div style={{ width: '100%', height: '6px', background: 'var(--border)', borderRadius: '3px' }}><div style={{ width: '95%', height: '100%', background: 'var(--success)', borderRadius: '3px' }} /></div>
                                     </div>
                                 </div>
                                 {!selectedPharmacy.verified && (
@@ -157,10 +157,10 @@ const PharmacyFinder = () => {
                             </div>
 
                             <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
-                                <button className="btn-primary" style={{ flex: 1, background: 'var(--bg-card)', color: 'var(--trust-blue)', border: '1px solid var(--border-color)' }}>
+                                <button className="ui-btn ui-btn-primary" style={{ flex: 1, background: 'var(--bg-card)', color: 'var(--primary)', border: '1px solid var(--border)' }}>
                                     <Phone size={20} weight="fill" /> Call
                                 </button>
-                                <button className="btn-primary" style={{ flex: 1 }}>
+                                <button className="ui-btn ui-btn-primary" style={{ flex: 1 }}>
                                     <NavigationArrow size={20} weight="fill" /> Directions
                                 </button>
                             </div>

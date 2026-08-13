@@ -41,7 +41,7 @@ const Alerts = () => {
     return (
         <div style={{ maxWidth: '1000px', margin: '0 auto', display: 'grid', gap: '1.5rem' }}>
             <div>
-                <h1 style={{ fontSize: '1.75rem', margin: 0, color: 'var(--primary-color)' }}>Recall, Expiry & Risk Alerts</h1>
+                <h1 style={{ fontSize: '1.75rem', margin: 0, color: 'var(--primary)' }}>Recall, Expiry & Risk Alerts</h1>
                 <p style={{ color: 'var(--text-muted)', margin: '0.35rem 0 0' }}>Active recalls, near-expiry stock, and suspicious activity heuristics for your inventory.</p>
             </div>
 
@@ -79,7 +79,7 @@ const Alerts = () => {
                 ) : (
                     <div style={{ display: 'grid', gap: '0.75rem' }}>
                         {expiring.map((item) => (
-                            <div key={item.inventory_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.25rem', borderRadius: '0.85rem', border: '1px solid var(--border-color)', flexWrap: 'wrap', gap: '0.75rem' }}>
+                            <div key={item.inventory_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.25rem', borderRadius: '0.85rem', border: '1px solid var(--border)', flexWrap: 'wrap', gap: '0.75rem' }}>
                                 <div>
                                     <div style={{ fontWeight: 700 }}>{item.medicine} &bull; Batch {item.batch_number}</div>
                                     <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>{item.quantity} units &bull; Expiry {item.expiry_date}</div>
@@ -104,7 +104,7 @@ const Alerts = () => {
                 ) : (
                     <div style={{ display: 'grid', gap: '0.75rem' }}>
                         {riskAlerts.map((alert, index) => (
-                            <div key={index} style={{ padding: '1rem 1.25rem', borderRadius: '0.85rem', border: '1px solid var(--border-color)' }}>
+                            <div key={index} style={{ padding: '1rem 1.25rem', borderRadius: '0.85rem', border: '1px solid var(--border)' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.35rem' }}>
                                     <StatusPill tone={alert.type === 'danger' ? 'red' : 'amber'}><Warning size={14} />{alert.type}</StatusPill>
                                     <div style={{ fontWeight: 700 }}>{alert.title}</div>

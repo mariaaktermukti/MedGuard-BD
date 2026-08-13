@@ -6,9 +6,9 @@ const inputStyle = {
     width: '100%',
     padding: '0.75rem 1rem',
     borderRadius: '0.5rem',
-    border: '1px solid var(--border-color)',
+    border: '1px solid var(--border)',
     background: 'var(--bg-input)',
-    color: 'var(--text-light)',
+    color: 'var(--text-main)',
     fontSize: '1rem',
     boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.05)',
 };
@@ -125,7 +125,7 @@ const Warehouses = () => {
     return (
         <div style={{ maxWidth: '900px', margin: '0 auto', display: 'grid', gap: '1.5rem' }}>
             <div>
-                <h1 style={{ fontSize: '1.75rem', margin: 0, color: 'var(--primary-color)' }}>Warehouse Management</h1>
+                <h1 style={{ fontSize: '1.75rem', margin: 0, color: 'var(--primary)' }}>Warehouse Management</h1>
                 <p style={{ color: 'var(--text-muted)', margin: '0.35rem 0 0' }}>Create and manage your warehouse locations.</p>
             </div>
 
@@ -144,7 +144,7 @@ const Warehouses = () => {
                         </Field>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                        <button type="submit" className="btn-primary" disabled={submitting} style={{ width: 'auto', padding: '0.75rem 1.5rem' }}>
+                        <button type="submit" className="ui-btn ui-btn-primary" disabled={submitting} style={{ width: 'auto', padding: '0.75rem 1.5rem' }}>
                             <Plus size={18} weight="bold" /> Add Warehouse
                         </button>
                     </div>
@@ -164,7 +164,7 @@ const Warehouses = () => {
                 ) : (
                     <div style={{ display: 'grid', gap: '0.75rem' }}>
                         {warehouses.map((warehouse) => (
-                            <div key={warehouse.id} style={{ padding: '1rem 1.25rem', borderRadius: '0.85rem', border: '1px solid var(--border-color)' }}>
+                            <div key={warehouse.id} style={{ padding: '1rem 1.25rem', borderRadius: '0.85rem', border: '1px solid var(--border)' }}>
                                 {editingId === warehouse.id ? (
                                     <div style={{ display: 'grid', gap: '0.75rem' }}>
                                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '0.75rem' }}>
@@ -176,7 +176,7 @@ const Warehouses = () => {
                                             <button type="button" onClick={cancelEdit} style={{ ...inputStyle, width: 'auto', padding: '0.5rem 1rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
                                                 <X size={16} /> Cancel
                                             </button>
-                                            <button type="button" className="btn-primary" disabled={savingEdit} onClick={() => saveEdit(warehouse.id)} style={{ width: 'auto', padding: '0.5rem 1rem' }}>
+                                            <button type="button" className="ui-btn ui-btn-primary" disabled={savingEdit} onClick={() => saveEdit(warehouse.id)} style={{ width: 'auto', padding: '0.5rem 1rem' }}>
                                                 <Check size={16} /> Save
                                             </button>
                                         </div>

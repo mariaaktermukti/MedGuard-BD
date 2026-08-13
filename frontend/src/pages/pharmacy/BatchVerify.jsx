@@ -6,9 +6,9 @@ const inputStyle = {
     width: '100%',
     padding: '0.75rem 1rem',
     borderRadius: '0.5rem',
-    border: '1px solid var(--border-color)',
+    border: '1px solid var(--border)',
     background: 'var(--bg-input)',
-    color: 'var(--text-light)',
+    color: 'var(--text-main)',
     fontSize: '1rem',
     boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.05)',
 };
@@ -54,14 +54,14 @@ const BatchVerify = () => {
     return (
         <div style={{ maxWidth: '760px', margin: '0 auto', display: 'grid', gap: '1.5rem' }}>
             <div>
-                <h1 style={{ fontSize: '1.75rem', margin: 0, color: 'var(--primary-color)' }}>Batch Verification</h1>
+                <h1 style={{ fontSize: '1.75rem', margin: 0, color: 'var(--primary)' }}>Batch Verification</h1>
                 <p style={{ color: 'var(--text-muted)', margin: '0.35rem 0 0' }}>Scan or enter a batch QR code to confirm authenticity before selling.</p>
             </div>
 
             <div className="glass-panel" style={{ padding: '2rem' }}>
                 <form onSubmit={handleVerify} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '1rem' }}>
                     <input value={qrCode} onChange={(e) => setQrCode(e.target.value)} placeholder="Scan or paste batch QR code" style={inputStyle} />
-                    <button type="submit" className="btn-primary" disabled={loading} style={{ width: 'auto', padding: '0.75rem 1.5rem' }}>
+                    <button type="submit" className="ui-btn ui-btn-primary" disabled={loading} style={{ width: 'auto', padding: '0.75rem 1.5rem' }}>
                         <QrCode size={18} /> Verify
                     </button>
                 </form>

@@ -1,5 +1,5 @@
 import React, { useContext, useState, useEffect } from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
@@ -20,8 +20,8 @@ const DashboardLayout = () => {
 
     if (loading) {
         return (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--bg-dark)' }}>
-                <div style={{ color: 'var(--primary-color)', fontSize: '1.25rem', fontWeight: 600 }}>Loading MedGuard...</div>
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--bg-page)' }}>
+                <div style={{ color: 'var(--primary)', fontSize: '1.25rem', fontWeight: 600 }}>Loading MedGuard...</div>
             </div>
         );
     }
@@ -30,23 +30,26 @@ const DashboardLayout = () => {
         return <Navigate to="/login" replace />;
     }
 
-    const sidebarWidth = isMobile ? '0px' : isTablet ? '72px' : '256px';
+    // Always show sidebar on desktop/tablet to maintain consistency across all portals
+    const showSidebar = !isMobile;
+    const sidebarWidth = showSidebar ? (isTablet ? '80px' : '256px') : '0px';
 
     return (
-        <div style={{ minHeight: '100vh', background: 'var(--bg-dark)', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ minHeight: '100vh', background: 'var(--bg-page)', display: 'flex', flexDirection: 'column' }}>
             <Navbar isMobile={isMobile} />
             <div style={{ display: 'flex', flex: 1, marginTop: '72px' }}>
-                {!isMobile && (
+                {showSidebar && (
                     <div style={{ 
                         width: sidebarWidth, 
                         position: 'fixed', 
                         top: '72px', 
                         bottom: 0, 
                         left: 0, 
-                        background: 'var(--primary-color)',
                         zIndex: 40,
                         transition: 'width 0.3s ease',
-                        overflowY: 'auto'
+                        overflowY: 'auto',
+                        background: 'var(--bg-card)',
+                        boxShadow: 'var(--shadow-sm)'
                     }}>
                         <Sidebar isTablet={isTablet} />
                     </div>
@@ -54,11 +57,14 @@ const DashboardLayout = () => {
                 <div style={{ 
                     flex: 1, 
                     marginLeft: sidebarWidth, 
-                    padding: isMobile ? '16px' : '32px',
                     transition: 'margin-left 0.3s ease',
-                    minHeight: 'calc(100vh - 72px)'
+                    minHeight: 'calc(100vh - 72px)',
+                    display: 'flex',
+                    flexDirection: 'column'
                 }}>
-                    <Outlet />
+                    <main className="page-wrapper">
+                        <Outlet />
+                    </main>
                 </div>
             </div>
         </div>

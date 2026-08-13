@@ -63,7 +63,7 @@ const Notifications = () => {
     return (
         <div style={{ maxWidth: '600px', margin: '0 auto', height: '100%', display: 'flex', flexDirection: 'column' }}>
             <div style={{ marginBottom: '2rem' }}>
-                <h1 style={{ fontSize: '1.75rem', margin: '0 0 1.5rem 0', color: 'var(--primary-color)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <h1 style={{ fontSize: '1.75rem', margin: '0 0 1.5rem 0', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <Bell size={32} weight="duotone" /> Notifications
                 </h1>
                 
@@ -71,7 +71,7 @@ const Notifications = () => {
                 <div style={{ display: 'flex', background: 'rgba(27, 79, 114, 0.1)', padding: '0.25rem', borderRadius: '1rem' }}>
                     <button 
                         onClick={() => setActiveTab('all')}
-                        style={{ flex: 1, padding: '0.75rem', border: 'none', background: activeTab === 'all' ? 'var(--bg-card)' : 'transparent', borderRadius: '0.75rem', fontWeight: 600, color: activeTab === 'all' ? 'var(--primary-color)' : 'var(--text-muted)', boxShadow: activeTab === 'all' ? '0 2px 8px rgba(0,0,0,0.05)' : 'none', cursor: 'pointer', transition: 'all 0.2s ease' }}
+                        style={{ flex: 1, padding: '0.75rem', border: 'none', background: activeTab === 'all' ? 'var(--bg-card)' : 'transparent', borderRadius: '0.75rem', fontWeight: 600, color: activeTab === 'all' ? 'var(--primary)' : 'var(--text-muted)', boxShadow: activeTab === 'all' ? '0 2px 8px rgba(0,0,0,0.05)' : 'none', cursor: 'pointer', transition: 'all 0.2s ease' }}
                     >
                         সব (All)
                     </button>
@@ -119,7 +119,7 @@ const Notifications = () => {
                                         </div>
                                         <div style={{ flex: 1 }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.25rem' }}>
-                                                <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-light)' }}>{notif.title}</h3>
+                                                <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-main)' }}>{notif.title}</h3>
                                                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{notif.date}</span>
                                             </div>
                                             <p style={{ margin: '0 0 0.5rem 0', color: 'var(--text-muted)', fontSize: '0.95rem', lineHeight: 1.4 }}>{notif.message}</p>

@@ -4,7 +4,7 @@ import api from '../../services/api';
 
 const MetricCard = ({ icon, label, value }) => (
     <div className="glass-panel" style={{ padding: '1.5rem', minHeight: '110px', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <div style={{ width: '44px', height: '44px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(59, 130, 246, 0.1)', color: 'var(--primary-color)', flex: '0 0 auto' }}>
+        <div style={{ width: '44px', height: '44px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(59, 130, 246, 0.1)', color: 'var(--primary)', flex: '0 0 auto' }}>
             {icon}
         </div>
         <div>
@@ -43,7 +43,7 @@ const Analytics = () => {
     return (
         <div style={{ maxWidth: '1000px', margin: '0 auto', display: 'grid', gap: '1.5rem' }}>
             <div>
-                <h1 style={{ fontSize: '1.75rem', margin: 0, color: 'var(--primary-color)' }}>Distribution Analytics</h1>
+                <h1 style={{ fontSize: '1.75rem', margin: 0, color: 'var(--primary)' }}>Distribution Analytics</h1>
                 <p style={{ color: 'var(--text-muted)', margin: '0.35rem 0 0' }}>Delivery performance for shipments you've sent to pharmacies.</p>
             </div>
 
@@ -63,7 +63,7 @@ const Analytics = () => {
                 ) : (
                     <div style={{ display: 'grid', gap: '0.6rem' }}>
                         {monthlyVolume.map((row) => (
-                            <div key={row.month} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.6rem 0', borderBottom: '1px solid var(--border-color)' }}>
+                            <div key={row.month} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.6rem 0', borderBottom: '1px solid var(--border)' }}>
                                 <span>{row.month}</span>
                                 <span style={{ fontWeight: 700 }}>{row.units} units</span>
                             </div>
@@ -79,7 +79,7 @@ const Analytics = () => {
                 ) : (
                     <div style={{ display: 'grid', gap: '0.6rem' }}>
                         {topDestinations.map((row) => (
-                            <div key={row.pharmacy} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.6rem 0', borderBottom: '1px solid var(--border-color)' }}>
+                            <div key={row.pharmacy} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.6rem 0', borderBottom: '1px solid var(--border)' }}>
                                 <span>{row.pharmacy}</span>
                                 <span style={{ fontWeight: 700 }}>{row.units} units</span>
                             </div>

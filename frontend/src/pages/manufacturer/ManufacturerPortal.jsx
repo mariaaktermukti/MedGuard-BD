@@ -63,7 +63,7 @@ const viewMeta = {
 
 const panelStyle = {
     background: 'var(--bg-card)',
-    border: '1px solid var(--border-color)',
+    border: '1px solid var(--border)',
     borderRadius: '1rem',
     boxShadow: '0 4px 20px rgba(0, 0, 0, 0.04)',
 };
@@ -84,9 +84,9 @@ const inputStyle = {
     width: '100%',
     padding: '0.75rem 1rem',
     borderRadius: '0.5rem',
-    border: '1px solid var(--border-color)',
+    border: '1px solid var(--border)',
     background: 'var(--bg-input)',
-    color: 'var(--text-light)',
+    color: 'var(--text-main)',
     fontSize: '1rem',
     boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.05)',
 };
@@ -100,7 +100,7 @@ const SectionTitle = ({ title, subtitle }) => (
 
 const PageHeader = ({ icon, title, subtitle }) => (
     <div className="manufacturer-page-header" style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', marginBottom: '2rem' }}>
-        <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: 'rgba(59, 130, 246, 0.1)', color: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto' }}>
+        <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: 'rgba(59, 130, 246, 0.1)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto' }}>
             {icon}
         </div>
         <div>
@@ -118,7 +118,7 @@ const Field = ({ label, children }) => (
 );
 
 const StatusPill = ({ children, tone = 'blue' }) => {
-    const color = tone === 'green' ? '#10b981' : tone === 'red' ? '#ef4444' : tone === 'amber' ? '#f59e0b' : 'var(--primary-color)';
+    const color = tone === 'green' ? '#10b981' : tone === 'red' ? '#ef4444' : tone === 'amber' ? '#f59e0b' : 'var(--primary)';
     return (
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.35rem 0.75rem', borderRadius: '999px', background: `${tone === 'blue' ? 'rgba(59, 130, 246, 0.1)' : tone === 'green' ? 'rgba(16, 185, 129, 0.1)' : tone === 'amber' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(239, 68, 68, 0.1)'}`, color, fontSize: '0.8rem', fontWeight: 700 }}>
             {children}
@@ -127,12 +127,12 @@ const StatusPill = ({ children, tone = 'blue' }) => {
 };
 
 const DashboardChart = () => (
-    <div style={{ padding: '1rem', borderRadius: '1rem', border: '1px dashed var(--border-color)', background: 'rgba(59, 130, 246, 0.04)' }}>
+    <div style={{ padding: '1rem', borderRadius: '1rem', border: '1px dashed var(--border)', background: 'rgba(59, 130, 246, 0.04)' }}>
         <div style={{ height: '160px', borderRadius: '0.95rem', background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.14), rgba(16, 185, 129, 0.12))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', textAlign: 'center', padding: '1rem' }}>
             Production vs Sales chart placeholder
         </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.85rem' }}>
-            <button type="button" style={{ ...buttonBase, width: 'auto', padding: '0.7rem 1rem', background: 'rgba(59, 130, 246, 0.1)', color: 'var(--primary-color)' }}>
+            <button type="button" style={{ ...buttonBase, width: 'auto', padding: '0.7rem 1rem', background: 'rgba(59, 130, 246, 0.1)', color: 'var(--primary)' }}>
                 Open
             </button>
         </div>
@@ -145,7 +145,7 @@ const MiniBars = () => {
         <div style={{ display: 'flex', alignItems: 'end', gap: '0.55rem', height: '100px', marginTop: '1rem' }}>
             {bars.map((value, index) => (
                 <div key={index} style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
-                    <div style={{ width: '100%', maxWidth: '34px', height: `${value}%`, minHeight: '26px', borderRadius: '0.7rem 0.7rem 0.35rem 0.35rem', background: index % 2 === 0 ? 'var(--primary-color)' : '#10b981' }} />
+                    <div style={{ width: '100%', maxWidth: '34px', height: `${value}%`, minHeight: '26px', borderRadius: '0.7rem 0.7rem 0.35rem 0.35rem', background: index % 2 === 0 ? 'var(--primary)' : '#10b981' }} />
                 </div>
             ))}
         </div>
@@ -154,7 +154,7 @@ const MiniBars = () => {
 
 const MetricCard = ({ icon, label, value }) => (
     <div className="glass-panel" style={{ padding: '1.5rem', minHeight: '132px', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <div style={{ width: '48px', height: '48px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(59, 130, 246, 0.1)', color: 'var(--primary-color)', flex: '0 0 auto' }}>
+        <div style={{ width: '48px', height: '48px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(59, 130, 246, 0.1)', color: 'var(--primary)', flex: '0 0 auto' }}>
             {icon}
         </div>
         <div>
@@ -270,8 +270,8 @@ const ManufacturerPortal = () => {
                 <div className="glass-panel" style={{ padding: '1.5rem' }}>
                     <SectionTitle title="AI Demand Prediction" subtitle="Next-month confidence: 78%" />
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
-                        <div style={{ width: '180px', height: '180px', borderRadius: '50%', background: 'conic-gradient(var(--primary-color) 0% 78%, rgba(148, 163, 184, 0.16) 78% 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <div style={{ width: '120px', height: '120px', borderRadius: '50%', background: 'var(--bg-card)', boxShadow: 'inset 0 0 0 1px var(--border-color)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                        <div style={{ width: '180px', height: '180px', borderRadius: '50%', background: 'conic-gradient(var(--primary) 0% 78%, rgba(148, 163, 184, 0.16) 78% 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <div style={{ width: '120px', height: '120px', borderRadius: '50%', background: 'var(--bg-card)', boxShadow: 'inset 0 0 0 1px var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                                 <div style={{ fontSize: '1.7rem', fontWeight: 800 }}>78%</div>
                                 <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Confidence</div>
                             </div>
@@ -310,8 +310,8 @@ const ManufacturerPortal = () => {
                         <input type="date" value={registerForm.expiryDate} onChange={(e) => setRegisterForm((current) => ({ ...current, expiryDate: e.target.value }))} style={inputStyle} />
                     </Field>
                 </div>
-                <div className="manufacturer-action-row" style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
-                    <button type="submit" style={{ ...buttonBase, width: 'auto', padding: '0.75rem 1.5rem', background: 'var(--primary-color)', color: '#fff' }}><PaperPlaneRight size={18} />Register Medicine</button>
+                <div className="manufacturer-action-row" style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--border)', paddingTop: '1.5rem' }}>
+                    <button type="submit" style={{ ...buttonBase, width: 'auto', padding: '0.75rem 1.5rem', background: 'var(--primary)', color: '#fff' }}><PaperPlaneRight size={18} />Register Medicine</button>
                 </div>
             </form>
         </div>
@@ -350,8 +350,8 @@ const ManufacturerPortal = () => {
                         </select>
                     </Field>
                 </div>
-                <div className="manufacturer-action-row" style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
-                    <button type="submit" style={{ ...buttonBase, width: 'auto', padding: '0.75rem 1.5rem', background: 'var(--primary-color)', color: '#fff' }}><PaperPlaneRight size={18} />Create Batch</button>
+                <div className="manufacturer-action-row" style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--border)', paddingTop: '1.5rem' }}>
+                    <button type="submit" style={{ ...buttonBase, width: 'auto', padding: '0.75rem 1.5rem', background: 'var(--primary)', color: '#fff' }}><PaperPlaneRight size={18} />Create Batch</button>
                 </div>
             </form>
         </div>
@@ -361,15 +361,15 @@ const ManufacturerPortal = () => {
         <div style={{ display: 'grid', gap: '1rem' }}>
             <div className="glass-panel" style={{ padding: '2rem' }}>
                 <SectionTitle title="QR Verification" subtitle="Upload a QR image to simulate a batch verification request." />
-                <div style={{ minHeight: '220px', borderRadius: '1rem', border: '1px dashed var(--border-color)', background: 'rgba(59, 130, 246, 0.04)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem', textAlign: 'center', padding: '1.5rem' }}>
-                    <QrCode size={46} color="var(--primary-color)" />
+                <div style={{ minHeight: '220px', borderRadius: '1rem', border: '1px dashed var(--border)', background: 'rgba(59, 130, 246, 0.04)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem', textAlign: 'center', padding: '1.5rem' }}>
+                    <QrCode size={46} color="var(--primary)" />
                     <div>
                         <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>Batch QR scanner</div>
                         <div style={{ color: 'var(--text-muted)', fontSize: '0.95rem', marginTop: '0.25rem' }}>
                             {scannerUploaded ? 'QR image uploaded. Review the verified batch details below.' : 'Upload a QR image to simulate batch verification.'}
                         </div>
                     </div>
-                    <button type="button" onClick={() => { setScannerUploaded(true); setMessage('QR image uploaded successfully.'); }} style={{ ...buttonBase, width: 'auto', padding: '0.75rem 1.5rem', background: 'var(--primary-color)', color: '#fff' }}>
+                    <button type="button" onClick={() => { setScannerUploaded(true); setMessage('QR image uploaded successfully.'); }} style={{ ...buttonBase, width: 'auto', padding: '0.75rem 1.5rem', background: 'var(--primary)', color: '#fff' }}>
                         <Upload size={18} />Upload QR image
                     </button>
                 </div>
@@ -398,7 +398,7 @@ const ManufacturerPortal = () => {
                         style={{
                             padding: '1rem 1.25rem',
                             borderRadius: '1rem',
-                            border: selectedRecallBatch === batch.id ? '1px solid rgba(239, 68, 68, 0.55)' : '1px solid var(--border-color)',
+                            border: selectedRecallBatch === batch.id ? '1px solid rgba(239, 68, 68, 0.55)' : '1px solid var(--border)',
                             background: selectedRecallBatch === batch.id ? 'rgba(239, 68, 68, 0.06)' : 'transparent',
                             display: 'flex',
                             justifyContent: 'space-between',
@@ -470,8 +470,8 @@ const ManufacturerPortal = () => {
                         </select>
                     </Field>
                 </div>
-                <div className="manufacturer-action-row" style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
-                    <button type="submit" style={{ ...buttonBase, width: 'auto', padding: '0.75rem 1.5rem', background: 'var(--primary-color)', color: '#fff' }}><PaperPlaneRight size={18} />Create Shipment</button>
+                <div className="manufacturer-action-row" style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--border)', paddingTop: '1.5rem' }}>
+                    <button type="submit" style={{ ...buttonBase, width: 'auto', padding: '0.75rem 1.5rem', background: 'var(--primary)', color: '#fff' }}><PaperPlaneRight size={18} />Create Shipment</button>
                 </div>
             </form>
         </div>
@@ -498,7 +498,7 @@ const ManufacturerPortal = () => {
         <div className="manufacturer-page" style={{ maxWidth: '1120px', margin: '0 auto', display: 'grid', gap: '1rem' }}>
             <PageHeader {...viewMeta[activeView]} />
 
-            {message && <div className="glass-panel" style={{ padding: '1rem 1.25rem', borderLeft: '4px solid var(--primary-color)', color: 'var(--text-light)' }}>{message}</div>}
+            {message && <div className="glass-panel" style={{ padding: '1rem 1.25rem', borderLeft: '4px solid var(--primary)', color: 'var(--text-main)' }}>{message}</div>}
 
             {renderView()}
 
@@ -550,7 +550,7 @@ const ManufacturerPortal = () => {
                         <p style={{ margin: '0.55rem 0 0', color: 'var(--text-muted)' }}>
                             Batch {recallConfirmation.batchId} has been marked for recall.
                         </p>
-                        <div style={{ marginTop: '1rem', padding: '0.85rem', borderRadius: '0.85rem', background: 'rgba(239, 68, 68, 0.08)', color: 'var(--text-light)', textAlign: 'left' }}>
+                        <div style={{ marginTop: '1rem', padding: '0.85rem', borderRadius: '0.85rem', background: 'rgba(239, 68, 68, 0.08)', color: 'var(--text-main)', textAlign: 'left' }}>
                             <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Reason</div>
                             <div style={{ fontWeight: 700, wordBreak: 'break-word' }}>{recallConfirmation.reason}</div>
                         </div>
@@ -558,7 +558,7 @@ const ManufacturerPortal = () => {
                             type="button"
                             className="medguard-confirmation-ok"
                             onClick={closeRecallConfirmation}
-                            style={{ ...buttonBase, width: '100%', marginTop: '1.1rem', padding: '0.95rem 1rem', background: 'var(--primary-color)', color: '#fff' }}
+                            style={{ ...buttonBase, width: '100%', marginTop: '1.1rem', padding: '0.95rem 1rem', background: 'var(--primary)', color: '#fff' }}
                         >
                             OK
                         </button>

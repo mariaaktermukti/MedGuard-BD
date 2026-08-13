@@ -6,9 +6,9 @@ const inputStyle = {
     width: '100%',
     padding: '0.6rem 0.9rem',
     borderRadius: '0.5rem',
-    border: '1px solid var(--border-color)',
+    border: '1px solid var(--border)',
     background: 'var(--bg-input)',
-    color: 'var(--text-light)',
+    color: 'var(--text-main)',
     fontSize: '0.95rem',
     boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.05)',
 };
@@ -66,7 +66,7 @@ const FleetMonitoring = () => {
     return (
         <div style={{ maxWidth: '900px', margin: '0 auto', display: 'grid', gap: '1.5rem' }}>
             <div>
-                <h1 style={{ fontSize: '1.75rem', margin: 0, color: 'var(--primary-color)' }}>Fleet Monitoring</h1>
+                <h1 style={{ fontSize: '1.75rem', margin: 0, color: 'var(--primary)' }}>Fleet Monitoring</h1>
                 <p style={{ color: 'var(--text-muted)', margin: '0.35rem 0 0' }}>Last known location for shipments currently in transit.</p>
             </div>
 
@@ -77,7 +77,7 @@ const FleetMonitoring = () => {
                 </p>
             </div>
 
-            {message && <div className="glass-panel" style={{ padding: '1rem 1.25rem', borderLeft: '4px solid var(--primary-color)' }}>{message}</div>}
+            {message && <div className="glass-panel" style={{ padding: '1rem 1.25rem', borderLeft: '4px solid var(--primary)' }}>{message}</div>}
 
             <div className="glass-panel" style={{ padding: '1.5rem' }}>
                 {loading ? (
@@ -90,13 +90,13 @@ const FleetMonitoring = () => {
                 ) : (
                     <div style={{ display: 'grid', gap: '1rem' }}>
                         {shipments.map((shipment) => (
-                            <div key={shipment.id} style={{ padding: '1.25rem', borderRadius: '0.85rem', border: '1px solid var(--border-color)' }}>
+                            <div key={shipment.id} style={{ padding: '1.25rem', borderRadius: '0.85rem', border: '1px solid var(--border)' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem' }}>
                                     <div>
                                         <div style={{ fontWeight: 700 }}>{shipment.batch_details.medicine} &bull; Batch {shipment.batch_details.batch_number}</div>
                                         <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>To {shipment.to_details.username}</div>
                                     </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--primary-color)', fontWeight: 600, fontSize: '0.9rem' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--primary)', fontWeight: 600, fontSize: '0.9rem' }}>
                                         <MapPin size={16} /> {shipment.geo_location || 'No location reported yet'}
                                         <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>&bull; {timeAgo(shipment.geo_timestamp)}</span>
                                     </div>
@@ -110,7 +110,7 @@ const FleetMonitoring = () => {
                                     />
                                     <button
                                         type="button"
-                                        className="btn-primary"
+                                        className="ui-btn ui-btn-primary"
                                         style={{ width: 'auto', padding: '0.6rem 1.1rem' }}
                                         disabled={updatingId === shipment.id || !(drafts[shipment.id] || '').trim()}
                                         onClick={() => handleUpdateLocation(shipment)}

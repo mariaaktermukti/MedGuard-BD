@@ -294,3 +294,9 @@ class DrugPassportSerializer(serializers.ModelSerializer):
             'quality_tests', 'shipments', 'distribution_events'
         ]
 
+
+class InspectionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Inspection
+        fields = '__all__'
+

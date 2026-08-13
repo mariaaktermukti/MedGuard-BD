@@ -6,9 +6,9 @@ const inputStyle = {
     width: '100%',
     padding: '0.75rem 1rem',
     borderRadius: '0.5rem',
-    border: '1px solid var(--border-color)',
+    border: '1px solid var(--border)',
     background: 'var(--bg-input)',
-    color: 'var(--text-light)',
+    color: 'var(--text-main)',
     fontSize: '1rem',
     boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.05)',
     resize: 'vertical',
@@ -62,7 +62,7 @@ const Complaints = () => {
     return (
         <div style={{ maxWidth: '900px', margin: '0 auto', display: 'grid', gap: '1.5rem' }}>
             <div>
-                <h1 style={{ fontSize: '1.75rem', margin: 0, color: 'var(--primary-color)' }}>Customer Complaint Management</h1>
+                <h1 style={{ fontSize: '1.75rem', margin: 0, color: 'var(--primary)' }}>Customer Complaint Management</h1>
                 <p style={{ color: 'var(--text-muted)', margin: '0.35rem 0 0' }}>Review and resolve complaints filed by citizens against your pharmacy.</p>
             </div>
 
@@ -77,7 +77,7 @@ const Complaints = () => {
                 ) : (
                     <div style={{ display: 'grid', gap: '1rem' }}>
                         {complaints.map((complaint) => (
-                            <div key={complaint.id} style={{ padding: '1.25rem', borderRadius: '0.85rem', border: '1px solid var(--border-color)' }}>
+                            <div key={complaint.id} style={{ padding: '1.25rem', borderRadius: '0.85rem', border: '1px solid var(--border)' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', marginBottom: '0.75rem' }}>
                                     <div>
                                         <div style={{ fontWeight: 700 }}>{complaint.citizen_username}</div>
@@ -89,7 +89,7 @@ const Complaints = () => {
 
                                 {complaint.status === 'resolved' ? (
                                     <div style={{ padding: '0.75rem 1rem', borderRadius: '0.6rem', background: 'rgba(16, 185, 129, 0.06)', color: 'var(--text-muted)' }}>
-                                        <strong style={{ color: 'var(--text-light)' }}>Resolution:</strong> {complaint.resolution_text}
+                                        <strong style={{ color: 'var(--text-main)' }}>Resolution:</strong> {complaint.resolution_text}
                                     </div>
                                 ) : (
                                     <div style={{ display: 'grid', gap: '0.6rem' }}>
@@ -103,7 +103,7 @@ const Complaints = () => {
                                         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                                             <button
                                                 type="button"
-                                                className="btn-primary"
+                                                className="ui-btn ui-btn-primary"
                                                 style={{ width: 'auto', padding: '0.6rem 1.1rem' }}
                                                 disabled={resolvingId === complaint.id || !(drafts[complaint.id] || '').trim()}
                                                 onClick={() => handleResolve(complaint.id)}

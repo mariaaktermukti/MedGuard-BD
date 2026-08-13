@@ -6,9 +6,9 @@ const inputStyle = {
     width: '100%',
     padding: '0.75rem 1rem',
     borderRadius: '0.5rem',
-    border: '1px solid var(--border-color)',
+    border: '1px solid var(--border)',
     background: 'var(--bg-input)',
-    color: 'var(--text-light)',
+    color: 'var(--text-main)',
     fontSize: '1rem',
     boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.05)',
 };
@@ -21,7 +21,7 @@ const Field = ({ label, children }) => (
 );
 
 const StatusPill = ({ children, tone = 'blue' }) => {
-    const color = tone === 'green' ? 'var(--success)' : tone === 'red' ? 'var(--danger)' : tone === 'amber' ? 'var(--warning)' : 'var(--primary-color)';
+    const color = tone === 'green' ? 'var(--success)' : tone === 'red' ? 'var(--danger)' : tone === 'amber' ? 'var(--warning)' : 'var(--primary)';
     const bg = tone === 'green' ? 'rgba(16, 185, 129, 0.1)' : tone === 'red' ? 'rgba(239, 68, 68, 0.1)' : tone === 'amber' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(59, 130, 246, 0.1)';
     return (
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.35rem 0.75rem', borderRadius: '999px', background: bg, color, fontSize: '0.8rem', fontWeight: 700 }}>
@@ -137,15 +137,15 @@ const Shipments = () => {
     return (
         <div style={{ maxWidth: '1000px', margin: '0 auto', display: 'grid', gap: '1.5rem' }}>
             <div>
-                <h1 style={{ fontSize: '1.75rem', margin: 0, color: 'var(--primary-color)' }}>Shipment Management</h1>
+                <h1 style={{ fontSize: '1.75rem', margin: 0, color: 'var(--primary)' }}>Shipment Management</h1>
                 <p style={{ color: 'var(--text-muted)', margin: '0.35rem 0 0' }}>Track shipments coming in from manufacturers and manage shipments going out to pharmacies.</p>
             </div>
 
-            {message && <div className="glass-panel" style={{ padding: '1rem 1.25rem', borderLeft: '4px solid var(--primary-color)' }}>{message}</div>}
+            {message && <div className="glass-panel" style={{ padding: '1rem 1.25rem', borderLeft: '4px solid var(--primary)' }}>{message}</div>}
 
             <div className="glass-panel" style={{ padding: '1.5rem' }}>
                 <h2 style={{ margin: '0 0 1rem', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <PaperPlaneTilt size={20} color="var(--primary-color)" /> Create Outgoing Shipment
+                    <PaperPlaneTilt size={20} color="var(--primary)" /> Create Outgoing Shipment
                 </h2>
                 <form onSubmit={handleCreate} style={{ display: 'grid', gap: '1.25rem' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '1.25rem' }}>
@@ -171,7 +171,7 @@ const Shipments = () => {
                         </Field>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                        <button type="submit" className="btn-primary" disabled={submitting} style={{ width: 'auto', padding: '0.75rem 1.5rem' }}>
+                        <button type="submit" className="ui-btn ui-btn-primary" disabled={submitting} style={{ width: 'auto', padding: '0.75rem 1.5rem' }}>
                             <PaperPlaneTilt size={18} /> Create Shipment
                         </button>
                     </div>
@@ -180,7 +180,7 @@ const Shipments = () => {
 
             <div className="glass-panel" style={{ padding: '1.5rem' }}>
                 <h2 style={{ margin: '0 0 1rem', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <ArrowUp size={20} color="var(--primary-color)" /> Outgoing Shipments (to Pharmacies)
+                    <ArrowUp size={20} color="var(--primary)" /> Outgoing Shipments (to Pharmacies)
                 </h2>
                 {loading ? (
                     <p style={{ color: 'var(--text-muted)' }}>Loading...</p>
@@ -189,7 +189,7 @@ const Shipments = () => {
                 ) : (
                     <div style={{ display: 'grid', gap: '0.75rem' }}>
                         {outgoing.map((shipment) => (
-                            <div key={shipment.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.25rem', borderRadius: '0.85rem', border: '1px solid var(--border-color)', flexWrap: 'wrap', gap: '0.75rem' }}>
+                            <div key={shipment.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.25rem', borderRadius: '0.85rem', border: '1px solid var(--border)', flexWrap: 'wrap', gap: '0.75rem' }}>
                                 <div>
                                     <div style={{ fontWeight: 700 }}>{shipment.batch_details.medicine} &bull; Batch {shipment.batch_details.batch_number}</div>
                                     <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
@@ -219,7 +219,7 @@ const Shipments = () => {
 
             <div className="glass-panel" style={{ padding: '1.5rem' }}>
                 <h2 style={{ margin: '0 0 1rem', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <ArrowDown size={20} color="var(--primary-color)" /> Incoming Shipments (from Manufacturers)
+                    <ArrowDown size={20} color="var(--primary)" /> Incoming Shipments (from Manufacturers)
                 </h2>
                 {loading ? (
                     <p style={{ color: 'var(--text-muted)' }}>Loading...</p>
@@ -231,7 +231,7 @@ const Shipments = () => {
                 ) : (
                     <div style={{ display: 'grid', gap: '0.75rem' }}>
                         {incoming.map((shipment) => (
-                            <div key={shipment.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.25rem', borderRadius: '0.85rem', border: '1px solid var(--border-color)', flexWrap: 'wrap', gap: '0.75rem' }}>
+                            <div key={shipment.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.25rem', borderRadius: '0.85rem', border: '1px solid var(--border)', flexWrap: 'wrap', gap: '0.75rem' }}>
                                 <div>
                                     <div style={{ fontWeight: 700 }}>{shipment.batch_details.medicine} &bull; Batch {shipment.batch_details.batch_number}</div>
                                     <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
@@ -243,7 +243,7 @@ const Shipments = () => {
                                     {shipment.status !== 'delivered' && (
                                         <button
                                             type="button"
-                                            className="btn-primary"
+                                            className="ui-btn ui-btn-primary"
                                             style={{ width: 'auto', padding: '0.6rem 1rem' }}
                                             disabled={receivingId === shipment.id}
                                             onClick={() => handleReceive(shipment)}
