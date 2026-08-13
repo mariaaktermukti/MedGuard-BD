@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Truck, PaperPlaneTilt, ArrowDown, ArrowUp } from '@phosphor-icons/react';
+import { Truck, PaperPlaneTilt, ArrowDown, ArrowUp, CheckCircle } from '@phosphor-icons/react';
 import api from '../../services/api';
 
 const inputStyle = {
@@ -52,6 +52,7 @@ const Shipments = () => {
     const [submitting, setSubmitting] = useState(false);
 
     const [updatingId, setUpdatingId] = useState(null);
+    const [receivingId, setReceivingId] = useState(null);
 
     const fetchAll = async () => {
         try {
@@ -116,6 +117,20 @@ const Shipments = () => {
             setMessage(error.response?.data?.detail || 'Could not update shipment status.');
         } finally {
             setUpdatingId(null);
+        }
+    };
+
+    const handleReceive = async (shipment) => {
+        setReceivingId(shipment.id);
+        setMessage('');
+        try {
+            await api.post(`core/distributor/shipments/incoming/${shipment.id}/receive/`);
+            setMessage(`Shipment ${shipment.batch_details.batch_number} marked as received.`);
+            fetchAll();
+        } catch (error) {
+            setMessage(error.response?.data?.detail || 'Could not mark this shipment as received.');
+        } finally {
+            setReceivingId(null);
         }
     };
 
@@ -223,7 +238,20 @@ const Shipments = () => {
                                         From {shipment.from_details.username} &bull; {shipment.quantity} units &bull; Tracking {shipment.tracking_number || 'N/A'}
                                     </div>
                                 </div>
-                                <StatusPill tone={statusTone(shipment.status)}>{shipment.status.replace('_', ' ')}</StatusPill>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                    <StatusPill tone={statusTone(shipment.status)}>{shipment.status.replace('_', ' ')}</StatusPill>
+                                    {shipment.status !== 'delivered' && (
+                                        <button
+                                            type="button"
+                                            className="btn-primary"
+                                            style={{ width: 'auto', padding: '0.6rem 1rem' }}
+                                            disabled={receivingId === shipment.id}
+                                            onClick={() => handleReceive(shipment)}
+                                        >
+                                            <CheckCircle size={18} /> Mark Received
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         ))}
                     </div>

@@ -11,6 +11,7 @@ from .views import (
     DistributorIncomingShipmentListView,
     DistributorOutgoingShipmentDetailView,
     DistributorOutgoingShipmentListCreateView,
+    DistributorShipmentReceiveView,
     DistributorWarehouseDetailView,
     DistributorWarehouseListCreateView,
     DrugPassportView,
@@ -53,6 +54,7 @@ urlpatterns = [
     path('distributor/warehouses/', DistributorWarehouseListCreateView.as_view(), name='distributor-warehouses'),
     path('distributor/warehouses/<int:pk>/', DistributorWarehouseDetailView.as_view(), name='distributor-warehouse-detail'),
     path('distributor/shipments/incoming/', DistributorIncomingShipmentListView.as_view(), name='distributor-shipments-incoming'),
+    path('distributor/shipments/incoming/<int:pk>/receive/', DistributorShipmentReceiveView.as_view(), name='distributor-shipment-receive'),
     path('distributor/shipments/outgoing/', DistributorOutgoingShipmentListCreateView.as_view(), name='distributor-shipments-outgoing'),
     path('distributor/shipments/outgoing/<int:pk>/', DistributorOutgoingShipmentDetailView.as_view(), name='distributor-shipment-outgoing-detail'),
 ]

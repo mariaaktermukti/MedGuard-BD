@@ -611,6 +611,20 @@ class DistributorIncomingShipmentListView(generics.ListAPIView):
         ).order_by('-created_at')
 
 
+class DistributorShipmentReceiveView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, IsDistributor]
+
+    def post(self, request, pk):
+        shipment = get_object_or_404(Shipment, pk=pk, to_user=request.user)
+        if shipment.status == 'delivered':
+            return Response({'detail': 'Shipment already received.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        shipment.status = 'delivered'
+        shipment.delivery_date = date.today()
+        shipment.save(update_fields=['status', 'delivery_date', 'updated_at'])
+        return Response(DistributorShipmentSerializer(shipment).data)
+
+
 class DistributorOutgoingShipmentListCreateView(generics.ListCreateAPIView):
     serializer_class = DistributorShipmentSerializer
     permission_classes = [permissions.IsAuthenticated, IsDistributor]
