@@ -33,6 +33,44 @@ class ShipmentSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class DistributorShipmentSerializer(serializers.ModelSerializer):
+    batch = serializers.PrimaryKeyRelatedField(queryset=Batch.objects.all())
+    batch_details = serializers.SerializerMethodField(read_only=True)
+    from_details = serializers.SerializerMethodField(read_only=True)
+    to_details = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = Shipment
+        fields = '__all__'
+        read_only_fields = ['from_user']
+
+    def validate(self, attrs):
+        to_user = attrs.get('to_user') or getattr(self.instance, 'to_user', None)
+        if to_user and getattr(to_user, 'role', None) != 'pharmacy':
+            raise serializers.ValidationError('The receiving account must be a registered pharmacy.')
+        return attrs
+
+    def get_batch_details(self, obj):
+        return {
+            'id': obj.batch_id,
+            'batch_number': obj.batch.batch_number,
+            'medicine': obj.batch.medicine.name,
+            'status': obj.batch.status,
+        }
+
+    def get_from_details(self, obj):
+        return {
+            'id': obj.from_user_id,
+            'username': obj.from_user.username,
+        }
+
+    def get_to_details(self, obj):
+        return {
+            'id': obj.to_user_id,
+            'username': obj.to_user.username,
+        }
+
+
 class DistributionEventSerializer(serializers.ModelSerializer):
     batch = serializers.PrimaryKeyRelatedField(queryset=Batch.objects.all())
     batch_details = serializers.SerializerMethodField(read_only=True)
@@ -143,6 +181,13 @@ class DosageScheduleSerializer(serializers.ModelSerializer):
         model = DosageSchedule
         fields = '__all__'
         read_only_fields = ['citizen', 'created_at']
+
+
+class WarehouseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Warehouse
+        fields = '__all__'
+        read_only_fields = ['distributor']
 
 
 class PharmacyProfileSerializer(serializers.ModelSerializer):

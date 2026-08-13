@@ -18,6 +18,7 @@ from .models import (
     Recall,
     Sale,
     Shipment,
+    Warehouse,
 )
 from users.models import PharmacyProfile
 from .serializers import (
@@ -26,6 +27,7 @@ from .serializers import (
     ComplianceItemSerializer,
     DemandForecastSerializer,
     DistributionEventSerializer,
+    DistributorShipmentSerializer,
     DrugPassportSerializer,
     DosageScheduleSerializer,
     MedicineSerializer,
@@ -33,6 +35,7 @@ from .serializers import (
     QualityTestSerializer,
     RecallSerializer,
     PharmacyProfileSerializer,
+    WarehouseSerializer,
 )
 from users.permissions import IsCitizen, IsDGDA, IsDistributor, IsManufacturer
 import os
@@ -574,5 +577,219 @@ class CitizenDashboardView(views.APIView):
             'recent_activity': recent_activity,
             'upcoming_dose': upcoming_dose,
             'recalls': recalls_data
+        })
+
+
+# Distributor Portal Views
+
+class DistributorWarehouseListCreateView(generics.ListCreateAPIView):
+    serializer_class = WarehouseSerializer
+    permission_classes = [permissions.IsAuthenticated, IsDistributor]
+
+    def get_queryset(self):
+        return Warehouse.objects.filter(distributor=self.request.user).order_by('name')
+
+    def perform_create(self, serializer):
+        serializer.save(distributor=self.request.user)
+
+
+class DistributorWarehouseDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = WarehouseSerializer
+    permission_classes = [permissions.IsAuthenticated, IsDistributor]
+
+    def get_queryset(self):
+        return Warehouse.objects.filter(distributor=self.request.user)
+
+
+class DistributorIncomingShipmentListView(generics.ListAPIView):
+    serializer_class = DistributorShipmentSerializer
+    permission_classes = [permissions.IsAuthenticated, IsDistributor]
+
+    def get_queryset(self):
+        return Shipment.objects.filter(to_user=self.request.user).select_related(
+            'batch', 'batch__medicine', 'from_user'
+        ).order_by('-created_at')
+
+
+class DistributorShipmentReceiveView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, IsDistributor]
+
+    def post(self, request, pk):
+        shipment = get_object_or_404(Shipment, pk=pk, to_user=request.user)
+        if shipment.status == 'delivered':
+            return Response({'detail': 'Shipment already received.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        shipment.status = 'delivered'
+        shipment.delivery_date = date.today()
+        shipment.save(update_fields=['status', 'delivery_date', 'updated_at'])
+        return Response(DistributorShipmentSerializer(shipment).data)
+
+
+class DistributorOutgoingShipmentListCreateView(generics.ListCreateAPIView):
+    serializer_class = DistributorShipmentSerializer
+    permission_classes = [permissions.IsAuthenticated, IsDistributor]
+
+    def get_queryset(self):
+        return Shipment.objects.filter(from_user=self.request.user).select_related(
+            'batch', 'batch__medicine', 'to_user'
+        ).order_by('-created_at')
+
+    def perform_create(self, serializer):
+        serializer.save(from_user=self.request.user)
+
+
+class DistributorOutgoingShipmentDetailView(generics.RetrieveUpdateAPIView):
+    serializer_class = DistributorShipmentSerializer
+    permission_classes = [permissions.IsAuthenticated, IsDistributor]
+
+    def get_queryset(self):
+        return Shipment.objects.filter(from_user=self.request.user).select_related(
+            'batch', 'batch__medicine', 'to_user'
+        )
+
+
+class DistributorAnalyticsView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, IsDistributor]
+
+    def get(self, request):
+        shipments = Shipment.objects.filter(from_user=request.user).select_related('to_user')
+        delivered = shipments.filter(status='delivered')
+
+        transit_days = [
+            (shipment.delivery_date - shipment.shipment_date).days
+            for shipment in delivered
+            if shipment.delivery_date and shipment.shipment_date
+        ]
+        avg_transit_days = round(sum(transit_days) / len(transit_days), 1) if transit_days else None
+
+        monthly_volume = defaultdict(int)
+        pharmacy_volume = defaultdict(int)
+        for shipment in shipments:
+            monthly_volume[shipment.shipment_date.strftime('%Y-%m')] += shipment.quantity
+            pharmacy_volume[shipment.to_user.username] += shipment.quantity
+
+        top_destinations = [
+            {'pharmacy': username, 'units': units}
+            for username, units in sorted(pharmacy_volume.items(), key=lambda item: item[1], reverse=True)[:5]
+        ]
+
+        return Response({
+            'summary': {
+                'total_shipments': shipments.count(),
+                'delivered': delivered.count(),
+                'in_transit': shipments.filter(status='in_transit').count(),
+                'pending': shipments.filter(status='pending').count(),
+                'cancelled': shipments.filter(status='cancelled').count(),
+                'avg_transit_days': avg_transit_days,
+            },
+            'charts': {
+                'monthly_volume': [{'month': month, 'units': units} for month, units in sorted(monthly_volume.items())],
+                'top_destinations': top_destinations,
+            },
+        })
+
+
+class DistributorRouteOptimizationView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, IsDistributor]
+
+    def get(self, request):
+        shipments = Shipment.objects.filter(
+            from_user=request.user, status__in=['pending', 'in_transit']
+        ).select_related('to_user', 'to_user__pharmacy_profile', 'batch', 'batch__medicine')
+
+        area_groups = defaultdict(list)
+        for shipment in shipments:
+            profile = getattr(shipment.to_user, 'pharmacy_profile', None)
+            address = profile.address if profile else None
+            area = address.split(',')[0].strip() if address else 'Unknown area'
+            area_groups[area].append(shipment)
+
+        suggestions = [
+            {
+                'area': area,
+                'shipment_count': len(group),
+                'total_units': sum(shipment.quantity for shipment in group),
+                'shipments': [
+                    {
+                        'id': shipment.id,
+                        'batch_number': shipment.batch.batch_number,
+                        'medicine': shipment.batch.medicine.name,
+                        'pharmacy': shipment.to_user.username,
+                        'quantity': shipment.quantity,
+                    }
+                    for shipment in group
+                ],
+            }
+            for area, group in area_groups.items()
+        ]
+        suggestions.sort(key=lambda item: item['shipment_count'], reverse=True)
+
+        return Response({
+            'note': 'Heuristic area-based batching suggestion, grouped by pharmacy address text. Not a real distance/route calculation.',
+            'suggestions': suggestions,
+        })
+
+
+class DistributorFleetMonitoringView(generics.ListAPIView):
+    serializer_class = DistributorShipmentSerializer
+    permission_classes = [permissions.IsAuthenticated, IsDistributor]
+
+    def get_queryset(self):
+        return Shipment.objects.filter(
+            from_user=self.request.user, status='in_transit'
+        ).select_related('batch', 'batch__medicine', 'to_user').order_by('-geo_timestamp')
+
+
+class DistributorShipmentLocationUpdateView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, IsDistributor]
+
+    def post(self, request, pk):
+        shipment = get_object_or_404(Shipment, pk=pk, from_user=request.user, status='in_transit')
+        geo_location = request.data.get('geo_location', '').strip()
+        if not geo_location:
+            return Response({'detail': 'A location is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        shipment.geo_location = geo_location
+        shipment.geo_timestamp = timezone.now()
+        shipment.save(update_fields=['geo_location', 'geo_timestamp', 'updated_at'])
+        return Response(DistributorShipmentSerializer(shipment).data)
+
+
+ROUTE_RISK_KEYWORDS = ['flood', 'waterlogged', 'hartal', 'strike', 'accident', 'construction', 'বন্যা', 'জলাবদ্ধ', 'হরতাল']
+OVERDUE_IN_TRANSIT_DAYS = 3
+
+
+class DistributorRouteRiskView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, IsDistributor]
+
+    def get(self, request):
+        shipments = Shipment.objects.filter(
+            from_user=request.user, status__in=['pending', 'in_transit']
+        ).select_related('batch', 'batch__medicine', 'to_user', 'to_user__pharmacy_profile')
+
+        alerts = []
+        for shipment in shipments:
+            if shipment.status == 'in_transit':
+                days_elapsed = (date.today() - shipment.shipment_date).days
+                if days_elapsed > OVERDUE_IN_TRANSIT_DAYS:
+                    alerts.append({
+                        'type': 'danger',
+                        'title': f'Delayed shipment: Batch {shipment.batch.batch_number}',
+                        'message': f'In transit for {days_elapsed} days (started {shipment.shipment_date}), past the {OVERDUE_IN_TRANSIT_DAYS}-day expectation.',
+                    })
+
+            profile = getattr(shipment.to_user, 'pharmacy_profile', None)
+            text_to_scan = ' '.join(filter(None, [shipment.geo_location, profile.address if profile else None])).lower()
+            matched_keywords = [keyword for keyword in ROUTE_RISK_KEYWORDS if keyword.lower() in text_to_scan]
+            if matched_keywords:
+                alerts.append({
+                    'type': 'warning',
+                    'title': f'Route risk keyword match: Batch {shipment.batch.batch_number}',
+                    'message': f'Location text mentions "{", ".join(matched_keywords)}" - review conditions before dispatch.',
+                })
+
+        return Response({
+            'note': 'Heuristic keyword and delay-based risk flags. Not real traffic or weather analysis - no such data source exists in this system.',
+            'alerts': alerts[:10],
         })
 
