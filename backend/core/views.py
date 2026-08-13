@@ -27,6 +27,7 @@ from .serializers import (
     ComplianceItemSerializer,
     DemandForecastSerializer,
     DistributionEventSerializer,
+    DistributorShipmentSerializer,
     DrugPassportSerializer,
     DosageScheduleSerializer,
     MedicineSerializer,
@@ -598,4 +599,37 @@ class DistributorWarehouseDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     def get_queryset(self):
         return Warehouse.objects.filter(distributor=self.request.user)
+
+
+class DistributorIncomingShipmentListView(generics.ListAPIView):
+    serializer_class = DistributorShipmentSerializer
+    permission_classes = [permissions.IsAuthenticated, IsDistributor]
+
+    def get_queryset(self):
+        return Shipment.objects.filter(to_user=self.request.user).select_related(
+            'batch', 'batch__medicine', 'from_user'
+        ).order_by('-created_at')
+
+
+class DistributorOutgoingShipmentListCreateView(generics.ListCreateAPIView):
+    serializer_class = DistributorShipmentSerializer
+    permission_classes = [permissions.IsAuthenticated, IsDistributor]
+
+    def get_queryset(self):
+        return Shipment.objects.filter(from_user=self.request.user).select_related(
+            'batch', 'batch__medicine', 'to_user'
+        ).order_by('-created_at')
+
+    def perform_create(self, serializer):
+        serializer.save(from_user=self.request.user)
+
+
+class DistributorOutgoingShipmentDetailView(generics.RetrieveUpdateAPIView):
+    serializer_class = DistributorShipmentSerializer
+    permission_classes = [permissions.IsAuthenticated, IsDistributor]
+
+    def get_queryset(self):
+        return Shipment.objects.filter(from_user=self.request.user).select_related(
+            'batch', 'batch__medicine', 'to_user'
+        )
 

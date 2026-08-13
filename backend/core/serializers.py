@@ -33,6 +33,38 @@ class ShipmentSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class DistributorShipmentSerializer(serializers.ModelSerializer):
+    batch = serializers.PrimaryKeyRelatedField(queryset=Batch.objects.all())
+    batch_details = serializers.SerializerMethodField(read_only=True)
+    from_details = serializers.SerializerMethodField(read_only=True)
+    to_details = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = Shipment
+        fields = '__all__'
+        read_only_fields = ['from_user']
+
+    def get_batch_details(self, obj):
+        return {
+            'id': obj.batch_id,
+            'batch_number': obj.batch.batch_number,
+            'medicine': obj.batch.medicine.name,
+            'status': obj.batch.status,
+        }
+
+    def get_from_details(self, obj):
+        return {
+            'id': obj.from_user_id,
+            'username': obj.from_user.username,
+        }
+
+    def get_to_details(self, obj):
+        return {
+            'id': obj.to_user_id,
+            'username': obj.to_user.username,
+        }
+
+
 class DistributionEventSerializer(serializers.ModelSerializer):
     batch = serializers.PrimaryKeyRelatedField(queryset=Batch.objects.all())
     batch_details = serializers.SerializerMethodField(read_only=True)
