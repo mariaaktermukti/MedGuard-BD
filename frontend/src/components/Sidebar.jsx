@@ -22,6 +22,7 @@ const Sidebar = ({ isTablet }) => {
         { path: '/dashboard/distributor/warehouses', icon: <Warehouse size={24} weight="duotone" />, label: 'Warehouses' },
         { path: '/dashboard/distributor/shipments', icon: <Truck size={24} weight="duotone" />, label: 'Shipments' },
         { path: '/dashboard/distributor/analytics', icon: <ChartBar size={24} weight="duotone" />, label: 'Analytics' },
+        { path: '/dashboard/distributor/route-optimization', icon: <MapPin size={24} weight="duotone" />, label: 'Route Optimization' },
         { path: '/dashboard/notifications', icon: <Bell size={24} weight="duotone" />, label: 'Notifications' },
         { path: '/dashboard/settings', icon: <Gear size={24} weight="duotone" />, label: 'Settings' }
     ];

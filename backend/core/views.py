@@ -688,3 +688,44 @@ class DistributorAnalyticsView(views.APIView):
             },
         })
 
+
+class DistributorRouteOptimizationView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, IsDistributor]
+
+    def get(self, request):
+        shipments = Shipment.objects.filter(
+            from_user=request.user, status__in=['pending', 'in_transit']
+        ).select_related('to_user', 'to_user__pharmacy_profile', 'batch', 'batch__medicine')
+
+        area_groups = defaultdict(list)
+        for shipment in shipments:
+            profile = getattr(shipment.to_user, 'pharmacy_profile', None)
+            address = profile.address if profile else None
+            area = address.split(',')[0].strip() if address else 'Unknown area'
+            area_groups[area].append(shipment)
+
+        suggestions = [
+            {
+                'area': area,
+                'shipment_count': len(group),
+                'total_units': sum(shipment.quantity for shipment in group),
+                'shipments': [
+                    {
+                        'id': shipment.id,
+                        'batch_number': shipment.batch.batch_number,
+                        'medicine': shipment.batch.medicine.name,
+                        'pharmacy': shipment.to_user.username,
+                        'quantity': shipment.quantity,
+                    }
+                    for shipment in group
+                ],
+            }
+            for area, group in area_groups.items()
+        ]
+        suggestions.sort(key=lambda item: item['shipment_count'], reverse=True)
+
+        return Response({
+            'note': 'Heuristic area-based batching suggestion, grouped by pharmacy address text. Not a real distance/route calculation.',
+            'suggestions': suggestions,
+        })
+
