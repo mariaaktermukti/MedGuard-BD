@@ -14,6 +14,7 @@ from .views import (
     DistributorOutgoingShipmentDetailView,
     DistributorOutgoingShipmentListCreateView,
     DistributorRouteOptimizationView,
+    DistributorRouteRiskView,
     DistributorShipmentLocationUpdateView,
     DistributorShipmentReceiveView,
     DistributorWarehouseDetailView,
@@ -65,4 +66,5 @@ urlpatterns = [
     path('distributor/route-optimization/', DistributorRouteOptimizationView.as_view(), name='distributor-route-optimization'),
     path('distributor/fleet-monitoring/', DistributorFleetMonitoringView.as_view(), name='distributor-fleet-monitoring'),
     path('distributor/fleet-monitoring/<int:pk>/update-location/', DistributorShipmentLocationUpdateView.as_view(), name='distributor-fleet-update-location'),
+    path('distributor/route-risk/', DistributorRouteRiskView.as_view(), name='distributor-route-risk'),
 ]

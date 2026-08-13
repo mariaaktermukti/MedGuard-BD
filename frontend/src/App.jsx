@@ -20,6 +20,7 @@ import Shipments from './pages/distributor/Shipments';
 import Analytics from './pages/distributor/Analytics';
 import RouteOptimization from './pages/distributor/RouteOptimization';
 import FleetMonitoring from './pages/distributor/FleetMonitoring';
+import RouteRisk from './pages/distributor/RouteRisk';
 
 function App() {
   return (
@@ -52,6 +53,7 @@ function App() {
             <Route path="distributor/analytics" element={<Analytics />} />
             <Route path="distributor/route-optimization" element={<RouteOptimization />} />
             <Route path="distributor/fleet-monitoring" element={<FleetMonitoring />} />
+            <Route path="distributor/route-risk" element={<RouteRisk />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

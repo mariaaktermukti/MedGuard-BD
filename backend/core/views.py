@@ -754,3 +754,42 @@ class DistributorShipmentLocationUpdateView(views.APIView):
         shipment.save(update_fields=['geo_location', 'geo_timestamp', 'updated_at'])
         return Response(DistributorShipmentSerializer(shipment).data)
 
+
+ROUTE_RISK_KEYWORDS = ['flood', 'waterlogged', 'hartal', 'strike', 'accident', 'construction', 'বন্যা', 'জলাবদ্ধ', 'হরতাল']
+OVERDUE_IN_TRANSIT_DAYS = 3
+
+
+class DistributorRouteRiskView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, IsDistributor]
+
+    def get(self, request):
+        shipments = Shipment.objects.filter(
+            from_user=request.user, status__in=['pending', 'in_transit']
+        ).select_related('batch', 'batch__medicine', 'to_user', 'to_user__pharmacy_profile')
+
+        alerts = []
+        for shipment in shipments:
+            if shipment.status == 'in_transit':
+                days_elapsed = (date.today() - shipment.shipment_date).days
+                if days_elapsed > OVERDUE_IN_TRANSIT_DAYS:
+                    alerts.append({
+                        'type': 'danger',
+                        'title': f'Delayed shipment: Batch {shipment.batch.batch_number}',
+                        'message': f'In transit for {days_elapsed} days (started {shipment.shipment_date}), past the {OVERDUE_IN_TRANSIT_DAYS}-day expectation.',
+                    })
+
+            profile = getattr(shipment.to_user, 'pharmacy_profile', None)
+            text_to_scan = ' '.join(filter(None, [shipment.geo_location, profile.address if profile else None])).lower()
+            matched_keywords = [keyword for keyword in ROUTE_RISK_KEYWORDS if keyword.lower() in text_to_scan]
+            if matched_keywords:
+                alerts.append({
+                    'type': 'warning',
+                    'title': f'Route risk keyword match: Batch {shipment.batch.batch_number}',
+                    'message': f'Location text mentions "{", ".join(matched_keywords)}" - review conditions before dispatch.',
+                })
+
+        return Response({
+            'note': 'Heuristic keyword and delay-based risk flags. Not real traffic or weather analysis - no such data source exists in this system.',
+            'alerts': alerts[:10],
+        })
+
