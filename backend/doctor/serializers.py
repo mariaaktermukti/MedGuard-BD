@@ -70,7 +70,7 @@ class DoctorPrescriptionWriteSerializer(serializers.ModelSerializer):
 class DoctorMedicineSerializer(serializers.ModelSerializer):
     class Meta:
         model = Medicine
-        fields = ['id', 'name', 'generic_name', 'strength', 'dosage_form']
+        fields = ['id', 'name', 'generic_name', 'category', 'strength', 'dosage_form']
 
 
 class DoctorPatientSaleSerializer(serializers.ModelSerializer):

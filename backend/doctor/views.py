@@ -1,6 +1,7 @@
 import os
 
 from django.contrib.auth import get_user_model
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, permissions, status, views
 from rest_framework.exceptions import PermissionDenied
@@ -105,7 +106,19 @@ class DoctorPrescriptionDetailView(generics.RetrieveUpdateAPIView):
 class DoctorMedicineListView(generics.ListAPIView):
     serializer_class = DoctorMedicineSerializer
     permission_classes = [permissions.IsAuthenticated, IsDoctor]
-    queryset = Medicine.objects.filter(is_active=True).order_by('name')
+
+    def get_queryset(self):
+        queryset = Medicine.objects.filter(is_active=True).order_by('name')
+
+        query = self.request.query_params.get('q')
+        if query:
+            queryset = queryset.filter(Q(name__icontains=query) | Q(generic_name__icontains=query))
+
+        category = self.request.query_params.get('category')
+        if category:
+            queryset = queryset.filter(category__iexact=category)
+
+        return queryset
 
 
 class DoctorPrescriptionCheckView(views.APIView):
