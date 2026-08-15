@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from core.models import Consultation, DosageSchedule, Medicine, Prescription, Sale
 from users.permissions import IsDoctor
 
+from .utils import check_prescription_warnings
 from .serializers import (
     DoctorMedicineSerializer,
     DoctorPatientDosageScheduleSerializer,
@@ -103,3 +104,16 @@ class DoctorMedicineListView(generics.ListAPIView):
     serializer_class = DoctorMedicineSerializer
     permission_classes = [permissions.IsAuthenticated, IsDoctor]
     queryset = Medicine.objects.filter(is_active=True).order_by('name')
+
+
+class DoctorPrescriptionCheckView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, IsDoctor]
+
+    def post(self, request):
+        citizen_id = request.data.get('citizen')
+        items = request.data.get('items', [])
+        if not citizen_id:
+            return Response({'detail': 'citizen is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        warnings = check_prescription_warnings(citizen_id, items)
+        return Response({'warnings': warnings})
