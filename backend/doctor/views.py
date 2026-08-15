@@ -1,16 +1,19 @@
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, permissions, status, views
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 
-from core.models import Consultation, DosageSchedule, Prescription, Sale
+from core.models import Consultation, DosageSchedule, Medicine, Prescription, Sale
 from users.permissions import IsDoctor
 
 from .serializers import (
+    DoctorMedicineSerializer,
     DoctorPatientDosageScheduleSerializer,
     DoctorPatientSaleSerializer,
     DoctorPatientSerializer,
     DoctorPrescriptionSerializer,
+    DoctorPrescriptionWriteSerializer,
 )
 
 User = get_user_model()
@@ -60,3 +63,43 @@ class DoctorPatientMedicineHistoryView(views.APIView):
             'prescriptions': DoctorPrescriptionSerializer(prescriptions, many=True).data,
             'sales': DoctorPatientSaleSerializer(sales, many=True).data,
         })
+
+
+class DoctorPrescriptionListCreateView(generics.ListCreateAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsDoctor]
+
+    def get_queryset(self):
+        return Prescription.objects.filter(doctor=self.request.user).select_related('doctor', 'citizen').prefetch_related(
+            'items', 'items__medicine'
+        ).order_by('-prescription_date')
+
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return DoctorPrescriptionWriteSerializer
+        return DoctorPrescriptionSerializer
+
+    def perform_create(self, serializer):
+        citizen = serializer.validated_data.get('citizen')
+        if not _is_existing_patient(self.request.user, citizen.id):
+            raise PermissionDenied('You do not have an existing consultation or prescription with this patient.')
+        serializer.save()
+
+
+class DoctorPrescriptionDetailView(generics.RetrieveUpdateAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsDoctor]
+
+    def get_queryset(self):
+        return Prescription.objects.filter(doctor=self.request.user).select_related('doctor', 'citizen').prefetch_related(
+            'items', 'items__medicine'
+        )
+
+    def get_serializer_class(self):
+        if self.request.method in ('PUT', 'PATCH'):
+            return DoctorPrescriptionWriteSerializer
+        return DoctorPrescriptionSerializer
+
+
+class DoctorMedicineListView(generics.ListAPIView):
+    serializer_class = DoctorMedicineSerializer
+    permission_classes = [permissions.IsAuthenticated, IsDoctor]
+    queryset = Medicine.objects.filter(is_active=True).order_by('name')

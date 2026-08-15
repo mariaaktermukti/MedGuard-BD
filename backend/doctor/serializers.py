@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from core.models import DosageSchedule, Prescription, PrescriptionItem, Sale
+from core.models import DosageSchedule, Medicine, Prescription, PrescriptionItem, Sale
 
 
 class DoctorPatientSerializer(serializers.Serializer):
@@ -29,10 +29,48 @@ class DoctorPrescriptionItemSerializer(serializers.ModelSerializer):
 class DoctorPrescriptionSerializer(serializers.ModelSerializer):
     items = DoctorPrescriptionItemSerializer(many=True, read_only=True)
     doctor_username = serializers.CharField(source='doctor.username', read_only=True)
+    citizen_username = serializers.CharField(source='citizen.username', read_only=True)
+    citizen_full_name = serializers.CharField(source='citizen.full_name', read_only=True)
 
     class Meta:
         model = Prescription
-        fields = ['id', 'doctor_username', 'prescription_date', 'status', 'notes', 'items']
+        fields = [
+            'id', 'doctor_username', 'citizen_username', 'citizen_full_name',
+            'prescription_date', 'status', 'notes', 'items',
+        ]
+
+
+class DoctorPrescriptionItemWriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PrescriptionItem
+        fields = ['medicine', 'dosage', 'duration', 'instructions']
+
+
+class DoctorPrescriptionWriteSerializer(serializers.ModelSerializer):
+    items = DoctorPrescriptionItemWriteSerializer(many=True)
+
+    class Meta:
+        model = Prescription
+        fields = ['id', 'citizen', 'consultation', 'status', 'notes', 'items']
+        read_only_fields = ['id']
+
+    def validate_items(self, value):
+        if not value:
+            raise serializers.ValidationError('A prescription must have at least one item.')
+        return value
+
+    def create(self, validated_data):
+        items_data = validated_data.pop('items')
+        prescription = Prescription.objects.create(doctor=self.context['request'].user, **validated_data)
+        for item_data in items_data:
+            PrescriptionItem.objects.create(prescription=prescription, **item_data)
+        return prescription
+
+
+class DoctorMedicineSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Medicine
+        fields = ['id', 'name', 'generic_name', 'strength', 'dosage_form']
 
 
 class DoctorPatientSaleSerializer(serializers.ModelSerializer):
