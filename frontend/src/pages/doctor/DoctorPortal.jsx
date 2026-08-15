@@ -1,14 +1,16 @@
 import React from 'react';
 import { Routes, Route, NavLink } from 'react-router-dom';
-import { Users, ClipboardText, ShieldWarning } from '@phosphor-icons/react';
+import { Users, ClipboardText, ShieldWarning, MagnifyingGlass } from '@phosphor-icons/react';
 import PatientMedicineHistory from './PatientMedicineHistory';
 import DigitalPrescription from './DigitalPrescription';
 import DrugInteractionChecker from './DrugInteractionChecker';
+import MedicineLookup from './MedicineLookup';
 
 const tabs = [
     { path: 'patient-history', label: 'Patient Medicine History', icon: <Users size={18} /> },
     { path: 'prescriptions', label: 'Digital Prescription', icon: <ClipboardText size={18} /> },
     { path: 'interaction-checker', label: 'Drug Interaction Checker', icon: <ShieldWarning size={18} /> },
+    { path: 'medicine-lookup', label: 'Medicine Lookup', icon: <MagnifyingGlass size={18} /> },
 ];
 
 const DoctorPortal = () => {
@@ -47,6 +49,7 @@ const DoctorPortal = () => {
                 <Route path="patient-history" element={<PatientMedicineHistory />} />
                 <Route path="prescriptions" element={<DigitalPrescription />} />
                 <Route path="interaction-checker" element={<DrugInteractionChecker />} />
+                <Route path="medicine-lookup" element={<MedicineLookup />} />
             </Routes>
         </div>
     );
