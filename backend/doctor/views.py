@@ -14,6 +14,9 @@ from users.permissions import IsDoctor
 from .utils import _chat_completion, check_prescription_warnings
 from .serializers import (
     DoctorADRReportSerializer,
+    DoctorConsultationSerializer,
+    DoctorConsultationStatusUpdateSerializer,
+    DoctorConsultationWriteSerializer,
     DoctorFrequentMedicineSerializer,
     DoctorMedicineSerializer,
     DoctorPatientDosageScheduleSerializer,
@@ -168,6 +171,30 @@ class DoctorFrequentMedicinesView(generics.ListAPIView):
         ).annotate(
             times_prescribed=Count('prescription_items', filter=Q(prescription_items__prescription__doctor=doctor))
         ).distinct().order_by('-times_prescribed', 'name')
+
+
+class DoctorConsultationListCreateView(generics.ListCreateAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsDoctor]
+
+    def get_queryset(self):
+        return Consultation.objects.filter(doctor=self.request.user).select_related('citizen').order_by('-consultation_date')
+
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return DoctorConsultationWriteSerializer
+        return DoctorConsultationSerializer
+
+
+class DoctorConsultationDetailView(generics.RetrieveUpdateAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsDoctor]
+
+    def get_queryset(self):
+        return Consultation.objects.filter(doctor=self.request.user).select_related('citizen')
+
+    def get_serializer_class(self):
+        if self.request.method in ('PUT', 'PATCH'):
+            return DoctorConsultationStatusUpdateSerializer
+        return DoctorConsultationSerializer
 
 
 class DoctorResearchDatasetListView(generics.ListAPIView):

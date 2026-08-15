@@ -1,6 +1,9 @@
+from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from core.models import ADRReport, DosageSchedule, Medicine, Prescription, PrescriptionItem, ResearchDataset, Sale
+from core.models import ADRReport, Consultation, DosageSchedule, Medicine, Prescription, PrescriptionItem, ResearchDataset, Sale
+
+User = get_user_model()
 
 
 class DoctorPatientSerializer(serializers.Serializer):
@@ -114,3 +117,40 @@ class DoctorADRReportSerializer(serializers.ModelSerializer):
             'description', 'severity', 'reaction_date', 'date_reported', 'status', 'attachment',
         ]
         read_only_fields = ['id', 'date_reported', 'status']
+
+
+class DoctorConsultationSerializer(serializers.ModelSerializer):
+    citizen_username = serializers.CharField(source='citizen.username', read_only=True)
+    citizen_full_name = serializers.CharField(source='citizen.full_name', read_only=True)
+
+    class Meta:
+        model = Consultation
+        fields = [
+            'id', 'citizen_username', 'citizen_full_name',
+            'consultation_date', 'consultation_type', 'status', 'notes',
+        ]
+
+
+class DoctorConsultationWriteSerializer(serializers.ModelSerializer):
+    citizen_username = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = Consultation
+        fields = ['id', 'citizen_username', 'consultation_type', 'status', 'notes']
+        read_only_fields = ['id']
+
+    def validate_citizen_username(self, value):
+        try:
+            return User.objects.get(username=value, role='citizen')
+        except User.DoesNotExist:
+            raise serializers.ValidationError('No citizen found with this exact username.')
+
+    def create(self, validated_data):
+        citizen = validated_data.pop('citizen_username')
+        return Consultation.objects.create(doctor=self.context['request'].user, citizen=citizen, **validated_data)
+
+
+class DoctorConsultationStatusUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Consultation
+        fields = ['status', 'notes']

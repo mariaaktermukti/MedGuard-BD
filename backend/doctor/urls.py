@@ -2,6 +2,8 @@ from django.urls import path
 
 from .views import (
     DoctorADRReportListCreateView,
+    DoctorConsultationDetailView,
+    DoctorConsultationListCreateView,
     DoctorFrequentMedicinesView,
     DoctorInteractionCheckerView,
     DoctorMedicineListView,
@@ -26,4 +28,6 @@ urlpatterns = [
     path('recall-alerts/', DoctorRecallAlertsView.as_view(), name='doctor-recall-alerts'),
     path('frequent-medicines/', DoctorFrequentMedicinesView.as_view(), name='doctor-frequent-medicines'),
     path('research-datasets/', DoctorResearchDatasetListView.as_view(), name='doctor-research-datasets'),
+    path('consultations/', DoctorConsultationListCreateView.as_view(), name='doctor-consultations'),
+    path('consultations/<int:pk>/', DoctorConsultationDetailView.as_view(), name='doctor-consultation-detail'),
 ]
