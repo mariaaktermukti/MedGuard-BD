@@ -1,6 +1,6 @@
 import React from 'react';
 import { Routes, Route, NavLink } from 'react-router-dom';
-import { Users, ClipboardText, ShieldWarning, MagnifyingGlass, QrCode, Warning, Bell, Star, Database } from '@phosphor-icons/react';
+import { Users, ClipboardText, ShieldWarning, MagnifyingGlass, QrCode, Warning, Bell, Star, Database, VideoCamera } from '@phosphor-icons/react';
 import PatientMedicineHistory from './PatientMedicineHistory';
 import DigitalPrescription from './DigitalPrescription';
 import DrugInteractionChecker from './DrugInteractionChecker';
@@ -10,6 +10,7 @@ import DoctorADRReport from './DoctorADRReport';
 import RecallAlerts from './RecallAlerts';
 import MedicineLibrary from './MedicineLibrary';
 import ResearchDatasets from './ResearchDatasets';
+import DoctorConsultations from './DoctorConsultations';
 
 const tabs = [
     { path: 'patient-history', label: 'Patient Medicine History', icon: <Users size={18} /> },
@@ -21,6 +22,7 @@ const tabs = [
     { path: 'recall-alerts', label: 'Recall Notifications', icon: <Bell size={18} /> },
     { path: 'medicine-library', label: 'My Medicine Library', icon: <Star size={18} /> },
     { path: 'research-datasets', label: 'Research Datasets', icon: <Database size={18} /> },
+    { path: 'consultations', label: 'Consultations', icon: <VideoCamera size={18} /> },
 ];
 
 const DoctorPortal = () => {
@@ -65,6 +67,7 @@ const DoctorPortal = () => {
                 <Route path="recall-alerts" element={<RecallAlerts />} />
                 <Route path="medicine-library" element={<MedicineLibrary />} />
                 <Route path="research-datasets" element={<ResearchDatasets />} />
+                <Route path="consultations" element={<DoctorConsultations />} />
             </Routes>
         </div>
     );
