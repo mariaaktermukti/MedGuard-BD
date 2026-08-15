@@ -19,6 +19,7 @@ const DigitalPrescription = () => {
     const [submitting, setSubmitting] = useState(false);
     const [formError, setFormError] = useState('');
     const [formSuccess, setFormSuccess] = useState('');
+    const [warnings, setWarnings] = useState(null);
 
     const loadPrescriptions = async () => {
         setLoadingPrescriptions(true);
@@ -50,16 +51,29 @@ const DigitalPrescription = () => {
     }, []);
 
     const updateItem = (index, field, value) => {
+        setWarnings(null);
         setItems((prev) => prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)));
     };
 
-    const addItem = () => setItems((prev) => [...prev, { ...emptyItem }]);
-    const removeItem = (index) => setItems((prev) => prev.filter((_, i) => i !== index));
+    const addItem = () => {
+        setWarnings(null);
+        setItems((prev) => [...prev, { ...emptyItem }]);
+    };
+    const removeItem = (index) => {
+        setWarnings(null);
+        setItems((prev) => prev.filter((_, i) => i !== index));
+    };
+
+    const handleCitizenChange = (value) => {
+        setWarnings(null);
+        setCitizen(value);
+    };
 
     const resetForm = () => {
         setCitizen('');
         setNotes('');
         setItems([{ ...emptyItem }]);
+        setWarnings(null);
     };
 
     const handleSubmit = async (e) => {
@@ -78,6 +92,19 @@ const DigitalPrescription = () => {
 
         setSubmitting(true);
         try {
+            if (warnings === null) {
+                const checkResponse = await api.post('doctor/prescriptions/check/', {
+                    citizen: Number(citizen),
+                    items: items.map((item) => ({ medicine: Number(item.medicine) })),
+                });
+                if (checkResponse.data.warnings.length > 0) {
+                    setWarnings(checkResponse.data.warnings);
+                    setSubmitting(false);
+                    return;
+                }
+                setWarnings([]);
+            }
+
             await api.post('doctor/prescriptions/', {
                 citizen: Number(citizen),
                 notes,
@@ -112,7 +139,7 @@ const DigitalPrescription = () => {
                             <label style={{ display: 'block', marginBottom: '0.35rem', fontWeight: 600, fontSize: '0.9rem' }}>Patient</label>
                             <select
                                 value={citizen}
-                                onChange={(e) => setCitizen(e.target.value)}
+                                onChange={(e) => handleCitizenChange(e.target.value)}
                                 style={{ width: '100%', padding: '0.6rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-main)' }}
                             >
                                 <option value="">Select a patient...</option>
@@ -183,10 +210,21 @@ const DigitalPrescription = () => {
                             />
                         </div>
 
+                        {warnings && warnings.length > 0 && (
+                            <div style={{ padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--warning)', background: 'var(--primary-light)' }}>
+                                <div style={{ fontWeight: 700, color: 'var(--warning)', marginBottom: '0.35rem' }}>Review before creating:</div>
+                                <ul style={{ margin: 0, paddingLeft: '1.2rem', color: 'var(--text-main)', fontSize: '0.9rem' }}>
+                                    {warnings.map((warning, i) => <li key={i}>{warning}</li>)}
+                                </ul>
+                            </div>
+                        )}
+
                         {formError && <p style={{ color: 'var(--danger)', margin: 0 }}>{formError}</p>}
                         {formSuccess && <p style={{ color: 'var(--success)', margin: 0 }}>{formSuccess}</p>}
 
-                        <Button type="submit" disabled={submitting}>{submitting ? 'Creating...' : 'Create Prescription'}</Button>
+                        <Button type="submit" disabled={submitting}>
+                            {submitting ? 'Working...' : warnings && warnings.length > 0 ? 'Create Anyway' : 'Create Prescription'}
+                        </Button>
                     </form>
                 </CardContent>
             </Card>
