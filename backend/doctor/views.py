@@ -1,3 +1,5 @@
+import os
+
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, permissions, status, views
@@ -7,7 +9,7 @@ from rest_framework.response import Response
 from core.models import Consultation, DosageSchedule, Medicine, Prescription, Sale
 from users.permissions import IsDoctor
 
-from .utils import check_prescription_warnings
+from .utils import _chat_completion, check_prescription_warnings
 from .serializers import (
     DoctorMedicineSerializer,
     DoctorPatientDosageScheduleSerializer,
@@ -117,3 +119,40 @@ class DoctorPrescriptionCheckView(views.APIView):
 
         warnings = check_prescription_warnings(citizen_id, items)
         return Response({'warnings': warnings})
+
+
+class DoctorInteractionCheckerView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, IsDoctor]
+
+    def post(self, request):
+        medicines = request.data.get('medicines', [])
+        if len(medicines) < 2:
+            return Response(
+                {'error': 'Please provide at least two medicines to check for interactions.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        api_key = os.environ.get('OPENROUTER_API_KEY') or os.environ.get('NVIDIA_API_KEY')
+        if not api_key:
+            return Response(
+                {'error': 'OPENROUTER_API_KEY is missing in backend/.env. Please add OPENROUTER_API_KEY to your .env file.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        try:
+            meds_str = ', '.join(medicines)
+            full_prompt = (
+                f'A doctor is prescribing the following medicines together: {meds_str}. '
+                f'Analyze potential drug interactions between them. Provide a severity summary '
+                f'(None, Minor, Moderate, Major) and a brief clinical explanation. Structure your response clearly.'
+            )
+
+            response_text = _chat_completion(
+                api_key=api_key,
+                model=os.environ.get('OPENROUTER_MODEL', 'openai/gpt-4o-mini'),
+                messages=[{'role': 'user', 'content': full_prompt}],
+                is_openrouter=True,
+            )
+            return Response({'response': response_text})
+        except Exception as e:
+            return Response({'error': f'AI provider error: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

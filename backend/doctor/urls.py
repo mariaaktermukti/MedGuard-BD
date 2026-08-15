@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .views import (
+    DoctorInteractionCheckerView,
     DoctorMedicineListView,
     DoctorPatientListView,
     DoctorPatientMedicineHistoryView,
@@ -16,4 +17,5 @@ urlpatterns = [
     path('prescriptions/check/', DoctorPrescriptionCheckView.as_view(), name='doctor-prescription-check'),
     path('prescriptions/<int:pk>/', DoctorPrescriptionDetailView.as_view(), name='doctor-prescription-detail'),
     path('medicines/', DoctorMedicineListView.as_view(), name='doctor-medicines'),
+    path('interactions/check/', DoctorInteractionCheckerView.as_view(), name='doctor-interaction-checker'),
 ]
