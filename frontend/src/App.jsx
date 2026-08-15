@@ -31,6 +31,7 @@ import RouteOptimization from './pages/distributor/RouteOptimization';
 import FleetMonitoring from './pages/distributor/FleetMonitoring';
 import RouteRisk from './pages/distributor/RouteRisk';
 import DGDAPortal from './pages/dgda/DGDAPortal';
+import DoctorPortal from './pages/doctor/DoctorPortal';
 
 function App() {
   return (
@@ -62,6 +63,7 @@ function App() {
             <Route path="pharmacy" element={<PharmacyDashboard />} />
             <Route path="pharmacy/inventory" element={<Inventory />} />
             <Route path="dgda/*" element={<DGDAPortal />} />
+            <Route path="doctor/*" element={<DoctorPortal />} />
             <Route path="pharmacy/suppliers" element={<Suppliers />} />
             <Route path="pharmacy/verify" element={<BatchVerify />} />
             <Route path="pharmacy/sales" element={<SaleLogging />} />
