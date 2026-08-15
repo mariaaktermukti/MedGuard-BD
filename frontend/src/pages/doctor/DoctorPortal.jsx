@@ -1,11 +1,12 @@
 import React from 'react';
 import { Routes, Route, NavLink } from 'react-router-dom';
-import { Users, ClipboardText, ShieldWarning, MagnifyingGlass, QrCode } from '@phosphor-icons/react';
+import { Users, ClipboardText, ShieldWarning, MagnifyingGlass, QrCode, Warning } from '@phosphor-icons/react';
 import PatientMedicineHistory from './PatientMedicineHistory';
 import DigitalPrescription from './DigitalPrescription';
 import DrugInteractionChecker from './DrugInteractionChecker';
 import MedicineLookup from './MedicineLookup';
 import DrugPassportViewer from './DrugPassportViewer';
+import DoctorADRReport from './DoctorADRReport';
 
 const tabs = [
     { path: 'patient-history', label: 'Patient Medicine History', icon: <Users size={18} /> },
@@ -13,6 +14,7 @@ const tabs = [
     { path: 'interaction-checker', label: 'Drug Interaction Checker', icon: <ShieldWarning size={18} /> },
     { path: 'medicine-lookup', label: 'Medicine Lookup', icon: <MagnifyingGlass size={18} /> },
     { path: 'drug-passport', label: 'Digital Drug Passport', icon: <QrCode size={18} /> },
+    { path: 'adr-report', label: 'Report ADR', icon: <Warning size={18} /> },
 ];
 
 const DoctorPortal = () => {
@@ -53,6 +55,7 @@ const DoctorPortal = () => {
                 <Route path="interaction-checker" element={<DrugInteractionChecker />} />
                 <Route path="medicine-lookup" element={<MedicineLookup />} />
                 <Route path="drug-passport" element={<DrugPassportViewer />} />
+                <Route path="adr-report" element={<DoctorADRReport />} />
             </Routes>
         </div>
     );
