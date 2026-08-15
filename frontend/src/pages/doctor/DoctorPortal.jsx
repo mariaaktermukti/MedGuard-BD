@@ -1,10 +1,12 @@
 import React from 'react';
 import { Routes, Route, NavLink } from 'react-router-dom';
-import { Users } from '@phosphor-icons/react';
+import { Users, ClipboardText } from '@phosphor-icons/react';
 import PatientMedicineHistory from './PatientMedicineHistory';
+import DigitalPrescription from './DigitalPrescription';
 
 const tabs = [
     { path: 'patient-history', label: 'Patient Medicine History', icon: <Users size={18} /> },
+    { path: 'prescriptions', label: 'Digital Prescription', icon: <ClipboardText size={18} /> },
 ];
 
 const DoctorPortal = () => {
@@ -41,6 +43,7 @@ const DoctorPortal = () => {
             <Routes>
                 <Route index element={<PatientMedicineHistory />} />
                 <Route path="patient-history" element={<PatientMedicineHistory />} />
+                <Route path="prescriptions" element={<DigitalPrescription />} />
             </Routes>
         </div>
     );
