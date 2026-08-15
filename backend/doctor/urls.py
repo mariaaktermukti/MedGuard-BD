@@ -2,6 +2,7 @@ from django.urls import path
 
 from .views import (
     DoctorADRReportListCreateView,
+    DoctorFrequentMedicinesView,
     DoctorInteractionCheckerView,
     DoctorMedicineListView,
     DoctorPatientListView,
@@ -22,4 +23,5 @@ urlpatterns = [
     path('interactions/check/', DoctorInteractionCheckerView.as_view(), name='doctor-interaction-checker'),
     path('adr-reports/', DoctorADRReportListCreateView.as_view(), name='doctor-adr-reports'),
     path('recall-alerts/', DoctorRecallAlertsView.as_view(), name='doctor-recall-alerts'),
+    path('frequent-medicines/', DoctorFrequentMedicinesView.as_view(), name='doctor-frequent-medicines'),
 ]

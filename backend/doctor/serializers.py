@@ -73,6 +73,14 @@ class DoctorMedicineSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'generic_name', 'category', 'strength', 'dosage_form']
 
 
+class DoctorFrequentMedicineSerializer(serializers.ModelSerializer):
+    times_prescribed = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = Medicine
+        fields = ['id', 'name', 'generic_name', 'category', 'strength', 'dosage_form', 'times_prescribed']
+
+
 class DoctorPatientSaleSerializer(serializers.ModelSerializer):
     medicine_name = serializers.CharField(source='batch.medicine.name', read_only=True)
     batch_number = serializers.CharField(source='batch.batch_number', read_only=True)

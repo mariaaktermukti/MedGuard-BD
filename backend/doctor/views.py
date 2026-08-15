@@ -2,7 +2,7 @@ import os
 from collections import defaultdict
 
 from django.contrib.auth import get_user_model
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, permissions, status, views
 from rest_framework.exceptions import PermissionDenied
@@ -14,6 +14,7 @@ from users.permissions import IsDoctor
 from .utils import _chat_completion, check_prescription_warnings
 from .serializers import (
     DoctorADRReportSerializer,
+    DoctorFrequentMedicineSerializer,
     DoctorMedicineSerializer,
     DoctorPatientDosageScheduleSerializer,
     DoctorPatientSaleSerializer,
@@ -153,6 +154,19 @@ class DoctorADRReportListCreateView(generics.ListCreateAPIView):
         if not _is_existing_patient(self.request.user, citizen.id):
             raise PermissionDenied('You do not have an existing consultation or prescription with this patient.')
         serializer.save(reported_by_user=self.request.user)
+
+
+class DoctorFrequentMedicinesView(generics.ListAPIView):
+    serializer_class = DoctorFrequentMedicineSerializer
+    permission_classes = [permissions.IsAuthenticated, IsDoctor]
+
+    def get_queryset(self):
+        doctor = self.request.user
+        return Medicine.objects.filter(
+            prescription_items__prescription__doctor=doctor
+        ).annotate(
+            times_prescribed=Count('prescription_items', filter=Q(prescription_items__prescription__doctor=doctor))
+        ).distinct().order_by('-times_prescribed', 'name')
 
 
 class DoctorRecallAlertsView(views.APIView):
