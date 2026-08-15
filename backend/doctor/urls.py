@@ -9,6 +9,7 @@ from .views import (
     DoctorPrescriptionCheckView,
     DoctorPrescriptionDetailView,
     DoctorPrescriptionListCreateView,
+    DoctorRecallAlertsView,
 )
 
 urlpatterns = [
@@ -20,4 +21,5 @@ urlpatterns = [
     path('medicines/', DoctorMedicineListView.as_view(), name='doctor-medicines'),
     path('interactions/check/', DoctorInteractionCheckerView.as_view(), name='doctor-interaction-checker'),
     path('adr-reports/', DoctorADRReportListCreateView.as_view(), name='doctor-adr-reports'),
+    path('recall-alerts/', DoctorRecallAlertsView.as_view(), name='doctor-recall-alerts'),
 ]

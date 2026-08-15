@@ -1,4 +1,5 @@
 import os
+from collections import defaultdict
 
 from django.contrib.auth import get_user_model
 from django.db.models import Q
@@ -7,7 +8,7 @@ from rest_framework import generics, permissions, status, views
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 
-from core.models import ADRReport, Consultation, DosageSchedule, Medicine, Prescription, Sale
+from core.models import ADRReport, Consultation, DosageSchedule, Medicine, Prescription, Recall, Sale
 from users.permissions import IsDoctor
 
 from .utils import _chat_completion, check_prescription_warnings
@@ -31,17 +32,20 @@ def _is_existing_patient(doctor, patient_id):
     )
 
 
+def _doctor_patient_ids(doctor):
+    return set(
+        Consultation.objects.filter(doctor=doctor).values_list('citizen_id', flat=True)
+    ) | set(
+        Prescription.objects.filter(doctor=doctor).values_list('citizen_id', flat=True)
+    )
+
+
 class DoctorPatientListView(generics.ListAPIView):
     serializer_class = DoctorPatientSerializer
     permission_classes = [permissions.IsAuthenticated, IsDoctor]
 
     def get_queryset(self):
-        patient_ids = set(
-            Consultation.objects.filter(doctor=self.request.user).values_list('citizen_id', flat=True)
-        ) | set(
-            Prescription.objects.filter(doctor=self.request.user).values_list('citizen_id', flat=True)
-        )
-        return User.objects.filter(id__in=patient_ids).order_by('full_name')
+        return User.objects.filter(id__in=_doctor_patient_ids(self.request.user)).order_by('full_name')
 
 
 class DoctorPatientMedicineHistoryView(views.APIView):
@@ -149,6 +153,39 @@ class DoctorADRReportListCreateView(generics.ListCreateAPIView):
         if not _is_existing_patient(self.request.user, citizen.id):
             raise PermissionDenied('You do not have an existing consultation or prescription with this patient.')
         serializer.save(reported_by_user=self.request.user)
+
+
+class DoctorRecallAlertsView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, IsDoctor]
+
+    def get(self, request):
+        patient_ids = _doctor_patient_ids(request.user)
+
+        schedules = DosageSchedule.objects.filter(
+            citizen_id__in=patient_ids, is_active=True
+        ).select_related('medicine', 'citizen')
+
+        medicine_to_patients = defaultdict(list)
+        for schedule in schedules:
+            medicine_to_patients[schedule.medicine_id].append(schedule.citizen)
+
+        active_recalls = Recall.objects.filter(
+            status='active', batch__medicine_id__in=medicine_to_patients.keys()
+        ).select_related('batch', 'batch__medicine')
+
+        alerts = []
+        for recall in active_recalls:
+            for patient in medicine_to_patients.get(recall.batch.medicine_id, []):
+                alerts.append({
+                    'patient_id': patient.id,
+                    'patient_name': patient.full_name or patient.username,
+                    'medicine_name': recall.batch.medicine.name,
+                    'batch_number': recall.batch.batch_number,
+                    'reason': recall.reason,
+                    'date_issued': recall.date_issued,
+                })
+
+        return Response({'alerts': alerts})
 
 
 class DoctorInteractionCheckerView(views.APIView):
