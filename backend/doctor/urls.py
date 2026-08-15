@@ -11,6 +11,7 @@ from .views import (
     DoctorPrescriptionDetailView,
     DoctorPrescriptionListCreateView,
     DoctorRecallAlertsView,
+    DoctorResearchDatasetListView,
 )
 
 urlpatterns = [
@@ -24,4 +25,5 @@ urlpatterns = [
     path('adr-reports/', DoctorADRReportListCreateView.as_view(), name='doctor-adr-reports'),
     path('recall-alerts/', DoctorRecallAlertsView.as_view(), name='doctor-recall-alerts'),
     path('frequent-medicines/', DoctorFrequentMedicinesView.as_view(), name='doctor-frequent-medicines'),
+    path('research-datasets/', DoctorResearchDatasetListView.as_view(), name='doctor-research-datasets'),
 ]

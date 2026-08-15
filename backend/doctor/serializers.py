@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from core.models import ADRReport, DosageSchedule, Medicine, Prescription, PrescriptionItem, Sale
+from core.models import ADRReport, DosageSchedule, Medicine, Prescription, PrescriptionItem, ResearchDataset, Sale
 
 
 class DoctorPatientSerializer(serializers.Serializer):
@@ -79,6 +79,18 @@ class DoctorFrequentMedicineSerializer(serializers.ModelSerializer):
     class Meta:
         model = Medicine
         fields = ['id', 'name', 'generic_name', 'category', 'strength', 'dosage_form', 'times_prescribed']
+
+
+class DoctorResearchDatasetSerializer(serializers.ModelSerializer):
+    created_by_username = serializers.CharField(source='created_by.username', read_only=True)
+    has_data_file = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ResearchDataset
+        fields = ['id', 'dataset_name', 'description', 'created_by_username', 'created_at', 'has_data_file']
+
+    def get_has_data_file(self, obj):
+        return bool(obj.data_file)
 
 
 class DoctorPatientSaleSerializer(serializers.ModelSerializer):

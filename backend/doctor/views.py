@@ -8,7 +8,7 @@ from rest_framework import generics, permissions, status, views
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 
-from core.models import ADRReport, Consultation, DosageSchedule, Medicine, Prescription, Recall, Sale
+from core.models import ADRReport, Consultation, DosageSchedule, Medicine, Prescription, Recall, ResearchDataset, Sale
 from users.permissions import IsDoctor
 
 from .utils import _chat_completion, check_prescription_warnings
@@ -21,6 +21,7 @@ from .serializers import (
     DoctorPatientSerializer,
     DoctorPrescriptionSerializer,
     DoctorPrescriptionWriteSerializer,
+    DoctorResearchDatasetSerializer,
 )
 
 User = get_user_model()
@@ -167,6 +168,12 @@ class DoctorFrequentMedicinesView(generics.ListAPIView):
         ).annotate(
             times_prescribed=Count('prescription_items', filter=Q(prescription_items__prescription__doctor=doctor))
         ).distinct().order_by('-times_prescribed', 'name')
+
+
+class DoctorResearchDatasetListView(generics.ListAPIView):
+    serializer_class = DoctorResearchDatasetSerializer
+    permission_classes = [permissions.IsAuthenticated, IsDoctor]
+    queryset = ResearchDataset.objects.select_related('created_by').order_by('-created_at')
 
 
 class DoctorRecallAlertsView(views.APIView):
