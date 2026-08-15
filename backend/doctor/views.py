@@ -7,11 +7,12 @@ from rest_framework import generics, permissions, status, views
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 
-from core.models import Consultation, DosageSchedule, Medicine, Prescription, Sale
+from core.models import ADRReport, Consultation, DosageSchedule, Medicine, Prescription, Sale
 from users.permissions import IsDoctor
 
 from .utils import _chat_completion, check_prescription_warnings
 from .serializers import (
+    DoctorADRReportSerializer,
     DoctorMedicineSerializer,
     DoctorPatientDosageScheduleSerializer,
     DoctorPatientSaleSerializer,
@@ -132,6 +133,22 @@ class DoctorPrescriptionCheckView(views.APIView):
 
         warnings = check_prescription_warnings(citizen_id, items)
         return Response({'warnings': warnings})
+
+
+class DoctorADRReportListCreateView(generics.ListCreateAPIView):
+    serializer_class = DoctorADRReportSerializer
+    permission_classes = [permissions.IsAuthenticated, IsDoctor]
+
+    def get_queryset(self):
+        return ADRReport.objects.filter(reported_by_user=self.request.user).select_related(
+            'citizen', 'medicine'
+        ).order_by('-date_reported')
+
+    def perform_create(self, serializer):
+        citizen = serializer.validated_data.get('citizen')
+        if not _is_existing_patient(self.request.user, citizen.id):
+            raise PermissionDenied('You do not have an existing consultation or prescription with this patient.')
+        serializer.save(reported_by_user=self.request.user)
 
 
 class DoctorInteractionCheckerView(views.APIView):

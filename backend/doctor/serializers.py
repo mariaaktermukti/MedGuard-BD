@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from core.models import DosageSchedule, Medicine, Prescription, PrescriptionItem, Sale
+from core.models import ADRReport, DosageSchedule, Medicine, Prescription, PrescriptionItem, Sale
 
 
 class DoctorPatientSerializer(serializers.Serializer):
@@ -80,3 +80,17 @@ class DoctorPatientSaleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Sale
         fields = ['id', 'medicine_name', 'batch_number', 'quantity', 'sale_date', 'price']
+
+
+class DoctorADRReportSerializer(serializers.ModelSerializer):
+    citizen_username = serializers.CharField(source='citizen.username', read_only=True)
+    citizen_full_name = serializers.CharField(source='citizen.full_name', read_only=True)
+    medicine_name = serializers.CharField(source='medicine.name', read_only=True)
+
+    class Meta:
+        model = ADRReport
+        fields = [
+            'id', 'citizen', 'citizen_username', 'citizen_full_name', 'batch', 'medicine', 'medicine_name',
+            'description', 'severity', 'reaction_date', 'date_reported', 'status', 'attachment',
+        ]
+        read_only_fields = ['id', 'date_reported', 'status']
