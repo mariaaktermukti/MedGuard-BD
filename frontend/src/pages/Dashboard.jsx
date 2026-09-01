@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { QrCode, Pill, Clipboard, MapPin, Intersect, Alarm, CalendarBlank, Warning, ChatCircle, Pill as PillIcon, XCircle, CheckCircle, Storefront, Lightbulb } from '@phosphor-icons/react';
 import api from '../services/api';
 import Card, { CardContent, CardHeader, CardFooter } from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
+import { AuthContext } from '../context/AuthContext';
 
 const StatCard = ({ icon, label, value, color }) => (
     <Card padding="md" style={{ transition: 'all 0.3s ease', cursor: 'pointer' }} className="hover-lift">
@@ -27,6 +28,7 @@ const ActionCard = ({ icon, label }) => (
 );
 
 const Dashboard = () => {
+    const { user } = useContext(AuthContext);
     const today = new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date());
     const [data, setData] = useState({
         stats: { total_scans: 0, active_medicines: 0, reports_submitted: 0, pharmacy_visits: 0 },
@@ -48,13 +50,14 @@ const Dashboard = () => {
     }, []);
 
     const { stats, recent_activity, upcoming_dose, recalls } = data;
+    const userName = user?.full_name || user?.username || 'Rakib Hasan';
 
     return (
         <div className="animate-fade-in" style={{ paddingBottom: '2rem' }}>
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <div>
-                    <h1 style={{ fontSize: '2rem', margin: '0 0 0.5rem 0', color: 'var(--text-main)' }}>Welcome, Rakib Hasan 👋</h1>
+                    <h1 style={{ fontSize: '2rem', margin: '0 0 0.5rem 0', color: 'var(--text-main)' }}>Welcome, {userName} 👋</h1>
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: 'var(--primary-light)', color: 'var(--primary)', padding: '0.5rem 1rem', borderRadius: '2rem', fontSize: '0.85rem', fontWeight: 600 }}>
                         <CalendarBlank size={16} /> {today}
                     </div>
@@ -181,14 +184,14 @@ const Dashboard = () => {
                         </CardContent>
                     </Card>
 
-                    {/* AI Tip */}
-                    <Card padding="md" style={{ background: 'linear-gradient(135deg, var(--secondary), var(--primary))', color: 'white', border: 'none' }}>
+                    {/* AI Health Tip */}
+                    <Card padding="md" style={{ background: 'var(--primary-light)', border: '1px solid var(--primary)', borderRadius: '12px' }}>
                         <CardContent>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-                                <Lightbulb size={24} color="#F59E0B" weight="fill" />
-                                <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'white' }}>Health Tip</h3>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                                <Lightbulb size={24} color="var(--primary)" weight="fill" />
+                                <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-main)', fontWeight: 700 }}>Health Tip</h3>
                             </div>
-                            <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: 1.5, opacity: 0.9 }}>
+                            <p style={{ margin: 0, fontSize: '0.925rem', lineHeight: 1.5, color: 'var(--text-main)', fontWeight: 600 }}>
                                 Always take paracetamol after meals. Do not take it on an empty stomach to avoid acidity.
                             </p>
                         </CardContent>

@@ -14,8 +14,7 @@ export const AuthProvider = ({ children }) => {
             const token = localStorage.getItem('access_token') || localStorage.getItem('access');
             if (token) {
                 try {
-                    // Try to hit the debug endpoint to get user details
-                    const response = await api.get('users/debug/');
+                    const response = await api.get('users/me/');
                     setUser(response.data);
                 } catch (error) {
                     console.error("Token invalid or expired", error);
@@ -37,12 +36,13 @@ export const AuthProvider = ({ children }) => {
             localStorage.setItem('refresh_token', response.data.refresh);
             
             // Fetch user info after login
-            const userResponse = await api.get('users/debug/');
+            const userResponse = await api.get('users/me/');
             setUser(userResponse.data);
-            navigate('/dashboard');
-            return { success: true };
+            
+            // Do NOT navigate here so Login page can show animation
+            return { success: true, role: userResponse.data.role };
         } catch (error) {
-            return { success: false, error: error.response?.data?.detail || "Login failed" };
+            return { success: false, error: error.response?.data?.detail || "Invalid username/email or password." };
         }
     };
 

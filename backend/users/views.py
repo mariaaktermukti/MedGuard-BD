@@ -5,12 +5,26 @@ from rest_framework.response import Response
 # pyrefly: ignore [missing-import]
 from rest_framework import status
 # pyrefly: ignore [missing-import]
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from .serializers import RegisterSerializer
 from .permissions import (
     IsCitizen, IsPharmacy, IsManufacturer, 
     IsDistributor, IsDGDA, IsDoctor, IsResearcher
 )
+
+class UserMeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        return Response({
+            "id": user.id,
+            "full_name": user.full_name,
+            "username": user.username,
+            "email": user.email,
+            "phone": getattr(user, 'phone', ''),
+            "role": getattr(user, 'role', 'citizen')
+        })
 
 class RegisterView(APIView):
     permission_classes = [AllowAny]

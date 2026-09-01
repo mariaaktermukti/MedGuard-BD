@@ -1,76 +1,95 @@
 import React from 'react';
 
-const Button = ({ 
+const Button = React.forwardRef(({ 
   children, 
   variant = 'primary', 
   size = 'md', 
   className = '', 
   fullWidth = false,
   disabled = false,
+  style = {},
   ...props 
-}) => {
-  const baseStyles = "inline-flex items-center justify-center font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed";
+}, ref) => {
   
-  const variants = {
-    primary: "bg-[var(--primary)] text-white hover:bg-[var(--primary-hover)] focus:ring-[var(--primary)] border border-transparent",
-    secondary: "bg-[var(--secondary)] text-white hover:bg-[var(--secondary-hover)] focus:ring-[var(--secondary)] border border-transparent",
-    outline: "bg-transparent text-[var(--text-main)] border border-[var(--border)] hover:border-[var(--primary)] hover:text-[var(--primary)] focus:ring-[var(--primary)]",
-    danger: "bg-[var(--danger)] text-white hover:bg-red-600 focus:ring-red-500 border border-transparent",
-    ghost: "bg-transparent text-[var(--text-muted)] hover:text-[var(--primary)] hover:bg-[var(--primary-light)] focus:ring-[var(--primary)]"
-  };
-
-  const sizes = {
-    sm: "px-3 py-1.5 text-sm",
-    md: "px-4 py-2 text-base",
-    lg: "px-6 py-3 text-lg"
-  };
-
-  // Polyfill styles via inline since we're replacing the legacy CSS classes
   const getStyle = () => {
-    let style = {
+    let base = {
       display: 'inline-flex',
       alignItems: 'center',
       justifyContent: 'center',
-      fontWeight: '500',
-      borderRadius: 'var(--radius-md)',
-      transition: 'all 0.2s',
+      fontWeight: '600',
+      fontFamily: 'inherit',
+      borderRadius: '10px',
+      transition: 'all 0.15s ease-in-out',
       cursor: disabled ? 'not-allowed' : 'pointer',
-      opacity: disabled ? 0.6 : 1,
+      opacity: disabled ? 0.5 : 1,
       width: fullWidth ? '100%' : 'auto',
-      border: '1px solid transparent'
+      outline: 'none',
+      gap: '0.5rem',
+      userSelect: 'none',
+      border: '1px solid transparent',
+      textDecoration: 'none',
+      boxSizing: 'border-box'
     };
 
-    if (size === 'sm') {
-      style.padding = '0.5rem 0.75rem';
-      style.fontSize = '0.875rem';
+    // Sizes (Shadcn Standards)
+    if (size === 'xs') {
+      base.padding = '0.35rem 0.65rem';
+      base.fontSize = '0.775rem';
+      base.borderRadius = '6px';
+    } else if (size === 'sm') {
+      base.padding = '0.5rem 0.85rem';
+      base.fontSize = '0.85rem';
+      base.borderRadius = '8px';
     } else if (size === 'lg') {
-      style.padding = '1rem 1.5rem';
-      style.fontSize = '1.125rem';
+      base.padding = '0.85rem 1.6rem';
+      base.fontSize = '1rem';
+      base.borderRadius = '12px';
+    } else if (size === 'icon') {
+      base.padding = '0.5rem';
+      base.width = '38px';
+      base.height = '38px';
+      base.borderRadius = '8px';
     } else {
-      style.padding = '0.75rem 1.25rem';
-      style.fontSize = '1rem';
+      base.padding = '0.65rem 1.25rem';
+      base.fontSize = '0.925rem';
+      base.borderRadius = '10px';
     }
 
-    if (variant === 'primary') {
-      style.backgroundColor = 'var(--primary)';
-      style.color = '#fff';
+    // Variants (Shadcn Palette)
+    if (variant === 'primary' || variant === 'default') {
+      base.backgroundColor = 'var(--primary)';
+      base.color = '#FFFFFF';
+      base.boxShadow = disabled ? 'none' : '0 4px 12px rgba(5, 150, 105, 0.2)';
     } else if (variant === 'secondary') {
-      style.backgroundColor = 'var(--secondary)';
-      style.color = '#fff';
-    } else if (variant === 'danger') {
-      style.backgroundColor = 'var(--danger)';
-      style.color = '#fff';
+      base.backgroundColor = 'var(--primary-light)';
+      base.color = 'var(--primary)';
+      base.borderColor = 'rgba(5, 150, 105, 0.15)';
     } else if (variant === 'outline') {
-      style.backgroundColor = 'transparent';
-      style.color = 'var(--text-main)';
-      style.borderColor = 'var(--border)';
+      base.backgroundColor = 'var(--bg-card)';
+      base.color = 'var(--text-main)';
+      base.borderColor = 'var(--border)';
+      base.boxShadow = '0 1px 2px rgba(0,0,0,0.04)';
+    } else if (variant === 'danger' || variant === 'destructive') {
+      base.backgroundColor = 'var(--danger)';
+      base.color = '#FFFFFF';
+      base.boxShadow = disabled ? 'none' : '0 4px 12px rgba(220, 38, 38, 0.2)';
+    } else if (variant === 'ghost') {
+      base.backgroundColor = 'transparent';
+      base.color = 'var(--text-main)';
+      base.borderColor = 'transparent';
+    } else if (variant === 'link') {
+      base.backgroundColor = 'transparent';
+      base.color = 'var(--primary)';
+      base.borderColor = 'transparent';
+      base.padding = '0';
     }
 
-    return style;
+    return { ...base, ...style };
   };
 
   return (
     <button
+      ref={ref}
       className={`ui-btn ui-btn-${variant} ${className}`}
       style={getStyle()}
       disabled={disabled}
@@ -79,6 +98,8 @@ const Button = ({
       {children}
     </button>
   );
-};
+});
+
+Button.displayName = 'Button';
 
 export default Button;

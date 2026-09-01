@@ -1,41 +1,41 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 :root {
-  /* Core Healthcare Palette */
-  --primary: #059669; /* Trustworthy Healthcare Green */
+  /* Core Healthcare Palette - Crisp White & Fresh Emerald Green System */
+  --primary: #059669; /* Fresh Healthcare Emerald Green */
   --primary-hover: #047857;
-  --primary-light: #d1fae5;
-  --secondary: #064e3b; /* Deep/Dark Green */
-  --secondary-hover: #022c22;
+  --primary-light: #ecfdf5; /* Soft Mint Light Green Fill */
+  --secondary: #10b981; /* Fresh Medium Green */
+  --secondary-hover: #059669;
   
   /* Semantic Colors */
   --success: #10b981;
-  --warning: #f59e0b;
-  --danger: #ef4444;
-  --info: #3b82f6;
+  --warning: #d97706;
+  --danger: #dc2626;
+  --info: #2563eb;
 
   /* Backgrounds & Surfaces */
-  --bg-page: #f8fafc; /* Very light neutral for pages */
-  --bg-card: #ffffff; /* White for cards */
+  --bg-page: #f8fafc; /* Crisp Light Neutral Page Background */
+  --bg-card: #ffffff; /* Pure Crisp White Cards */
   --bg-input: #ffffff;
   
-  /* Text */
-  --text-main: #1e293b; /* Dark charcoal */
-  --text-muted: #64748b; /* Neutral gray */
+  /* High-Contrast Deep Text Colors */
+  --text-main: #0f172a; /* Slate 900 Charcoal Text (Deep, Sharp) */
+  --text-muted: #334155; /* Slate 700 Dark Gray (Visible & Clear) */
   --text-inverse: #ffffff;
   
   /* Borders & Shadows */
   --border: #e2e8f0;
   --border-focus: var(--primary);
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 6px -1px rgba(5, 150, 105, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(5, 150, 105, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
   
   /* Radii */
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
   
   /* Layout Spacing */
   --spacing-xs: 4px;
@@ -48,17 +48,17 @@
 [data-theme="dark"] {
   --primary: #10b981; 
   --primary-hover: #34d399;
-  --primary-light: #064e3b;
-  --secondary: #022c22;
-  --secondary-hover: #064e3b;
+  --primary-light: #ecfdf5;
+  --secondary: #059669;
+  --secondary-hover: #047857;
   
-  --bg-page: #0f172a; 
-  --bg-card: #1e293b; 
-  --bg-input: #0f172a;
+  --bg-page: #f8fafc; 
+  --bg-card: #ffffff; 
+  --bg-input: #ffffff;
   
-  --text-main: #f8fafc; 
-  --text-muted: #94a3b8; 
-  --border: #334155; 
+  --text-main: #0f172a; 
+  --text-muted: #334155; 
+  --border: #e2e8f0; 
 }
 
 /* Global Reset */
@@ -80,13 +80,14 @@ body {
 /* Typography */
 h1, h2, h3, h4, h5, h6 {
   color: var(--text-main);
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.25;
   margin-bottom: var(--spacing-sm);
 }
 
 p {
   color: var(--text-muted);
+  font-weight: 500;
   margin-bottom: var(--spacing-md);
 }
 
@@ -112,7 +113,7 @@ a:hover {
   display: flex;
   flex-direction: column;
   transition: padding-left 0.3s ease;
-  min-width: 0; /* Prevent flex overflow */
+  min-width: 0;
 }
 
 .page-wrapper {
@@ -123,7 +124,7 @@ a:hover {
   width: 100%;
 }
 
-/* Form Groups (Legacy support during refactor) */
+/* Form Groups */
 .input-group {
   margin-bottom: var(--spacing-md);
   display: flex;
@@ -134,7 +135,7 @@ a:hover {
 .input-group label {
   font-size: 0.875rem;
   color: var(--text-main);
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .input-group input, .input-group select, .input-group textarea {
@@ -154,6 +155,110 @@ a:hover {
   box-shadow: 0 0 0 3px var(--primary-light);
 }
 
+/* ==========================================================================
+   Shadcn UI Global Button Styles (.ui-btn)
+   ========================================================================== */
+.ui-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-family: inherit;
+  border-radius: 10px;
+  transition: all 0.15s ease-in-out;
+  cursor: pointer;
+  outline: none;
+  gap: 0.5rem;
+  user-select: none;
+  border: 1px solid transparent;
+  text-decoration: none;
+  box-sizing: border-box;
+  padding: 0.65rem 1.25rem;
+  font-size: 0.925rem;
+  line-height: 1;
+}
+
+.ui-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.ui-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none !important;
+}
+
+/* Variants */
+.ui-btn-primary, .ui-btn-default {
+  background-color: var(--primary);
+  color: #FFFFFF;
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);
+}
+
+.ui-btn-primary:hover:not(:disabled), .ui-btn-default:hover:not(:disabled) {
+  background-color: var(--primary-hover);
+  color: #FFFFFF;
+  box-shadow: 0 6px 16px rgba(5, 150, 105, 0.3);
+}
+
+.ui-btn-secondary {
+  background-color: var(--primary-light);
+  color: var(--primary);
+  border: 1px solid rgba(5, 150, 105, 0.15);
+}
+
+.ui-btn-secondary:hover:not(:disabled) {
+  background-color: #d1fae5;
+  color: var(--primary-hover);
+}
+
+.ui-btn-outline {
+  background-color: var(--bg-card);
+  color: var(--text-main);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+.ui-btn-outline:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary);
+  background-color: var(--primary-light);
+}
+
+.ui-btn-danger, .ui-btn-destructive {
+  background-color: var(--danger);
+  color: #FFFFFF;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
+}
+
+.ui-btn-danger:hover:not(:disabled), .ui-btn-destructive:hover:not(:disabled) {
+  background-color: #b91c1c;
+  color: #FFFFFF;
+  box-shadow: 0 6px 16px rgba(220, 38, 38, 0.3);
+}
+
+.ui-btn-ghost {
+  background-color: transparent;
+  color: var(--text-main);
+  border: 1px solid transparent;
+}
+
+.ui-btn-ghost:hover:not(:disabled) {
+  background-color: var(--primary-light);
+  color: var(--primary);
+}
+
+.ui-btn-link {
+  background-color: transparent;
+  color: var(--primary);
+  border: none;
+  padding: 0;
+}
+
+.ui-btn-link:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
 /* Animations */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(5px); }
@@ -164,7 +269,7 @@ a:hover {
   animation: fadeIn 0.3s ease-out forwards;
 }
 
-/* Legacy Glassmorphism (keeping for compat while refactoring) */
+/* Glassmorphism Panel */
 .glass-panel {
   background: var(--bg-card);
   border: 1px solid var(--border);

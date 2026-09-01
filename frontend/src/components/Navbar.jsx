@@ -180,13 +180,7 @@ const Navbar = ({ isMobile }) => {
                         }}>
                             <User size={20} weight="fill" />
                         </div>
-                        {!isMobile && (
-                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-main)', lineHeight: 1 }}>{user?.username || 'User'}</span>
-                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'capitalize' }}>{user?.role || 'Guest'}</span>
-                            </div>
-                        )}
-                        {!isMobile && <CaretDown size={16} color="var(--text-muted)" weight="bold" style={{ marginLeft: '4px' }} />}
+                        <CaretDown size={14} color="var(--text-muted)" weight="bold" />
                     </div>
 
                     {showProfileMenu && (
@@ -197,7 +191,7 @@ const Navbar = ({ isMobile }) => {
                             minWidth: '200px', zIndex: 100, overflow: 'hidden'
                         }}>
                             <div style={{ padding: '1rem', borderBottom: '1px solid var(--border)' }}>
-                                <div style={{ fontWeight: 600 }}>{user?.username || 'User'}</div>
+                                <div style={{ fontWeight: 600 }}>{user?.full_name || user?.username || 'User'}</div>
                                 <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textTransform: 'capitalize' }}>{user?.role || 'Guest'} Account</div>
                             </div>
                             

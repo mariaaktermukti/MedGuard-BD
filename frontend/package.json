@@ -22,7 +22,8 @@
     "react-leaflet": "^5.0.0",
     "react-router-dom": "^7.18.2",
     "react-swipeable-list": "^1.10.0",
-    "simple-icons": "^16.28.0"
+    "simple-icons": "^16.28.0",
+    "sweetalert2": "^11.26.25"
   },
   "devDependencies": {
     "@types/react": "^19.2.17",

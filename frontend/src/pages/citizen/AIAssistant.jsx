@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Chat, PaperPlaneRight, Robot, User, Microphone, SpeakerHigh, WarningCircle } from '@phosphor-icons/react';
+import { Chat, PaperPlaneRight, Robot, User, SpeakerHigh, WarningCircle, Lightbulb } from '@phosphor-icons/react';
 import api from '../../services/api';
 
 const AIAssistant = () => {
@@ -13,8 +13,6 @@ const AIAssistant = () => {
     const [loading, setLoading] = useState(false);
     const messagesEndRef = useRef(null);
 
-    const suggestions = ["পার্শ্বপ্রতিক্রিয়া", "ডোজ", "বিকল্প ওষুধ"];
-
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
@@ -25,15 +23,16 @@ const AIAssistant = () => {
 
     const handleSend = async (e, text = input) => {
         if (e && e.preventDefault) e.preventDefault();
-        if (!text.trim()) return;
+        const textToSend = text || input;
+        if (!textToSend.trim()) return;
 
-        const userMsg = { role: 'user', content: text };
+        const userMsg = { role: 'user', content: textToSend };
         setMessages(prev => [...prev, userMsg]);
         setInput('');
         setLoading(true);
 
         try {
-            const response = await api.post('core/ai-assistant/', { prompt: text });
+            const response = await api.post('core/ai-assistant/', { prompt: textToSend });
             const aiMsg = { 
                 role: 'assistant', 
                 content: response.data.response || response.data.error || "Sorry, I could not generate a response."
@@ -48,21 +47,28 @@ const AIAssistant = () => {
         }
     };
 
-    const parseInlineFormatting = (text) => {
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSend(e);
+        }
+    };
+
+    const parseInlineFormatting = (text, isUser = false) => {
         const parts = text.split('**');
         return parts.map((part, idx) => {
             if (idx % 2 === 1) {
-                return <strong key={idx} style={{ color: '#38BDF8', fontWeight: 700 }}>{part}</strong>;
+                return <strong key={idx} style={{ color: isUser ? '#FFFFFF' : 'var(--primary)', fontWeight: 700 }}>{part}</strong>;
             }
             if (part.includes('*')) {
                 const subParts = part.split('*');
-                return subParts.map((sub, sIdx) => sIdx % 2 === 1 ? <em key={sIdx} style={{ fontStyle: 'italic', color: '#94A3B8', opacity: 0.9 }}>{sub}</em> : sub);
+                return subParts.map((sub, sIdx) => sIdx % 2 === 1 ? <em key={sIdx} style={{ fontStyle: 'italic', color: isUser ? '#E2E8F0' : 'var(--text-muted)', opacity: 0.9 }}>{sub}</em> : sub);
             }
             return part;
         });
     };
 
-    const renderFormattedText = (text) => {
+    const renderFormattedText = (text, isUser = false) => {
         return text.split('\n').map((line, i) => {
             const trimmed = line.trim();
             if (!trimmed) return <div key={i} style={{ height: '0.4rem' }} />;
@@ -76,12 +82,12 @@ const AIAssistant = () => {
                         padding: '0.75rem 1rem', 
                         marginTop: '0.75rem',
                         borderRadius: '0 0.75rem 0.75rem 0',
-                        color: '#FCA5A5',
+                        color: isUser ? '#FFFFFF' : 'var(--text-main)',
                         display: 'flex', gap: '0.6rem', alignItems: 'center',
                         fontSize: '0.875rem', fontWeight: 500
                     }}>
                         <WarningCircle size={22} weight="fill" style={{ flexShrink: 0, color: '#EF4444' }} />
-                        <div>{parseInlineFormatting(warningMsg)}</div>
+                        <div>{parseInlineFormatting(warningMsg, isUser)}</div>
                     </div>
                 );
             }
@@ -91,12 +97,12 @@ const AIAssistant = () => {
                 return (
                     <div key={i} style={{ 
                         display: 'flex', gap: '0.6rem', alignItems: 'flex-start', margin: '0.4rem 0',
-                        background: 'rgba(56, 189, 248, 0.08)', padding: '0.65rem 0.85rem', borderRadius: '0.6rem',
-                        border: '1px solid rgba(56, 189, 248, 0.2)'
+                        background: isUser ? 'rgba(255, 255, 255, 0.15)' : 'var(--primary-light)', padding: '0.65rem 0.85rem', borderRadius: '0.6rem',
+                        border: isUser ? '1px solid rgba(255, 255, 255, 0.2)' : '1px solid var(--border)'
                     }}>
-                        <span style={{ color: '#38BDF8', fontSize: '1.2rem', lineHeight: 1 }}>•</span>
-                        <div style={{ flex: 1, fontSize: '0.925rem', lineHeight: 1.5, color: '#F8FAFC' }}>
-                            {parseInlineFormatting(content)}
+                        <span style={{ color: isUser ? '#FFFFFF' : 'var(--primary)', fontSize: '1.2rem', lineHeight: 1 }}>•</span>
+                        <div style={{ flex: 1, fontSize: '0.925rem', lineHeight: 1.5, color: isUser ? '#FFFFFF' : 'var(--text-main)', fontWeight: 500 }}>
+                            {parseInlineFormatting(content, isUser)}
                         </div>
                     </div>
                 );
@@ -104,15 +110,15 @@ const AIAssistant = () => {
 
             if (trimmed.startsWith('**') && trimmed.endsWith('**')) {
                 return (
-                    <div key={i} style={{ fontSize: '1.05rem', fontWeight: 700, color: '#38BDF8', margin: '0.5rem 0 0.25rem 0' }}>
+                    <div key={i} style={{ fontSize: '1.05rem', fontWeight: 700, color: isUser ? '#FFFFFF' : 'var(--primary)', margin: '0.5rem 0 0.25rem 0' }}>
                         {trimmed.replace(/\*\*/g, '')}
                     </div>
                 );
             }
 
             return (
-                <div key={i} style={{ margin: '0.25rem 0', lineHeight: 1.5, color: '#FFFFFF' }}>
-                    {parseInlineFormatting(trimmed)}
+                <div key={i} style={{ margin: '0.25rem 0', lineHeight: 1.5, color: isUser ? '#FFFFFF' : 'var(--text-main)', fontWeight: 500 }}>
+                    {parseInlineFormatting(trimmed, isUser)}
                 </div>
             );
         });
@@ -121,7 +127,7 @@ const AIAssistant = () => {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)' }}>
             <div style={{ marginBottom: '1rem' }}>
-                <h1 style={{ fontSize: '1.5rem', color: '#38BDF8', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <h1 style={{ fontSize: '1.5rem', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <Robot size={28} weight="duotone" /> 
                     AI Medicine Assistant
                 </h1>
@@ -129,6 +135,8 @@ const AIAssistant = () => {
             </div>
 
             <div className="glass-panel" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                
+                {/* Message Log */}
                 <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                     {messages.map((msg, idx) => (
                         <div key={idx} style={{
@@ -138,13 +146,14 @@ const AIAssistant = () => {
                             alignItems: 'flex-start'
                         }}>
                             <div style={{
-                                background: msg.role === 'user' ? 'var(--primary)' : 'rgba(56, 189, 248, 0.15)',
-                                color: msg.role === 'user' ? '#FFFFFF' : '#38BDF8',
+                                background: msg.role === 'user' ? 'var(--primary)' : 'var(--primary-light)',
+                                color: msg.role === 'user' ? '#FFFFFF' : 'var(--primary)',
                                 padding: '0.75rem',
                                 borderRadius: '50%',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 width: '40px', height: '40px',
-                                border: '1px solid rgba(56, 189, 248, 0.25)'
+                                border: '1px solid var(--border)',
+                                flexShrink: 0
                             }}>
                                 {msg.role === 'user' ? <User size={20} weight="fill" /> : (
                                     <svg role="img" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" width="20" height="20">
@@ -155,17 +164,17 @@ const AIAssistant = () => {
                             
                             <div style={{
                                 background: msg.role === 'user' ? 'var(--primary)' : 'var(--bg-card)',
-                                color: msg.role === 'user' ? '#FFFFFF' : '#FFFFFF',
+                                color: msg.role === 'user' ? '#FFFFFF' : 'var(--text-main)',
                                 padding: '1rem 1.25rem',
                                 borderRadius: '1rem',
                                 borderTopRightRadius: msg.role === 'user' ? 0 : '1rem',
                                 borderTopLeftRadius: msg.role === 'user' ? '1rem' : 0,
                                 maxWidth: '75%',
                                 border: msg.role === 'assistant' ? '1px solid var(--border)' : 'none',
-                                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                                boxShadow: 'var(--shadow-sm)',
                                 position: 'relative'
                             }}>
-                                {renderFormattedText(msg.content)}
+                                {renderFormattedText(msg.content, msg.role === 'user')}
                                 
                                 {msg.role === 'assistant' && (
                                     <button style={{
@@ -200,20 +209,69 @@ const AIAssistant = () => {
                     <div ref={messagesEndRef} />
                 </div>
                 
-                <form onSubmit={handleSend} style={{ padding: '1rem', borderTop: '1px solid var(--border)', display: 'flex', gap: '1rem' }}>
-                    <input
-                        type="text"
-                        value={input}
-                        onChange={e => setInput(e.target.value)}
-                        placeholder="Ask about side effects, usage, alternatives..."
-                        className="input-field"
-                        style={{ flex: 1 }}
-                        disabled={loading}
-                    />
-                    <button type="submit" className="btn ui-btn ui-btn-primary" disabled={!input.trim() || loading} style={{ width: '50px', padding: '0', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                        <PaperPlaneRight size={18} />
-                    </button>
-                </form>
+                {/* Input Area with Textarea */}
+                <div style={{ padding: '1rem 1.25rem', borderTop: '1px solid var(--border)', backgroundColor: 'var(--bg-card)' }}>
+
+                    {/* Textarea Form */}
+                    <form onSubmit={handleSend} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end' }}>
+                        <textarea
+                            rows={2}
+                            value={input}
+                            onChange={e => setInput(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            placeholder="Type your medical query or prompt... (Press Enter to send, Shift+Enter for new line)"
+                            disabled={loading}
+                            style={{
+                                flex: 1,
+                                padding: '0.75rem 1rem',
+                                borderRadius: '12px',
+                                border: '1px solid var(--border)',
+                                backgroundColor: 'var(--bg-input)',
+                                color: 'var(--text-main)',
+                                fontFamily: 'inherit',
+                                fontSize: '0.925rem',
+                                outline: 'none',
+                                resize: 'none',
+                                minHeight: '52px',
+                                maxHeight: '140px',
+                                lineHeight: '1.4',
+                                transition: 'all 0.15s ease',
+                                boxShadow: 'var(--shadow-sm)'
+                            }}
+                            onFocus={(e) => {
+                                e.target.style.borderColor = 'var(--primary)';
+                                e.target.style.boxShadow = '0 0 0 3px var(--primary-light)';
+                            }}
+                            onBlur={(e) => {
+                                e.target.style.borderColor = 'var(--border)';
+                                e.target.style.boxShadow = 'var(--shadow-sm)';
+                            }}
+                        />
+
+                        <button 
+                            type="submit" 
+                            disabled={!input.trim() || loading} 
+                            style={{ 
+                                height: '48px',
+                                width: '48px', 
+                                padding: '0', 
+                                display: 'flex', 
+                                justifyContent: 'center', 
+                                alignItems: 'center',
+                                borderRadius: '12px',
+                                backgroundColor: (!input.trim() || loading) ? 'var(--border)' : 'var(--primary)',
+                                color: '#FFFFFF',
+                                border: 'none',
+                                cursor: (!input.trim() || loading) ? 'not-allowed' : 'pointer',
+                                transition: 'all 0.15s ease',
+                                flexShrink: 0,
+                                boxShadow: (!input.trim() || loading) ? 'none' : '0 4px 12px rgba(5, 150, 105, 0.3)'
+                            }}
+                        >
+                            <PaperPlaneRight size={20} weight="fill" />
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
     );
