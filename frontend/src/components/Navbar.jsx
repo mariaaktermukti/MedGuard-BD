@@ -1,12 +1,14 @@
 import React, { useContext, useState, useRef, useEffect } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { LanguageContext } from '../context/LanguageContext';
+import { useNotifications } from '../context/NotificationContext';
 import { Shield, Bell, QrCode, CaretDown, User, SignOut, Gear, CheckCircle, WarningCircle } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router-dom';
 
 const Navbar = ({ isMobile }) => {
     const { user, logout } = useContext(AuthContext);
     const { language, setLanguage, t } = useContext(LanguageContext);
+    const { notifications, unreadCount, markAsRead } = useNotifications() || { notifications: [], unreadCount: 0, markAsRead: () => {} };
     const navigate = useNavigate();
     
     const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -127,13 +129,16 @@ const Navbar = ({ isMobile }) => {
                         onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
                     >
                         <Bell size={24} weight="duotone" />
-                        <span style={{
-                            position: 'absolute', top: '-4px', right: '-4px', background: 'var(--danger)', color: 'white',
-                            fontSize: '0.65rem', fontWeight: 800, width: '18px', height: '18px', borderRadius: '50%',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--bg-card)'
-                        }}>
-                            3
-                        </span>
+                        {unreadCount > 0 && (
+                            <span style={{
+                                position: 'absolute', top: '-4px', right: '-4px', background: 'var(--danger)', color: 'white',
+                                fontSize: '0.65rem', fontWeight: 800, minWidth: '18px', height: '18px', borderRadius: '50%',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--bg-card)',
+                                padding: '0 4px'
+                            }}>
+                                {unreadCount}
+                            </span>
+                        )}
                     </button>
 
                     {showNotifications && (
@@ -143,25 +148,61 @@ const Navbar = ({ isMobile }) => {
                             borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-lg)',
                             width: '320px', zIndex: 100, overflow: 'hidden'
                         }}>
-                            <div style={{ padding: '1rem', borderBottom: '1px solid var(--border)', fontWeight: 600 }}>{t('notifications')}</div>
-                            <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                                <div style={{ padding: '1rem', borderBottom: '1px solid var(--border)', display: 'flex', gap: '1rem', cursor: 'pointer' }} className="hover-lift">
-                                    <WarningCircle size={24} color="var(--danger)" weight="fill" />
-                                    <div>
-                                        <div style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.25rem' }}>Counterfeit Alert</div>
-                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Duplicate QR code detected for Batch B-24001.</div>
-                                    </div>
-                                </div>
-                                <div style={{ padding: '1rem', borderBottom: '1px solid var(--border)', display: 'flex', gap: '1rem', cursor: 'pointer' }} className="hover-lift">
-                                    <CheckCircle size={24} color="var(--success)" weight="fill" />
-                                    <div>
-                                        <div style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.25rem' }}>Shipment Arrived</div>
-                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Your inventory has been updated.</div>
-                                    </div>
-                                </div>
+                            <div style={{ padding: '0.85rem 1rem', borderBottom: '1px solid var(--border)', fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span>{t('notifications')}</span>
+                                {unreadCount > 0 && <span style={{ fontSize: '0.75rem', background: 'var(--primary-light)', color: 'var(--primary)', padding: '0.2rem 0.5rem', borderRadius: '10px' }}>{unreadCount} new</span>}
                             </div>
-                            <div style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.85rem', color: 'var(--primary)', cursor: 'pointer', fontWeight: 600, background: 'var(--bg-page)' }}>
-                                View All
+                            
+                            <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                                {notifications.length === 0 ? (
+                                    <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                                        No notifications yet
+                                    </div>
+                                ) : (
+                                    notifications.slice(0, 5).map(n => (
+                                        <div 
+                                            key={n.id}
+                                            onClick={() => {
+                                                markAsRead(n.id);
+                                                setShowNotifications(false);
+                                                navigate('/dashboard/notifications');
+                                            }}
+                                            style={{ 
+                                                padding: '0.85rem 1rem', 
+                                                borderBottom: '1px solid var(--border)', 
+                                                display: 'flex', 
+                                                gap: '0.75rem', 
+                                                cursor: 'pointer',
+                                                background: n.is_read ? 'transparent' : 'var(--primary-light)'
+                                            }} 
+                                            className="hover-lift"
+                                        >
+                                            {n.notification_type === 'warning' ? (
+                                                <WarningCircle size={22} color="var(--danger)" weight="fill" style={{ flexShrink: 0 }} />
+                                            ) : (
+                                                <CheckCircle size={22} color="var(--primary)" weight="fill" style={{ flexShrink: 0 }} />
+                                            )}
+                                            <div>
+                                                <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-main)', marginBottom: '0.15rem' }}>
+                                                    {n.title}
+                                                </div>
+                                                <div style={{ fontSize: '0.775rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
+                                                    {n.message}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+
+                            <div 
+                                onClick={() => {
+                                    setShowNotifications(false);
+                                    navigate('/dashboard/notifications');
+                                }}
+                                style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.85rem', color: 'var(--primary)', cursor: 'pointer', fontWeight: 700, background: 'var(--bg-page)', borderTop: '1px solid var(--border)' }}
+                            >
+                                View All Notifications
                             </div>
                         </div>
                     )}

@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../services/api';
 import { useNavigate } from 'react-router-dom';
 
@@ -39,7 +39,6 @@ export const AuthProvider = ({ children }) => {
             const userResponse = await api.get('users/me/');
             setUser(userResponse.data);
             
-            // Do NOT navigate here so Login page can show animation
             return { success: true, role: userResponse.data.role };
         } catch (error) {
             return { success: false, error: error.response?.data?.detail || "Invalid username/email or password." };
@@ -49,7 +48,6 @@ export const AuthProvider = ({ children }) => {
     const register = async (userData) => {
         try {
             await api.post('users/register/', userData);
-            // Automatically login after successful registration
             return await login(userData.username, userData.password);
         } catch (error) {
             return { success: false, error: error.response?.data || "Registration failed" };
@@ -70,3 +68,5 @@ export const AuthProvider = ({ children }) => {
         </AuthContext.Provider>
     );
 };
+
+export const useAuth = () => useContext(AuthContext);

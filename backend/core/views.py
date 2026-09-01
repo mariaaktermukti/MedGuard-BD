@@ -2,6 +2,7 @@ from collections import defaultdict
 from datetime import date, timedelta
 
 from django.contrib.auth import get_user_model
+User = get_user_model()
 from django.db.models import Sum
 from django.utils import timezone
 from rest_framework import generics, views, status, permissions
@@ -373,17 +374,29 @@ class DemandForecastView(views.APIView):
 
 class PersonalMedicineRecordView(generics.ListCreateAPIView):
     serializer_class = DosageScheduleSerializer
-    permission_classes = [permissions.IsAuthenticated, IsCitizen]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return DosageSchedule.objects.filter(citizen=self.request.user)
+        return DosageSchedule.objects.filter(citizen=self.request.user).order_by('-created_at')
 
     def perform_create(self, serializer):
-        serializer.save(citizen=self.request.user)
+        medicine = serializer.validated_data.get('medicine')
+        if not medicine:
+            med_name = self.request.data.get('medicine_name', 'General Medicine').strip()
+            medicine = Medicine.objects.filter(name__iexact=med_name).first()
+            if not medicine:
+                mfg_user = User.objects.filter(role='manufacturer').first() or User.objects.first()
+                medicine = Medicine.objects.create(
+                    name=med_name,
+                    category='General',
+                    dosage_form=self.request.data.get('dosage_form', 'Tablet'),
+                    manufacturer=mfg_user
+                )
+        serializer.save(citizen=self.request.user, medicine=medicine)
 
 class PersonalMedicineRecordDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = DosageScheduleSerializer
-    permission_classes = [permissions.IsAuthenticated, IsCitizen]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         return DosageSchedule.objects.filter(citizen=self.request.user)
@@ -402,12 +415,15 @@ class PharmacyFinderView(generics.ListAPIView):
     def get_queryset(self):
         return PharmacyProfile.objects.all().order_by('-trust_score')
 
-class NotificationListView(generics.ListAPIView):
+class NotificationListView(generics.ListCreateAPIView):
     serializer_class = NotificationSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         return Notification.objects.filter(user=self.request.user).order_by('-created_at')
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
 class NotificationMarkReadView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]

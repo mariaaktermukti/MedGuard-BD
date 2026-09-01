@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { LanguageProvider } from './context/LanguageContext';
+import { NotificationProvider } from './context/NotificationContext';
 import DashboardLayout from './components/DashboardLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
@@ -40,50 +41,51 @@ function App() {
       <ThemeProvider>
         <LanguageProvider>
           <AuthProvider>
-            <Routes>
-            <Route path="/" element={<Landing />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            
-            <Route element={<ProtectedRoute />}>
-              <Route path="/dashboard" element={<DashboardLayout />}>
-              <Route index element={<Dashboard />} />
-              {/* Additional protected routes can go here */}
-              <Route path="drug-passport" element={<DrugPassport />} />
-              <Route path="my-medicines" element={<MyMedicines />} />
-              <Route path="report-adr" element={<ReportADR />} />
-              <Route path="ai-assistant" element={<AIAssistant />} />
-              <Route path="find-pharmacy" element={<PharmacyFinder />} />
-              <Route path="interaction-checker" element={<InteractionChecker />} />
-              <Route path="notifications" element={<Notifications />} />
-              <Route path="manufacturer" element={<ManufacturerPortal />} />
-              <Route path="manufacturer/register" element={<ManufacturerPortal />} />
-              <Route path="manufacturer/batch" element={<ManufacturerPortal />} />
-              <Route path="manufacturer/verify" element={<ManufacturerPortal />} />
-              <Route path="manufacturer/recall" element={<ManufacturerPortal />} />
-              <Route path="manufacturer/shipment" element={<ManufacturerPortal />} />
-              <Route path="pharmacy" element={<PharmacyDashboard />} />
-              <Route path="pharmacy/inventory" element={<Inventory />} />
-              <Route path="dgda/*" element={<DGDAPortal />} />
-              <Route path="doctor/*" element={<DoctorPortal />} />
-              <Route path="pharmacy/suppliers" element={<Suppliers />} />
-              <Route path="pharmacy/verify" element={<BatchVerify />} />
-              <Route path="pharmacy/sales" element={<SaleLogging />} />
-              <Route path="pharmacy/alerts" element={<Alerts />} />
-              <Route path="pharmacy/forecast" element={<StockForecast />} />
-              <Route path="pharmacy/complaints" element={<Complaints />} />
-              <Route path="distributor/warehouses" element={<Warehouses />} />
-              <Route path="distributor/shipments" element={<Shipments />} />
-              <Route path="distributor/analytics" element={<Analytics />} />
-              <Route path="distributor/route-optimization" element={<RouteOptimization />} />
-              <Route path="distributor/fleet-monitoring" element={<FleetMonitoring />} />
-              <Route path="distributor/route-risk" element={<RouteRisk />} />
-              <Route path="*" element={<Navigate to="/dashboard" replace />} />
-            </Route>
-          </Route>
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-        </AuthProvider>
+            <NotificationProvider>
+              <Routes>
+                <Route path="/" element={<Landing />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                
+                <Route element={<ProtectedRoute />}>
+                  <Route path="/dashboard" element={<DashboardLayout />}>
+                    <Route index element={<Dashboard />} />
+                    <Route path="drug-passport" element={<DrugPassport />} />
+                    <Route path="my-medicines" element={<MyMedicines />} />
+                    <Route path="report-adr" element={<ReportADR />} />
+                    <Route path="ai-assistant" element={<AIAssistant />} />
+                    <Route path="find-pharmacy" element={<PharmacyFinder />} />
+                    <Route path="interaction-checker" element={<InteractionChecker />} />
+                    <Route path="notifications" element={<Notifications />} />
+                    <Route path="manufacturer" element={<ManufacturerPortal />} />
+                    <Route path="manufacturer/register" element={<ManufacturerPortal />} />
+                    <Route path="manufacturer/batch" element={<ManufacturerPortal />} />
+                    <Route path="manufacturer/verify" element={<ManufacturerPortal />} />
+                    <Route path="manufacturer/recall" element={<ManufacturerPortal />} />
+                    <Route path="manufacturer/shipment" element={<ManufacturerPortal />} />
+                    <Route path="pharmacy" element={<PharmacyDashboard />} />
+                    <Route path="pharmacy/inventory" element={<Inventory />} />
+                    <Route path="dgda/*" element={<DGDAPortal />} />
+                    <Route path="doctor/*" element={<DoctorPortal />} />
+                    <Route path="pharmacy/suppliers" element={<Suppliers />} />
+                    <Route path="pharmacy/verify" element={<BatchVerify />} />
+                    <Route path="pharmacy/sales" element={<SaleLogging />} />
+                    <Route path="pharmacy/alerts" element={<Alerts />} />
+                    <Route path="pharmacy/forecast" element={<StockForecast />} />
+                    <Route path="pharmacy/complaints" element={<Complaints />} />
+                    <Route path="distributor/warehouses" element={<Warehouses />} />
+                    <Route path="distributor/shipments" element={<Shipments />} />
+                    <Route path="distributor/analytics" element={<Analytics />} />
+                    <Route path="distributor/route-optimization" element={<RouteOptimization />} />
+                    <Route path="distributor/fleet-monitoring" element={<FleetMonitoring />} />
+                    <Route path="distributor/route-risk" element={<RouteRisk />} />
+                    <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                  </Route>
+                </Route>
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </NotificationProvider>
+          </AuthProvider>
         </LanguageProvider>
       </ThemeProvider>
     </Router>

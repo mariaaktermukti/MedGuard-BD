@@ -179,6 +179,7 @@ class NotificationSerializer(serializers.ModelSerializer):
 
 
 class DosageScheduleSerializer(serializers.ModelSerializer):
+    medicine = serializers.PrimaryKeyRelatedField(queryset=Medicine.objects.all(), required=False, allow_null=True)
     medicine_details = MedicineSerializer(source='medicine', read_only=True)
 
     class Meta:
