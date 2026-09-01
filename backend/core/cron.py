@@ -5,6 +5,7 @@ import logging
 
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from django.db import close_old_connections
 
 logger = logging.getLogger(__name__)
 
@@ -13,6 +14,7 @@ def check_dose_reminders_cron():
     Cron Job 1: Checks active medicine schedules every minute 
     and generates user notifications for matching dose times.
     """
+    close_old_connections()
     try:
         from core.models import DosageSchedule, Notification
         
@@ -52,18 +54,21 @@ def check_dose_reminders_cron():
             logger.info(f"[CRON] Sent {count} medicine dose reminder notifications.")
     except Exception as e:
         logger.error(f"[CRON ERROR] Dose reminder job failed: {e}")
+    finally:
+        close_old_connections()
 
 
 def check_expired_batches_cron():
     """
     Cron Job 2: Audits medicine expiration dates daily and alerts DGDA & Pharmacies.
     """
+    close_old_connections()
     try:
         from core.models import Batch, Notification
         User = get_user_model()
 
         today = date.today()
-        expired_batches = Batch.objects.filter(expiration_date__lte=today)
+        expired_batches = Batch.objects.filter(expiry_date__lte=today)
 
         for batch in expired_batches:
             # Notify Manufacturer & DGDA Regulators
@@ -74,11 +79,13 @@ def check_expired_batches_cron():
                     Notification.objects.create(
                         user=reg,
                         title=title,
-                        message=f"Batch {batch.batch_number} of {batch.medicine.name} expired on {batch.expiration_date}. Disposal protocol required.",
+                        message=f"Batch {batch.batch_number} of {batch.medicine.name} expired on {batch.expiry_date}. Disposal protocol required.",
                         notification_type="warning"
                     )
     except Exception as e:
         logger.error(f"[CRON ERROR] Expiration audit job failed: {e}")
+    finally:
+        close_old_connections()
 
 
 def start_python_cron_scheduler():
@@ -87,14 +94,17 @@ def start_python_cron_scheduler():
     Runs indefinitely in background thread (like node-cron in Node.js)
     """
     def cron_loop():
-        logger.info("🟢 Python CronJob Scheduler started running in background...")
-        print("🟢 [Python CronJob Scheduler] Started background cron loop (checking every 30s)...")
+        logger.info("[CRON] Python CronJob Scheduler started running in background...")
+        print("[Python CronJob Scheduler] Started background cron loop (checking every 30s)...")
         while True:
             try:
+                close_old_connections()
                 check_dose_reminders_cron()
                 check_expired_batches_cron()
             except Exception as err:
                 logger.error(f"[CRON LOOP ERROR] {err}")
+            finally:
+                close_old_connections()
             time.sleep(30) # Run check every 30 seconds
 
     # Run in background daemon thread

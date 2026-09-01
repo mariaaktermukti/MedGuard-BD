@@ -1,10 +1,29 @@
 from rest_framework import serializers
 from django.contrib.auth.hashers import make_password
+from django.contrib.auth import get_user_model
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .models import (
     CustomUser, Role, CitizenProfile, ManufacturerProfile, 
     PharmacyProfile, DistributorProfile, DoctorProfile, 
     DGDAProfile, ResearcherProfile
 )
+
+User = get_user_model()
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        username_or_email = attrs.get('username')
+        if username_or_email:
+            # Allow login using either Email or Username (case-insensitive)
+            user_obj = User.objects.filter(email__iexact=username_or_email).first() or User.objects.filter(username__iexact=username_or_email).first()
+            if user_obj:
+                attrs['username'] = user_obj.username
+
+        data = super().validate(attrs)
+        data['role'] = getattr(self.user, 'role', 'citizen')
+        data['username'] = self.user.username
+        data['full_name'] = getattr(self.user, 'full_name', self.user.username)
+        return data
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})

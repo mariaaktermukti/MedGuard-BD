@@ -166,10 +166,19 @@ class DemandForecastSerializer(serializers.ModelSerializer):
 
 
 class ADRReportSerializer(serializers.ModelSerializer):
+    medicine = serializers.PrimaryKeyRelatedField(queryset=Medicine.objects.all(), required=False, allow_null=True)
+    medicine_details = MedicineSerializer(source='medicine', read_only=True)
+    medicine_name = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = ADRReport
-        fields = '__all__'
-        read_only_fields = ['reported_by_user', 'date_reported']
+        fields = ['id', 'reported_by_user', 'citizen', 'batch', 'medicine', 'medicine_details', 'medicine_name', 'description', 'severity', 'reaction_date', 'date_reported', 'status', 'attachment']
+        read_only_fields = ['reported_by_user', 'citizen', 'date_reported', 'status']
+
+    def get_medicine_name(self, obj):
+        if obj.medicine:
+            return obj.medicine.name
+        return "Unknown Medicine"
 
 
 class NotificationSerializer(serializers.ModelSerializer):

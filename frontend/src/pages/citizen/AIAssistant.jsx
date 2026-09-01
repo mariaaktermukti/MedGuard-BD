@@ -1,14 +1,32 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Chat, PaperPlaneRight, Robot, User, SpeakerHigh, WarningCircle, Lightbulb } from '@phosphor-icons/react';
+import React, { useState, useRef, useEffect, useContext } from 'react';
+import { Chat, PaperPlaneRight, Robot, User, SpeakerHigh, WarningCircle, Lightbulb, Trash, ClockCounterClockwise } from '@phosphor-icons/react';
 import api from '../../services/api';
+import { AuthContext } from '../../context/AuthContext';
 
 const AIAssistant = () => {
-    const [messages, setMessages] = useState([
+    const { user } = useContext(AuthContext);
+    const storageKey = `medguard_ai_chat_history_${user?.username || user?.id || 'guest'}`;
+
+    const defaultInitialMessage = [
         { 
             role: 'assistant', 
             content: "আমি আপনার ওষুধ সহায়ক। কী জানতে চান?" 
         }
-    ]);
+    ];
+
+    const [messages, setMessages] = useState(() => {
+        try {
+            const saved = localStorage.getItem(storageKey);
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+            }
+        } catch (e) {
+            console.error("Failed to load chat history:", e);
+        }
+        return defaultInitialMessage;
+    });
+
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
     const messagesEndRef = useRef(null);
@@ -18,8 +36,13 @@ const AIAssistant = () => {
     };
 
     useEffect(() => {
+        try {
+            localStorage.setItem(storageKey, JSON.stringify(messages));
+        } catch (e) {
+            console.error("Failed to save chat history:", e);
+        }
         scrollToBottom();
-    }, [messages]);
+    }, [messages, storageKey]);
 
     const handleSend = async (e, text = input) => {
         if (e && e.preventDefault) e.preventDefault();
@@ -44,6 +67,15 @@ const AIAssistant = () => {
             setMessages(prev => [...prev, { role: 'assistant', content: errorMessage }]);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleClearHistory = () => {
+        setMessages(defaultInitialMessage);
+        try {
+            localStorage.removeItem(storageKey);
+        } catch (e) {
+            console.error("Failed to clear chat history:", e);
         }
     };
 
@@ -126,12 +158,44 @@ const AIAssistant = () => {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)' }}>
-            <div style={{ marginBottom: '1rem' }}>
-                <h1 style={{ fontSize: '1.5rem', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Robot size={28} weight="duotone" /> 
-                    AI Medicine Assistant
-                </h1>
-                <p style={{ color: 'var(--text-muted)' }}>কৃত্রিম বুদ্ধিমত্তার সাহায্যে আপনার স্বাস্থ্য বিষয়ক যেকোনো প্রশ্ন করুন।</p>
+            
+            {/* Header with Clear History Option */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+                <div>
+                    <h1 style={{ fontSize: '1.5rem', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0, fontWeight: 800 }}>
+                        <Robot size={28} weight="duotone" /> 
+                        AI Medicine Assistant
+                    </h1>
+                    <p style={{ color: 'var(--text-muted)', margin: '0.2rem 0 0 0', fontSize: '0.875rem' }}>কৃত্রিম বুদ্ধিমত্তার সাহায্যে আপনার স্বাস্থ্য বিষয়ক যেকোনো প্রশ্ন করুন।</p>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontWeight: 600 }}>
+                        <ClockCounterClockwise size={14} /> History Saved ({messages.length})
+                    </span>
+                    {messages.length > 1 && (
+                        <button 
+                            type="button" 
+                            onClick={handleClearHistory}
+                            style={{ 
+                                background: 'rgba(239, 68, 68, 0.1)', 
+                                color: '#ef4444', 
+                                border: '1px solid rgba(239, 68, 68, 0.2)', 
+                                padding: '0.4rem 0.85rem', 
+                                borderRadius: '8px', 
+                                fontSize: '0.8rem', 
+                                fontWeight: 700, 
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.35rem',
+                                transition: 'all 0.15s ease'
+                            }}
+                        >
+                            <Trash size={14} /> Clear History
+                        </button>
+                    )}
+                </div>
             </div>
 
             <div className="glass-panel" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>

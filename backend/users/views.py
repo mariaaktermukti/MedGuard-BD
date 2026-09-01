@@ -1,16 +1,16 @@
-# pyrefly: ignore [missing-import]
 from rest_framework.views import APIView
-# pyrefly: ignore [missing-import]
 from rest_framework.response import Response
-# pyrefly: ignore [missing-import]
 from rest_framework import status
-# pyrefly: ignore [missing-import]
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from .serializers import RegisterSerializer
+from rest_framework_simplejwt.views import TokenObtainPairView
+from .serializers import RegisterSerializer, CustomTokenObtainPairSerializer
 from .permissions import (
     IsCitizen, IsPharmacy, IsManufacturer, 
     IsDistributor, IsDGDA, IsDoctor, IsResearcher
 )
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    serializer_class = CustomTokenObtainPairSerializer
 
 class UserMeView(APIView):
     permission_classes = [IsAuthenticated]

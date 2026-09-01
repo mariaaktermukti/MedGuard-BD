@@ -3,7 +3,8 @@ from datetime import date, timedelta
 
 from django.contrib.auth import get_user_model
 User = get_user_model()
-from django.db.models import Sum
+from django.db import models
+from django.db.models import Sum, Q
 from django.utils import timezone
 from rest_framework import generics, views, status, permissions
 from rest_framework.exceptions import ValidationError
@@ -401,12 +402,70 @@ class PersonalMedicineRecordDetailView(generics.RetrieveUpdateDestroyAPIView):
     def get_queryset(self):
         return DosageSchedule.objects.filter(citizen=self.request.user)
 
-class ADRReportCreateView(generics.CreateAPIView):
+    def perform_update(self, serializer):
+        medicine = serializer.validated_data.get('medicine')
+        if not medicine and 'medicine_name' in self.request.data:
+            med_name = str(self.request.data.get('medicine_name')).strip()
+            medicine = Medicine.objects.filter(name__iexact=med_name).first()
+            if not medicine:
+                mfg_user = User.objects.filter(role='manufacturer').first() or User.objects.first()
+                medicine = Medicine.objects.create(
+                    name=med_name,
+                    category='General',
+                    dosage_form=self.request.data.get('dosage_form', 'Tablet'),
+                    manufacturer=mfg_user
+                )
+            serializer.save(medicine=medicine)
+        else:
+            serializer.save()
+
+class ADRReportCreateView(generics.ListCreateAPIView):
     serializer_class = ADRReportSerializer
-    permission_classes = [permissions.IsAuthenticated, IsCitizen]
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if getattr(user, 'is_staff', False) or getattr(user, 'role', '') in ['dgda', 'admin']:
+            return ADRReport.objects.all().select_related('medicine', 'batch').order_by('-id')
+        
+        # Match by user ID or email so all ADR reports filed by the authenticated user appear cleanly
+        user_email = getattr(user, 'email', None)
+        return ADRReport.objects.filter(
+            Q(reported_by_user=user) | 
+            Q(citizen=user) |
+            (Q(reported_by_user__email=user_email) if user_email else Q(id__in=[])) |
+            (Q(citizen__email=user_email) if user_email else Q(id__in=[]))
+        ).select_related('medicine', 'batch').order_by('-id').distinct()
 
     def perform_create(self, serializer):
-        serializer.save(reported_by_user=self.request.user, citizen=self.request.user)
+        medicine_id = self.request.data.get('medicine')
+        medicine_name = self.request.data.get('medicine_name')
+        med_obj = None
+
+        if isinstance(medicine_id, int):
+            med_obj = Medicine.objects.filter(id=medicine_id).first()
+
+        target_name = medicine_name or (medicine_id if isinstance(medicine_id, str) else None)
+        if not med_obj and target_name:
+            clean_name = str(target_name).replace('custom-', '').strip()
+            if clean_name:
+                med_obj = Medicine.objects.filter(name__iexact=clean_name).first()
+                if not med_obj:
+                    mfg = User.objects.filter(role='manufacturer').first() or self.request.user
+                    med_obj = Medicine.objects.create(
+                        name=clean_name,
+                        generic_name=clean_name,
+                        manufacturer=mfg
+                    )
+
+        if not med_obj:
+            med_obj = Medicine.objects.first()
+
+        serializer.save(
+            reported_by_user=self.request.user,
+            citizen=self.request.user,
+            medicine=med_obj
+        )
 
 class PharmacyFinderView(generics.ListAPIView):
     serializer_class = PharmacyProfileSerializer
@@ -420,7 +479,25 @@ class NotificationListView(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Notification.objects.filter(user=self.request.user).order_by('-created_at')
+        user = self.request.user
+        try:
+            # Auto-sync active dosage schedules into user notifications so every alarm appears in Notifications API
+            active_schedules = DosageSchedule.objects.filter(citizen=user, is_active=True).select_related('medicine')
+            for sched in active_schedules:
+                med_name = getattr(sched.medicine, 'name', 'Personal Medicine') if sched.medicine else 'Personal Medicine'
+                reminder_times = sched.reminder_times or ['08:00 PM']
+                for rtime in reminder_times:
+                    notif_title = f"⏰ Medicine Dose Reminder: {med_name}"
+                    notif_msg = f"Scheduled dose time: {rtime} ({sched.dosage or '1 Dose'}, {sched.frequency or 'Daily'}). {sched.notes if sched.notes else ''}"
+                    Notification.objects.get_or_create(
+                        user=user,
+                        title=notif_title,
+                        defaults={'message': notif_msg, 'is_read': False}
+                    )
+        except Exception as e:
+            pass
+
+        return Notification.objects.filter(user=user).order_by('-created_at')
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
@@ -549,36 +626,152 @@ class CitizenDashboardView(views.APIView):
     def get(self, request):
         user = request.user
         
-        # 1. Total Scans (Proxy: Number of ADR reports + medicines in schedule)
-        total_scans = ADRReport.objects.filter(citizen=user).count() * 3 + DosageSchedule.objects.filter(citizen=user).count() * 5
-        if total_scans == 0: total_scans = 24 # Mock initial if empty
+        # 1. Total Scans (Baseline 42 + user scans/reports)
+        user_scans = ADRReport.objects.filter(
+            Q(reported_by_user=user) | Q(citizen=user)
+        ).count() * 3 + DosageSchedule.objects.filter(citizen=user).count() * 5
+        total_scans = 42 + user_scans
         
         # 2. Active Medicines
         active_medicines = DosageSchedule.objects.filter(citizen=user, is_active=True).count()
-        if active_medicines == 0: active_medicines = 5
+        if active_medicines == 0:
+            active_medicines = 5
 
         # 3. Reports Submitted
-        reports_submitted = ADRReport.objects.filter(citizen=user).count()
+        user_email = getattr(user, 'email', None)
+        reports_submitted = ADRReport.objects.filter(
+            Q(reported_by_user=user) | 
+            Q(citizen=user) |
+            (Q(reported_by_user__email=user_email) if user_email else Q(id__in=[])) |
+            (Q(citizen__email=user_email) if user_email else Q(id__in=[]))
+        ).distinct().count()
 
         # 4. Pharmacy Visits
         pharmacy_visits = Sale.objects.filter(citizen=user).values('pharmacy').distinct().count()
-        if pharmacy_visits == 0: pharmacy_visits = 8
+        if pharmacy_visits == 0:
+            pharmacy_visits = 8
 
-        # Recent Activity (Mocks combined with real data if available)
-        recent_activity = [
-            {'id': 1, 'type': 'scan', 'desc': 'Napa Extra স্ক্যান করা হয়েছে', 'time': '২ ঘন্টা আগে', 'status': 'verified'},
-            {'id': 2, 'type': 'pharmacy', 'desc': 'Lazz Pharma ভিজিট', 'time': 'গতকাল', 'status': 'completed'},
-            {'id': 3, 'type': 'adr', 'desc': 'পার্শ্বপ্রতিক্রিয়া রিপোর্ট', 'time': '৫ আগস্ট', 'status': 'pending'},
-        ]
+        # Dynamic Recent Activity from real user actions in DB
+        activities = []
+        user_email = getattr(user, 'email', None)
+
+        # 1. Real ADR Reports
+        adr_items = ADRReport.objects.filter(
+            Q(reported_by_user=user) | Q(citizen=user) |
+            (Q(reported_by_user__email=user_email) if user_email else Q(id__in=[])) |
+            (Q(citizen__email=user_email) if user_email else Q(id__in=[]))
+        ).select_related('medicine').order_by('-date_reported')[:5]
+
+        for adr in adr_items:
+            m_name = adr.medicine_name or (adr.medicine.name if adr.medicine else 'Medicine')
+            activities.append({
+                'id': f'adr-{adr.id}',
+                'dt': adr.date_reported,
+                'type': 'adr',
+                'desc': f"ADR Report Filed: {m_name} ({adr.severity.capitalize() if adr.severity else 'Reaction'})",
+                'status': adr.status or 'pending'
+            })
+
+        # 2. Real Dosage Schedules / Medicine Alarms
+        dosage_items = DosageSchedule.objects.filter(citizen=user).select_related('medicine').order_by('-created_at')[:5]
+        for ds in dosage_items:
+            m_name = ds.medicine.name if ds.medicine else (ds.medicine_name or 'Medicine')
+            activities.append({
+                'id': f'ds-{ds.id}',
+                'dt': ds.created_at,
+                'type': 'alarm',
+                'desc': f"Medicine Schedule: {m_name} ({ds.dosage or '1 Dose'}, {ds.frequency or 'Daily'})",
+                'status': 'verified' if ds.is_active else 'completed'
+            })
+
+        # 3. Real Pharmacy Sales / Purchases
+        sale_items = Sale.objects.filter(citizen=user).select_related('batch', 'batch__medicine', 'pharmacy').order_by('-sale_date')[:5]
+        for sale in sale_items:
+            m_name = sale.batch.medicine.name if (sale.batch and sale.batch.medicine) else 'Medicine'
+            p_name = sale.pharmacy.username if sale.pharmacy else 'Pharmacy'
+            activities.append({
+                'id': f'sale-{sale.id}',
+                'dt': sale.sale_date,
+                'type': 'pharmacy',
+                'desc': f"Pharmacy Visit ({p_name}): Purchased {m_name} ({sale.quantity} units)",
+                'status': 'completed'
+            })
+
+        # 4. Real Notifications
+        notif_items = Notification.objects.filter(user=user).order_by('-created_at')[:5]
+        for n in notif_items:
+            activities.append({
+                'id': f'notif-{n.id}',
+                'dt': n.created_at,
+                'type': 'scan' if 'scan' in n.title.lower() else 'alarm' if 'dose' in n.title.lower() else 'adr',
+                'desc': n.title,
+                'status': 'completed' if n.is_read else 'pending'
+            })
+
+        # Sort all combined activities by date descending
+        def get_dt(item):
+            d = item['dt']
+            if not d:
+                return timezone.now() - timedelta(days=365)
+            if timezone.is_naive(d):
+                return timezone.make_aware(d)
+            return d
+
+        activities.sort(key=get_dt, reverse=True)
+
+        # Helper to format humanized relative time
+        def format_human_time(d):
+            if not d:
+                return 'Recently'
+            now = timezone.now()
+            if timezone.is_naive(d):
+                d = timezone.make_aware(d)
+            diff = now - d
+            seconds = int(diff.total_seconds())
+            if seconds < 60:
+                return 'Just now'
+            minutes = seconds // 60
+            if minutes < 60:
+                return f'{minutes}m ago'
+            hours = minutes // 60
+            if hours < 24:
+                return f'{hours}h ago'
+            days = hours // 24
+            if days == 1:
+                return 'Yesterday'
+            if days < 30:
+                return f'{days}d ago'
+            return d.strftime('%b %d, %Y')
+
+        recent_activity = []
+        for act in activities[:6]:
+            recent_activity.append({
+                'id': act['id'],
+                'type': act['type'],
+                'desc': act['desc'],
+                'time': format_human_time(act['dt']),
+                'status': act['status']
+            })
+
+        if not recent_activity:
+            recent_activity = [
+                {'id': 'init-1', 'type': 'alarm', 'desc': 'Account registered & MedGuard BD active', 'time': 'Just now', 'status': 'completed'}
+            ]
         
         # Upcoming Dose
         upcoming_dose = None
         schedules = DosageSchedule.objects.filter(citizen=user, is_active=True).select_related('medicine')
         if schedules.exists():
             sched = schedules.first()
+            time_val = sched.reminder_times[0] if sched.reminder_times and len(sched.reminder_times) > 0 else '08:00 PM'
+            med_name = sched.medicine.name if sched.medicine else (sched.medicine_name or 'Personal Medicine')
             upcoming_dose = {
-                'medicine_name': sched.medicine.name,
-                'time': 'দুপুর ২:০০ টায়' if 'দুপুর' not in str(sched.reminder_times) else sched.reminder_times[0] if sched.reminder_times else 'রাত ৮:০০ টায়'
+                'id': sched.id,
+                'medicine_name': med_name,
+                'dosage': sched.dosage or '1 Dose',
+                'frequency': sched.frequency or 'Daily',
+                'time': time_val,
+                'notes': sched.notes or ''
             }
 
         # Recall Alerts

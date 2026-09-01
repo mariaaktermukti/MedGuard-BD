@@ -11,7 +11,7 @@ export const NotificationProvider = ({ children }) => {
     const [unreadCount, setUnreadCount] = useState(0);
     const triggeredAlarmsRef = useRef(new Set());
 
-    // 1. Reset user state & fetch User Notifications from Backend Database
+    // 1. Fetch User Notifications & Active Dose Schedules from Backend Database
     const fetchNotifications = async () => {
         if (!user) {
             setNotifications([]);
@@ -20,16 +20,42 @@ export const NotificationProvider = ({ children }) => {
             return;
         }
         try {
-            const response = await api.get('core/notifications/');
-            setNotifications(response.data);
-            setUnreadCount(response.data.filter(n => !n.is_read).length);
+            const [notifRes, medRes] = await Promise.all([
+                api.get('core/notifications/'),
+                api.get('core/medicines/personal/').catch(() => ({ data: [] }))
+            ]);
+
+            const dbNotifs = notifRes.data || [];
+            const activeMeds = (medRes.data || []).filter(m => m.is_active);
+
+            // Synthesize scheduled dose reminder items for top navbar dropdown
+            const scheduledNotifs = [];
+            activeMeds.forEach(med => {
+                const reminderTimes = med.reminder_times || [];
+                const medName = med.medicine_details?.name || med.medicine_name || 'Personal Medicine';
+                reminderTimes.forEach(rTime => {
+                    scheduledNotifs.push({
+                        id: `sched-${med.id}-${rTime}`,
+                        title: `⏰ Scheduled Dose: ${medName}`,
+                        message: `Next dose scheduled for ${rTime} (${med.dosage || '1 Dose'}). ${med.notes ? 'Note: ' + med.notes : ''}`,
+                        notification_type: 'dose_reminder',
+                        is_read: false,
+                        created_at: med.created_at || new Date().toISOString()
+                    });
+                });
+            });
+
+            // Combine active scheduled alarms + DB notifications
+            const combined = [...scheduledNotifs, ...dbNotifs];
+            setNotifications(combined);
+            setUnreadCount(combined.filter(n => !n.is_read).length);
         } catch (error) {
             console.error("Failed to fetch notifications:", error);
         }
     };
 
     useEffect(() => {
-        triggeredAlarmsRef.current.clear(); // Reset alarm triggers on user login/switch
+        triggeredAlarmsRef.current.clear();
         fetchNotifications();
     }, [user?.id]);
 
@@ -65,17 +91,15 @@ export const NotificationProvider = ({ children }) => {
         }
     }, []);
 
-    // 4. Per-User Real-Time Dose Reminder Loop (Scoped exclusively to logged-in user)
+    // 4. Per-User Real-Time Dose Reminder Loop
     useEffect(() => {
         if (!user) return;
 
-        // Dose alarms only apply to citizens or default users
         const isCitizen = !user.role || user.role === 'citizen';
         if (!isCitizen) return;
 
         const checkDoseReminders = async () => {
             try {
-                // Returns ONLY personal medicines belonging to the authenticated JWT user
                 const res = await api.get('core/medicines/personal/');
                 const activeMeds = res.data.filter(m => m.is_active);
 
@@ -91,7 +115,6 @@ export const NotificationProvider = ({ children }) => {
 
                     reminderTimes.forEach(rTime => {
                         const doseStr = String(rTime).trim().toUpperCase();
-                        // Key includes user.id to guarantee 100% per-user isolation
                         const alarmKey = `user-${user.id}-med-${med.id}-${doseStr}-${now.toDateString()}-${currentHour}:${currentMin}`;
 
                         if (triggeredAlarmsRef.current.has(alarmKey)) return;
@@ -123,10 +146,8 @@ export const NotificationProvider = ({ children }) => {
 
     // 5. Global Alarm Trigger (Desktop Push, Audio Chime, Global SweetAlert2 Popup, Database Entry)
     const triggerGlobalDoseAlarm = async (med) => {
-        // A. Audio Alarm Sound
         playAlarmSound();
 
-        // B. Desktop/Browser Push Notification
         if ('Notification' in window && Notification.permission === 'granted') {
             new Notification(`⏰ Medicine Alarm: ${med.name}`, {
                 body: `It's ${med.time}! Time to take ${med.dosage} (${med.frequency}). ${med.notes ? 'Note: ' + med.notes : ''}`,
@@ -134,7 +155,6 @@ export const NotificationProvider = ({ children }) => {
             });
         }
 
-        // C. Save Notification in Database for current user
         try {
             await api.post('core/notifications/', {
                 title: `⏰ Medicine Dose Reminder: ${med.name}`,
@@ -146,7 +166,6 @@ export const NotificationProvider = ({ children }) => {
             console.error("Failed to log notification to database:", e);
         }
 
-        // D. Global Universal Modal Popup for logged-in user
         Swal.fire({
             title: `⏰ DOSE ALARM TIME!`,
             html: `
@@ -187,7 +206,9 @@ export const NotificationProvider = ({ children }) => {
 
     const markAsRead = async (id) => {
         try {
-            await api.post(`core/notifications/${id}/read/`);
+            if (typeof id === 'number' || (typeof id === 'string' && !id.startsWith('sched-'))) {
+                await api.post(`core/notifications/${id}/read/`);
+            }
             setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
             setUnreadCount(prev => Math.max(0, prev - 1));
         } catch (e) {

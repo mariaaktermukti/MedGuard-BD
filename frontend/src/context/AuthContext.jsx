@@ -36,12 +36,32 @@ export const AuthProvider = ({ children }) => {
             localStorage.setItem('refresh_token', response.data.refresh);
             
             // Fetch user info after login
-            const userResponse = await api.get('users/me/');
-            setUser(userResponse.data);
+            let userData = null;
+            try {
+                const userResponse = await api.get('users/me/');
+                userData = userResponse.data;
+                setUser(userData);
+            } catch (e) {
+                userData = { 
+                    role: response.data.role || 'citizen', 
+                    username: response.data.username || username,
+                    full_name: response.data.full_name || username
+                };
+                setUser(userData);
+            }
             
-            return { success: true, role: userResponse.data.role };
+            return { success: true, role: userData?.role || 'citizen' };
         } catch (error) {
-            return { success: false, error: error.response?.data?.detail || "Invalid username/email or password." };
+            console.error("Login failed:", error);
+            let detailMsg = "Invalid username/email or password.";
+            if (error.code === 'ERR_NETWORK' || error.message === 'Network Error' || !error.response) {
+                detailMsg = "Unable to connect to backend server (ERR_CONNECTION_REFUSED). Please ensure Python Django server is running on port 8000.";
+            } else if (error.response?.data?.detail) {
+                detailMsg = error.response.data.detail;
+            } else if (typeof error.response?.data === 'string') {
+                detailMsg = error.response.data;
+            }
+            return { success: false, error: detailMsg };
         }
     };
 
