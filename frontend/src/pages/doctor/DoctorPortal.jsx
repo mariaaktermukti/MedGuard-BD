@@ -13,16 +13,16 @@ import ResearchDatasets from './ResearchDatasets';
 import DoctorConsultations from './DoctorConsultations';
 
 const tabs = [
-    { path: 'patient-history', label: 'Patient Medicine History', icon: <Users size={18} /> },
-    { path: 'prescriptions', label: 'Digital Prescription', icon: <ClipboardText size={18} /> },
-    { path: 'interaction-checker', label: 'Drug Interaction Checker', icon: <ShieldWarning size={18} /> },
-    { path: 'medicine-lookup', label: 'Medicine Lookup', icon: <MagnifyingGlass size={18} /> },
-    { path: 'drug-passport', label: 'Digital Drug Passport', icon: <QrCode size={18} /> },
-    { path: 'adr-report', label: 'Report ADR', icon: <Warning size={18} /> },
-    { path: 'recall-alerts', label: 'Recall Notifications', icon: <Bell size={18} /> },
-    { path: 'medicine-library', label: 'My Medicine Library', icon: <Star size={18} /> },
-    { path: 'research-datasets', label: 'Research Datasets', icon: <Database size={18} /> },
-    { path: 'consultations', label: 'Consultations', icon: <VideoCamera size={18} /> },
+    { path: '/dashboard/doctor/patient-history', label: 'Patient Medicine History', icon: <Users size={18} /> },
+    { path: '/dashboard/doctor/prescriptions', label: 'Digital Prescription', icon: <ClipboardText size={18} /> },
+    { path: '/dashboard/doctor/interaction-checker', label: 'Drug Interaction Checker', icon: <ShieldWarning size={18} /> },
+    { path: '/dashboard/doctor/medicine-lookup', label: 'Medicine Lookup', icon: <MagnifyingGlass size={18} /> },
+    { path: '/dashboard/doctor/drug-passport', label: 'Digital Drug Passport', icon: <QrCode size={18} /> },
+    { path: '/dashboard/doctor/adr-report', label: 'Report ADR', icon: <Warning size={18} /> },
+    { path: '/dashboard/doctor/recall-alerts', label: 'Recall Notifications', icon: <Bell size={18} /> },
+    { path: '/dashboard/doctor/medicine-library', label: 'My Medicine Library', icon: <Star size={18} /> },
+    { path: '/dashboard/doctor/research-datasets', label: 'Research Datasets', icon: <Database size={18} /> },
+    { path: '/dashboard/doctor/consultations', label: 'Consultations', icon: <VideoCamera size={18} /> },
 ];
 
 const DoctorPortal = () => {
