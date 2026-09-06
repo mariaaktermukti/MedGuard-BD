@@ -39,14 +39,14 @@ const Sidebar = ({ isTablet }) => {
     ];
 
     const dgdaNavItems = [
-        { path: '/dashboard/dgda/command-center', icon: <MapPin size={20} weight="duotone" />, label: t('command_center') },
-        { path: '/dashboard/dgda/live-monitoring', icon: <Crosshair size={20} weight="duotone" />, label: t('monitoring') },
-        { path: '/dashboard/dgda/investigations', icon: <ShieldWarning size={20} weight="duotone" />, label: t('investigations') },
-        { path: '/dashboard/dgda/recalls', icon: <WarningCircle size={20} weight="duotone" />, label: t('recalls') },
-        { path: '/dashboard/dgda/inspections', icon: <ClipboardText size={20} weight="duotone" />, label: t('inspections') },
-        { path: '/dashboard/dgda/entities', icon: <Buildings size={20} weight="duotone" />, label: t('entities') },
-        { path: '/dashboard/dgda/heatmaps', icon: <MapTrifold size={20} weight="duotone" />, label: t('heatmaps') },
-        { path: '/dashboard/dgda/risk', icon: <Brain size={20} weight="duotone" />, label: t('risk_intel') },
+        { path: '/dashboard/dgda/command-center', icon: <MapPin size={20} weight="duotone" />, label: 'Command Center' },
+        { path: '/dashboard/dgda/monitoring', icon: <Crosshair size={20} weight="duotone" />, label: 'Monitoring' },
+        { path: '/dashboard/dgda/entities', icon: <Buildings size={20} weight="duotone" />, label: 'Entities' },
+        { path: '/dashboard/dgda/investigations', icon: <ShieldWarning size={20} weight="duotone" />, label: 'Investigations' },
+        { path: '/dashboard/dgda/recalls', icon: <WarningCircle size={20} weight="duotone" />, label: 'Recalls' },
+        { path: '/dashboard/dgda/inspections', icon: <ClipboardText size={20} weight="duotone" />, label: 'Inspections' },
+        { path: '/dashboard/dgda/heatmaps', icon: <MapTrifold size={20} weight="duotone" />, label: 'Heatmaps' },
+        { path: '/dashboard/dgda/risk', icon: <Brain size={20} weight="duotone" />, label: 'Risk Intel' },
     ];
 
     const navItems = user?.role === 'pharmacy' ? pharmacyNavItems : user?.role === 'distributor' ? distributorNavItems : user?.role === 'dgda' ? dgdaNavItems : citizenNavItems;

@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate, Link } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { 
-    MapPin, Crosshair, ShieldWarning, WarningCircle, ClipboardText, 
-    Buildings, MapTrifold, Brain, ChartLineUp, Ambulance, Shield, CheckCircle
+    ShieldWarning, WarningCircle, CheckCircle
 } from '@phosphor-icons/react';
 import api from '../../services/api';
 import MapComponent from '../../components/MapComponent';
-import Card, { CardContent, CardHeader } from '../../components/ui/Card';
+import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
-import Input from '../../components/ui/Input';
+
+import DGDACommandCenter from './DGDACommandCenter';
+import DGDAMonitoring from './DGDAMonitoring';
+import DGDAEntities from './DGDAEntities';
 
 const DGDAPortal = () => {
     const location = useLocation();
@@ -21,84 +23,75 @@ const DGDAPortal = () => {
     const [isLoading, setIsLoading] = useState(false);
 
     const tabs = [
-        { id: 'command-center', label: 'Command Center', icon: <MapPin size={18} />, path: '/dashboard/dgda/command-center' },
-        { id: 'live-monitoring', label: 'Monitoring', icon: <Crosshair size={18} />, path: '/dashboard/dgda/live-monitoring' },
-        { id: 'investigations', label: 'Investigations', icon: <ShieldWarning size={18} />, path: '/dashboard/dgda/investigations' },
-        { id: 'recalls', label: 'Recalls', icon: <WarningCircle size={18} />, path: '/dashboard/dgda/recalls' },
-        { id: 'inspections', label: 'Inspections', icon: <ClipboardText size={18} />, path: '/dashboard/dgda/inspections' },
-        { id: 'entities', label: 'Entities', icon: <Buildings size={18} />, path: '/dashboard/dgda/entities' },
-        { id: 'heatmaps', label: 'Heatmaps', icon: <MapTrifold size={18} />, path: '/dashboard/dgda/heatmaps' },
-        { id: 'risk', label: 'Risk Intel', icon: <Brain size={18} />, path: '/dashboard/dgda/risk' }
+        { id: 'command-center', path: '/dashboard/dgda/command-center' },
+        { id: 'monitoring', path: '/dashboard/dgda/monitoring' },
+        { id: 'entities', path: '/dashboard/dgda/entities' },
+        { id: 'investigations', path: '/dashboard/dgda/investigations' },
+        { id: 'recalls', path: '/dashboard/dgda/recalls' },
+        { id: 'inspections', path: '/dashboard/dgda/inspections' },
+        { id: 'heatmaps', path: '/dashboard/dgda/heatmaps' },
+        { id: 'risk', path: '/dashboard/dgda/risk' }
     ];
 
     useEffect(() => {
-        const currentTab = tabs.find(t => pathname.includes(t.path));
-        if (currentTab) setActiveTab(currentTab.id);
-        fetchTabData(currentTab ? currentTab.id : 'command-center');
+        let currentTab = tabs.find(t => pathname.includes(t.path));
+        if (!currentTab && pathname.includes('/dashboard/dgda/live-monitoring')) {
+            currentTab = { id: 'monitoring', path: '/dashboard/dgda/monitoring' };
+        }
+        const activeId = currentTab ? currentTab.id : 'command-center';
+        setActiveTab(activeId);
+        if (['investigations', 'recalls', 'inspections', 'heatmaps', 'risk'].includes(activeId)) {
+            fetchTabData(activeId);
+        }
     }, [pathname]);
+
+    const handleNavigateTab = (tabId) => {
+        const target = tabs.find(t => t.id === tabId) || tabs[0];
+        setActiveTab(target.id);
+        navigate(target.path);
+    };
 
     const fetchTabData = async (tab) => {
         setIsLoading(true);
         try {
             let endpoint = '';
             switch(tab) {
-                case 'command-center': endpoint = 'core/dgda/command-center/'; break;
                 case 'investigations': endpoint = 'core/dgda/investigations/'; break;
                 case 'recalls': endpoint = 'core/dgda/recalls/'; break;
                 case 'inspections': endpoint = 'core/dgda/inspections/'; break;
-                case 'entities': endpoint = 'core/dgda/entities/'; break;
                 case 'heatmaps': endpoint = 'core/dgda/heatmaps/'; break;
                 case 'risk': endpoint = 'core/dgda/risk-intelligence/'; break;
                 default: endpoint = null;
             }
-            if(endpoint) {
+            if (endpoint) {
                 const res = await api.get(endpoint);
                 setData(res.data);
             } else {
                 setData(null);
             }
-        } catch(err) {
+        } catch (err) {
             console.error("Error fetching data for tab", tab, err);
         }
         setIsLoading(false);
     };
 
     const renderTabContent = () => {
-        if(isLoading) return <div style={{ padding: '4rem', textAlign: 'center', color: 'var(--text-muted)' }}>Loading intelligence data...</div>;
-
         switch(activeTab) {
             case 'command-center':
-                return (
-                    <div className="animate-fade-in">
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
-                            <Card padding="md" style={{ textAlign: 'center' }}>
-                                <h3 style={{ fontSize: '1rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Active Recalls</h3>
-                                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--danger)' }}>{data?.active_recalls || 0}</div>
-                            </Card>
-                            <Card padding="md" style={{ textAlign: 'center' }}>
-                                <h3 style={{ fontSize: '1rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>ADR Reports</h3>
-                                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--warning)' }}>{data?.total_adr || 0}</div>
-                            </Card>
-                            <Card padding="md" style={{ textAlign: 'center' }}>
-                                <h3 style={{ fontSize: '1rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Low Stock Alerts</h3>
-                                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--info)' }}>{data?.low_stock_alerts || 0}</div>
-                            </Card>
-                            <Card padding="md" style={{ textAlign: 'center' }}>
-                                <h3 style={{ fontSize: '1rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Live Movements</h3>
-                                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--primary)' }}>{data?.live_movements || 0}</div>
-                            </Card>
-                        </div>
-                        
-                        <Card padding="none" style={{ height: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-page)', overflow: 'hidden' }}>
-                            <MapComponent points={[]} />
-                        </Card>
-                    </div>
-                );
+                return <DGDACommandCenter onNavigateTab={handleNavigateTab} />;
+
+            case 'monitoring':
+            case 'live-monitoring':
+                return <DGDAMonitoring />;
+
+            case 'entities':
+                return <DGDAEntities />;
+
             case 'investigations':
                 return (
                     <div className="animate-fade-in">
                         <h2 style={{ marginBottom: '1.5rem', fontSize: '1.5rem' }}>Active Investigations</h2>
-                        {data && data.map((inv, idx) => (
+                        {isLoading ? <p>Loading investigations...</p> : data && data.map((inv, idx) => (
                             <Card key={idx} padding="md" style={{ marginBottom: '1rem', borderLeft: inv.threat_level === 'High' ? '4px solid var(--danger)' : '4px solid var(--warning)' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <div>
@@ -111,20 +104,21 @@ const DGDAPortal = () => {
                                 </div>
                             </Card>
                         ))}
-                        {(!data || data.length === 0) && <p style={{ color: 'var(--text-muted)' }}>No active investigations.</p>}
                     </div>
                 );
+
             case 'heatmaps':
                 return (
                     <div className="animate-fade-in">
                         <div style={{ marginBottom: '1.5rem' }}>
-                            <p style={{ color: 'var(--text-muted)', fontSize: '1.125rem' }}>Interactive visualization of ADRs, shortages, and counterfeiting risks across the country.</p>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '1.125rem' }}>Interactive visualization of ADRs, shortages, and counterfeiting risks across Bangladesh.</p>
                         </div>
                         <Card padding="none" style={{ height: '500px', overflow: 'hidden' }}>
                             {data && <MapComponent points={data} />}
                         </Card>
                     </div>
                 );
+
             case 'risk':
                 return (
                     <div className="animate-fade-in">
@@ -180,23 +174,15 @@ const DGDAPortal = () => {
                         </div>
                     </div>
                 );
+
             default:
-                return <div><h2 style={{ fontSize: '1.5rem' }}>{tabs.find(t => t.id === activeTab)?.label}</h2><p style={{ color: 'var(--text-muted)' }}>Dashboard module is currently under maintenance.</p></div>;
+                return <DGDACommandCenter onNavigateTab={handleNavigateTab} />;
         }
     };
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '1.5rem' }}>
-            
-            {/* Page Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                    <h1 style={{ fontSize: '2rem', margin: '0 0 0.5rem 0', color: 'var(--text-main)' }}>National Command Center</h1>
-                    <p style={{ margin: 0, color: 'var(--text-muted)' }}>Directorate General of Drug Administration (DGDA)</p>
-                </div>
-            </div>
-
-            {/* Main Content Area */}
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            {/* Main Content Area - Navigated exclusively via Sidebar */}
             <div style={{ flex: 1 }}>
                 {renderTabContent()}
             </div>

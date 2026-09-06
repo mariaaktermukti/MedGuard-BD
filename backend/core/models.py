@@ -272,3 +272,64 @@ class KnowledgeEdge(models.Model):
     relation = models.CharField(max_length=50)
     weight = models.DecimalField(max_digits=3, decimal_places=2, default=1.00)
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+class MonitoringEvent(models.Model):
+    EVENT_TYPES = [
+        ('adr', 'Adverse Drug Reaction'),
+        ('counterfeit', 'Suspected Counterfeit'),
+        ('expired', 'Expired Medicine'),
+        ('complaint', 'Citizen/Pharmacy Complaint'),
+        ('price_anomaly', 'Price Anomaly'),
+        ('supply_chain_anomaly', 'Supply Chain Anomaly'),
+        ('quality_issue', 'Quality Issue'),
+    ]
+
+    SEVERITY_CHOICES = [
+        ('critical', 'Critical'),
+        ('high', 'High'),
+        ('medium', 'Medium'),
+        ('low', 'Low'),
+    ]
+
+    STATUS_CHOICES = [
+        ('new', 'New'),
+        ('under_review', 'Under Review'),
+        ('escalated', 'Escalated'),
+        ('resolved', 'Resolved'),
+        ('dismissed', 'Dismissed'),
+    ]
+
+    event_id = models.CharField(max_length=50, unique=True, db_index=True, blank=True)
+    event_type = models.CharField(max_length=30, choices=EVENT_TYPES, default='adr')
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True, null=True)
+    medicine = models.ForeignKey(Medicine, on_delete=models.SET_NULL, null=True, blank=True, related_name='monitoring_events')
+    batch = models.ForeignKey(Batch, on_delete=models.SET_NULL, null=True, blank=True, related_name='monitoring_events')
+    manufacturer = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='manufacturer_monitoring_events')
+    pharmacy = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='pharmacy_monitoring_events')
+    distributor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='distributor_monitoring_events')
+    citizen = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='citizen_monitoring_events')
+    doctor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='doctor_monitoring_events')
+    researcher = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='researcher_monitoring_events')
+    location = models.CharField(max_length=100, blank=True, null=True)
+    severity = models.CharField(max_length=20, choices=SEVERITY_CHOICES, default='medium')
+    risk_score = models.IntegerField(default=50)
+    risk_factors = models.JSONField(default=list, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='new')
+    source = models.CharField(max_length=100, default='ADR Sentinel')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviewed_events')
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        if not self.event_id:
+            import random
+            rand_suffix = f"{random.randint(1000, 9999)}"
+            self.event_id = f"MON-2026-{rand_suffix}"
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"[{self.event_id}] {self.title} ({self.get_severity_display()})"
+

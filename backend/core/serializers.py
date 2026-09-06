@@ -13,6 +13,7 @@ from .models import (
     Inventory,
     Inspection,
     Medicine,
+    MonitoringEvent,
     Notification,
     QualityTest,
     Recall,
@@ -309,4 +310,64 @@ class InspectionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Inspection
         fields = '__all__'
+
+
+class MonitoringEventSerializer(serializers.ModelSerializer):
+    medicine_name = serializers.SerializerMethodField(read_only=True)
+    batch_number = serializers.SerializerMethodField(read_only=True)
+    manufacturer_name = serializers.SerializerMethodField(read_only=True)
+    pharmacy_name = serializers.SerializerMethodField(read_only=True)
+    distributor_name = serializers.SerializerMethodField(read_only=True)
+    citizen_name = serializers.SerializerMethodField(read_only=True)
+    doctor_name = serializers.SerializerMethodField(read_only=True)
+    researcher_name = serializers.SerializerMethodField(read_only=True)
+    reviewed_by_name = serializers.SerializerMethodField(read_only=True)
+    severity_display = serializers.CharField(source='get_severity_display', read_only=True)
+    event_type_display = serializers.CharField(source='get_event_type_display', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+
+    class Meta:
+        model = MonitoringEvent
+        fields = '__all__'
+
+    def get_medicine_name(self, obj):
+        return obj.medicine.name if obj.medicine else None
+
+    def get_batch_number(self, obj):
+        return obj.batch.batch_number if obj.batch else None
+
+    def get_manufacturer_name(self, obj):
+        if obj.manufacturer:
+            prof = getattr(obj.manufacturer, 'manufacturer_profile', None)
+            return prof.company_name if prof else obj.manufacturer.username
+        return None
+
+    def get_pharmacy_name(self, obj):
+        if obj.pharmacy:
+            prof = getattr(obj.pharmacy, 'pharmacy_profile', None)
+            return prof.pharmacy_name if prof else obj.pharmacy.username
+        return None
+
+    def get_distributor_name(self, obj):
+        if obj.distributor:
+            prof = getattr(obj.distributor, 'distributor_profile', None)
+            return prof.company_name if prof else obj.distributor.username
+        return None
+
+    def get_citizen_name(self, obj):
+        return obj.citizen.full_name or obj.citizen.username if obj.citizen else None
+
+    def get_doctor_name(self, obj):
+        if obj.doctor:
+            prof = getattr(obj.doctor, 'doctor_profile', None)
+            return f"Dr. {obj.doctor.full_name or obj.doctor.username}" if prof else obj.doctor.username
+        return None
+
+    def get_researcher_name(self, obj):
+        return obj.researcher.full_name or obj.researcher.username if obj.researcher else None
+
+    def get_reviewed_by_name(self, obj):
+        return obj.reviewed_by.full_name or obj.reviewed_by.username if obj.reviewed_by else None
+
+
 

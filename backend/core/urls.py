@@ -49,6 +49,10 @@ from .views import (
 )
 from .dgda_views import (
     DGDACommandCenterView,
+    DGDAMonitoringViewSet,
+    DGDAMonitoringSummaryView,
+    DGDAEntitiesView,
+    DGDAEntityDetailView,
     DGDABatchTrackingView,
     DGDACounterfeitInvestigationView,
     DGDARecallViewSet,
@@ -110,13 +114,18 @@ urlpatterns = [
 
     # DGDA Portal Routes
     path('dgda/command-center/', DGDACommandCenterView.as_view(), name='dgda-command-center'),
+    path('dgda/monitoring/', DGDAMonitoringViewSet.as_view({'get': 'list', 'post': 'create'}), name='dgda-monitoring-list'),
+    path('dgda/monitoring/summary/', DGDAMonitoringSummaryView.as_view(), name='dgda-monitoring-summary'),
+    path('dgda/monitoring/<int:pk>/', DGDAMonitoringViewSet.as_view({'get': 'retrieve', 'patch': 'partial_update', 'delete': 'destroy'}), name='dgda-monitoring-detail'),
+    path('dgda/entities/', DGDAEntitiesView.as_view(), name='dgda-entities'),
+    path('dgda/entities/detail/', DGDAEntityDetailView.as_view(), name='dgda-entities-detail'),
     path('dgda/batch/<str:batch_number>/', DGDABatchTrackingView.as_view(), name='dgda-batch-tracking'),
     path('dgda/investigations/', DGDACounterfeitInvestigationView.as_view(), name='dgda-investigations'),
     path('dgda/recalls/', DGDARecallViewSet.as_view({'get': 'list', 'post': 'create'}), name='dgda-recalls'),
     path('dgda/inspections/', DGDAInspectionViewSet.as_view({'get': 'list', 'post': 'create'}), name='dgda-inspections'),
-    path('dgda/entities/', DGDAEntityMonitoringView.as_view(), name='dgda-entities'),
     path('dgda/heatmaps/', DGDAHeatmapDataView.as_view(), name='dgda-heatmaps'),
     path('dgda/risk-intelligence/', DGDAAIRiskIntelligenceView.as_view(), name='dgda-risk-intelligence'),
     path('dgda/policy-analytics/', DGDAPolicyAnalyticsView.as_view(), name='dgda-policy-analytics'),
     path('dgda/emergency-response/', DGDAEmergencyResponseView.as_view(), name='dgda-emergency-response'),
 ]
+

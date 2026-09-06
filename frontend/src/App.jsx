@@ -69,7 +69,9 @@ function App() {
                       <Route path="manufacturer/shipment" element={<ManufacturerPortal />} />
                       <Route path="pharmacy" element={<PharmacyDashboard />} />
                       <Route path="pharmacy/inventory" element={<Inventory />} />
-                      <Route path="dgda/*" element={<DGDAPortal />} />
+                      <Route element={<ProtectedRoute allowedRoles={['dgda']} />}>
+                        <Route path="dgda/*" element={<DGDAPortal />} />
+                      </Route>
                       <Route path="doctor/*" element={<DoctorPortal />} />
                       <Route path="pharmacy/suppliers" element={<Suppliers />} />
                       <Route path="pharmacy/verify" element={<BatchVerify />} />
