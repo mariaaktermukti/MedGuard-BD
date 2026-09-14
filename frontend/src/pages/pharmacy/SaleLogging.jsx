@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { QrCode, MagnifyingGlass, Receipt, CheckCircle, Warning } from '@phosphor-icons/react';
+import { QrCode, MagnifyingGlass, Receipt, CheckCircle, Warning, Camera } from '@phosphor-icons/react';
 import api from '../../services/api';
+import QRScanner from '../../components/QRScanner';
 
 const inputStyle = {
     width: '100%',
@@ -25,6 +26,7 @@ const SaleLogging = () => {
     const [batch, setBatch] = useState(null);
     const [batchError, setBatchError] = useState('');
     const [checkingBatch, setCheckingBatch] = useState(false);
+    const [showScanner, setShowScanner] = useState(false);
 
     const [phone, setPhone] = useState('');
     const [citizens, setCitizens] = useState([]);
@@ -124,12 +126,23 @@ const SaleLogging = () => {
 
             <div className="glass-panel" style={{ padding: '1.5rem' }}>
                 <h2 style={{ margin: '0 0 1rem', fontSize: '1.1rem' }}>1. Verify Batch</h2>
-                <form onSubmit={handleCheckBatch} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '1rem' }}>
+                <form onSubmit={handleCheckBatch} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '1rem' }}>
                     <input value={qrCode} onChange={(e) => setQrCode(e.target.value)} placeholder="Scan or paste batch QR code" style={inputStyle} />
+                    <button type="button" className="ui-btn ui-btn-secondary" onClick={() => setShowScanner((open) => !open)} style={{ width: 'auto', padding: '0.75rem 1.25rem' }}>
+                        <Camera size={18} /> {showScanner ? 'Hide' : 'Scan'}
+                    </button>
                     <button type="submit" className="ui-btn ui-btn-primary" disabled={checkingBatch} style={{ width: 'auto', padding: '0.75rem 1.25rem' }}>
                         <QrCode size={18} /> Check
                     </button>
                 </form>
+                {showScanner && (
+                    <div style={{ marginTop: '1rem' }}>
+                        <QRScanner
+                            onScan={(decodedText) => { setQrCode(decodedText.trim()); setShowScanner(false); }}
+                            onClose={() => setShowScanner(false)}
+                        />
+                    </div>
+                )}
                 {batchError && <p style={{ marginTop: '1rem', color: 'var(--danger)' }}>{batchError}</p>}
                 {batch && (
                     <div style={{
