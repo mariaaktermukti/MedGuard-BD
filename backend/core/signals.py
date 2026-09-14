@@ -28,9 +28,9 @@ def create_recall_notifications(sender, instance, created, **kwargs):
         batch.qr_activated_at = batch.qr_activated_at or timezone.now()
         batch.save(update_fields=['status', 'release_blocked', 'qr_activated_at', 'updated_at'])
 
-        instance.progress_percent = 100 if instance.status == 'completed' else max(instance.progress_percent, 75)
+        instance.progress_percent = 100 if instance.status == 'completed' else instance.progress_percent
         instance.notified_downstream_at = timezone.now()
-        instance.save(update_fields=['progress_percent', 'notified_downstream_at'])
+        Recall.objects.filter(pk=instance.pk).update(progress_percent=instance.progress_percent, notified_downstream_at=instance.notified_downstream_at)
 
 
 @receiver(post_save, sender=QualityTest)

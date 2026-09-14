@@ -820,6 +820,8 @@ class DGDARecallViewSet(viewsets.ModelViewSet):
     queryset = Recall.objects.all()
     serializer_class = RecallSerializer
 
+    def perform_create(self, serializer):
+        serializer.save(issued_by_user=self.request.user)
 
 class DGDAInspectionViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsDGDA]
@@ -830,11 +832,13 @@ class DGDAInspectionViewSet(viewsets.ModelViewSet):
 class DGDAEntityMonitoringView(views.APIView):
     permission_classes = [IsAuthenticated, IsDGDA]
     def get(self, request):
-        manufacturers = ManufacturerProfile.objects.all().values('user__username', 'company_name', 'registration_number')
-        pharmacies = PharmacyProfile.objects.all().values('user__username', 'pharmacy_name', 'trust_score')
+        manufacturers = ManufacturerProfile.objects.all().values('user_id', 'user__username', 'company_name', 'registration_number')
+        pharmacies = PharmacyProfile.objects.all().values('user_id', 'user__username', 'pharmacy_name', 'trust_score')
+        distributors = DistributorProfile.objects.all().values('user_id', 'user__username', 'company_name', 'registration_number')
         return Response({
             "manufacturers": list(manufacturers),
-            "pharmacies": list(pharmacies)
+            "pharmacies": list(pharmacies),
+            "distributors": list(distributors)
         })
 
 

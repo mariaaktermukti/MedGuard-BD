@@ -85,7 +85,8 @@ WSGI_APPLICATION = "medguard.wsgi.application"
 
 DATABASES = {
     'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL'),
+        # Local fallback: when DATABASE_URL is not set, use SQLite
+        default=os.environ.get('DATABASE_URL') or f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
         conn_max_age=0,
     )
 }

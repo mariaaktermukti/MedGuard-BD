@@ -22,3 +22,7 @@ list_tables.py
 create_test_users.py
 debug_auth.py
 original_schema.sql
+
+.DS_Store
+.mcp.json
+.claude/
