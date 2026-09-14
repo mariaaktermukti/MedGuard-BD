@@ -23,6 +23,12 @@ const translations = {
         entities: 'Entities',
         heatmaps: 'Heatmaps',
         risk_intel: 'Risk Intelligence',
+        mfg_dashboard: 'Manufacturer Dashboard',
+        mfg_register_medicine: 'Register New Medicine',
+        mfg_create_batch: 'Create New Batch',
+        mfg_verify_batch: 'Scan QR / Verify Batch',
+        mfg_start_recall: 'Start a Recall',
+        mfg_create_shipment: 'Create Shipment',
     },
     BN: {
         home: 'হোম',
@@ -44,6 +50,12 @@ const translations = {
         entities: 'সত্তা',
         heatmaps: 'হিটম্যাপ',
         risk_intel: 'ঝুঁকি বুদ্ধিমত্তা',
+        mfg_dashboard: 'প্রস্তুতকারক ড্যাশবোর্ড',
+        mfg_register_medicine: 'নতুন ওষুধ নিবন্ধন',
+        mfg_create_batch: 'নতুন ব্যাচ তৈরি',
+        mfg_verify_batch: 'কিউআর স্ক্যান / ব্যাচ যাচাই',
+        mfg_start_recall: 'প্রত্যাহার শুরু করুন',
+        mfg_create_shipment: 'চালান তৈরি',
     }
 };
 

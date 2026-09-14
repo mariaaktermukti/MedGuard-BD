@@ -2,10 +2,10 @@ import React, { useContext } from 'react';
 import { NavLink } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { LanguageContext } from '../context/LanguageContext';
-import { House, QrCode, Pill, WarningCircle, MapPin, ChatText, Bell, Gear, UserCircle, Package, Truck, Receipt, ChartLineUp, ChatCenteredText, Warehouse, ChartBar, Crosshair, ShieldWarning, ClipboardText, Buildings, MapTrifold, Brain } from '@phosphor-icons/react';
+import { House, QrCode, Pill, WarningCircle, MapPin, ChatText, Bell, Gear, UserCircle, Package, Truck, Receipt, ChartLineUp, ChatCenteredText, Warehouse, ChartBar, Crosshair, ShieldWarning, ClipboardText, Buildings, MapTrifold, Brain, Factory } from '@phosphor-icons/react';
 
 const Sidebar = ({ isTablet }) => {
-    const { user } = useContext(AuthContext);
+    const { user, logout } = useContext(AuthContext);
     const { t } = useContext(LanguageContext);
 
     const citizenNavItems = [
@@ -47,9 +47,20 @@ const Sidebar = ({ isTablet }) => {
         { path: '/dashboard/dgda/entities', icon: <Buildings size={20} weight="duotone" />, label: t('entities') },
         { path: '/dashboard/dgda/heatmaps', icon: <MapTrifold size={20} weight="duotone" />, label: t('heatmaps') },
         { path: '/dashboard/dgda/risk', icon: <Brain size={20} weight="duotone" />, label: t('risk_intel') },
+        { path: '/dashboard/dgda/policy', icon: <ChartLineUp size={20} weight="duotone" />, label: 'Policy Analytics' },
+        { path: '/dashboard/dgda/emergency', icon: <Package size={20} weight="duotone" />, label: 'Emergency Response' },
     ];
 
-    const navItems = user?.role === 'pharmacy' ? pharmacyNavItems : user?.role === 'distributor' ? distributorNavItems : user?.role === 'dgda' ? dgdaNavItems : citizenNavItems;
+    const manufacturerNavItems = [
+        { path: '/dashboard/manufacturer', icon: <Factory size={20} weight="duotone" />, label: t('mfg_dashboard') },
+        { path: '/dashboard/manufacturer/register', icon: <ClipboardText size={20} weight="duotone" />, label: t('mfg_register_medicine') },
+        { path: '/dashboard/manufacturer/batch', icon: <Package size={20} weight="duotone" />, label: t('mfg_create_batch') },
+        { path: '/dashboard/manufacturer/verify', icon: <QrCode size={20} weight="duotone" />, label: t('mfg_verify_batch') },
+        { path: '/dashboard/manufacturer/recall', icon: <WarningCircle size={20} weight="duotone" />, label: t('mfg_start_recall') },
+        { path: '/dashboard/manufacturer/shipment', icon: <Truck size={20} weight="duotone" />, label: t('mfg_create_shipment') },
+    ];
+
+    const navItems = user?.role === 'pharmacy' ? pharmacyNavItems : user?.role === 'distributor' ? distributorNavItems : user?.role === 'dgda' ? dgdaNavItems : user?.role === 'manufacturer' ? manufacturerNavItems : citizenNavItems;
 
     const bottomNavItems = [
         { path: '/dashboard/notifications', icon: <Bell size={20} weight="duotone" />, label: t('notifications') },
@@ -76,7 +87,7 @@ const Sidebar = ({ isTablet }) => {
                     <NavLink 
                         key={index} 
                         to={item.path}
-                        end={item.path === '/dashboard' || item.path === '/dashboard/pharmacy' || item.path === '/dashboard/dgda'}
+                        end={item.path === '/dashboard' || item.path === '/dashboard/pharmacy' || item.path === '/dashboard/dgda' || item.path === '/dashboard/manufacturer'}
                         style={({ isActive }) => ({
                             display: 'flex',
                             alignItems: 'center',
@@ -124,7 +135,7 @@ const Sidebar = ({ isTablet }) => {
                 
                 {/* Logout Button */}
                 <button 
-                    onClick={() => { /* Logout Logic Here handled globally if needed */ }}
+                    onClick={() => logout()}
                     style={{
                         display: 'flex',
                         alignItems: 'center',
