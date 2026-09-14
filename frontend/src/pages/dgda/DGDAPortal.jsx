@@ -8,9 +8,10 @@ import {
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import MapComponent from '../../components/MapComponent';
-import Card from '../../components/ui/Card';
+import Card, { CardHeader, CardContent, CardFooter } from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
+import Input from '../../components/ui/Input';
 
 import DGDACommandCenter from './DGDACommandCenter';
 import DGDAMonitoring from './DGDAMonitoring';
@@ -148,6 +149,12 @@ const DGDAPortal = () => {
         setFormNotice(null);
         fetchTabData(tabId);
     }, [pathname]);
+
+    const handleNavigateTab = (tabId) => {
+        const target = tabs.find(t => t.id === tabId) || tabs[0];
+        setActiveTab(target.id);
+        navigate(target.path);
+    };
 
     const fetchTabData = async (tab, { silent = false } = {}) => {
         const requestId = ++requestIdRef.current;
