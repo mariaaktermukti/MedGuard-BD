@@ -255,7 +255,7 @@ const AIAssistant = () => {
                         <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
                             <div style={{
                                 background: 'rgba(56, 189, 248, 0.15)',
-                                color: '#38BDF8',
+                                color: '#343d41',
                                 padding: '0.75rem', 
                                 borderRadius: '50%',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',

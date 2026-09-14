@@ -1,4 +1,4 @@
-from collections import defaultdict
+﻿from collections import defaultdict
 from datetime import date, timedelta
 
 from django.contrib.auth import get_user_model

@@ -8,10 +8,13 @@ import {
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import MapComponent from '../../components/MapComponent';
-import Card, { CardContent, CardHeader } from '../../components/ui/Card';
+import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
-import Input from '../../components/ui/Input';
+
+import DGDACommandCenter from './DGDACommandCenter';
+import DGDAMonitoring from './DGDAMonitoring';
+import DGDAEntities from './DGDAEntities';
 
 // Matches the command-center low stock count (quantity < 20)
 const LOW_STOCK_THRESHOLD = 20;
@@ -527,13 +530,14 @@ const DGDAPortal = () => {
                 return (
                     <div className="animate-fade-in">
                         <div style={{ marginBottom: '1.5rem' }}>
-                            <p style={{ color: 'var(--text-muted)', fontSize: '1.125rem' }}>Interactive visualization of ADRs, shortages, and counterfeiting risks across the country.</p>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '1.125rem' }}>Interactive visualization of ADRs, shortages, and counterfeiting risks across Bangladesh.</p>
                         </div>
                         <Card padding="none" style={{ height: '500px', overflow: 'hidden' }}>
                             {data && <MapComponent points={data} />}
                         </Card>
                     </div>
                 );
+
             case 'risk':
                 return (
                     <div className="animate-fade-in">
@@ -741,7 +745,7 @@ const DGDAPortal = () => {
                 );
             }
             default:
-                return <div><h2 style={{ fontSize: '1.5rem' }}>{tabs.find(t => t.id === activeTab)?.label}</h2><p style={{ color: 'var(--text-muted)' }}>Dashboard module is currently under maintenance.</p></div>;
+                return <DGDACommandCenter onNavigateTab={handleNavigateTab} />;
         }
     };
 
