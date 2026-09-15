@@ -63,12 +63,14 @@ from .dgda_views import (
     DGDAPolicyAnalyticsView,
     DGDAEmergencyResponseView,
 )
+from .counterfeit_report_views import CounterfeitReportListCreateView
 
 urlpatterns = [
     path('passport/<str:qr_code>/', DrugPassportView.as_view(), name='drug-passport'),
     path('medicines/personal/', PersonalMedicineRecordView.as_view(), name='personal-medicines'),
     path('medicines/personal/<int:pk>/', PersonalMedicineRecordDetailView.as_view(), name='personal-medicines-detail'),
     path('adr/', ADRReportCreateView.as_view(), name='adr-report'),
+    path('counterfeit-reports/', CounterfeitReportListCreateView.as_view(), name='counterfeit-reports'),
     path('pharmacies/', PharmacyFinderView.as_view(), name='pharmacy-finder'),
     path('notifications/', NotificationListView.as_view(), name='notifications'),
     path('notifications/<int:pk>/read/', NotificationMarkReadView.as_view(), name='notification-mark-read'),

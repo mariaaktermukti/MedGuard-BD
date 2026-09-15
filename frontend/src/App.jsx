@@ -20,6 +20,7 @@ const AIAssistant = lazy(() => import('./pages/citizen/AIAssistant'));
 const PharmacyFinder = lazy(() => import('./pages/citizen/PharmacyFinder'));
 const InteractionChecker = lazy(() => import('./pages/citizen/InteractionChecker'));
 const Notifications = lazy(() => import('./pages/citizen/Notifications'));
+const CitizenReportCounterfeit = lazy(() => import('./pages/citizen/ReportCounterfeit'));
 const ManufacturerPortal = lazy(() => import('./pages/manufacturer/ManufacturerPortal'));
 const Inventory = lazy(() => import('./pages/pharmacy/Inventory'));
 const Suppliers = lazy(() => import('./pages/pharmacy/Suppliers'));
@@ -29,6 +30,7 @@ const Alerts = lazy(() => import('./pages/pharmacy/Alerts'));
 const StockForecast = lazy(() => import('./pages/pharmacy/StockForecast'));
 const Complaints = lazy(() => import('./pages/pharmacy/Complaints'));
 const PharmacyDashboard = lazy(() => import('./pages/pharmacy/PharmacyDashboard'));
+const PharmacyReportCounterfeit = lazy(() => import('./pages/pharmacy/ReportCounterfeit'));
 const Warehouses = lazy(() => import('./pages/distributor/Warehouses'));
 const Shipments = lazy(() => import('./pages/distributor/Shipments'));
 const Analytics = lazy(() => import('./pages/distributor/Analytics'));
@@ -57,6 +59,7 @@ function App() {
                       <Route path="drug-passport" element={<DrugPassport />} />
                       <Route path="my-medicines" element={<MyMedicines />} />
                       <Route path="report-adr" element={<ReportADR />} />
+                      <Route path="report-counterfeit" element={<CitizenReportCounterfeit />} />
                       <Route path="ai-assistant" element={<AIAssistant />} />
                       <Route path="find-pharmacy" element={<PharmacyFinder />} />
                       <Route path="interaction-checker" element={<InteractionChecker />} />
@@ -79,6 +82,7 @@ function App() {
                       <Route path="pharmacy/alerts" element={<Alerts />} />
                       <Route path="pharmacy/forecast" element={<StockForecast />} />
                       <Route path="pharmacy/complaints" element={<Complaints />} />
+                      <Route path="pharmacy/report-counterfeit" element={<PharmacyReportCounterfeit />} />
                       <Route path="distributor/warehouses" element={<Warehouses />} />
                       <Route path="distributor/shipments" element={<Shipments />} />
                       <Route path="distributor/analytics" element={<Analytics />} />
