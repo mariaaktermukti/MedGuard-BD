@@ -37,6 +37,7 @@ const FleetMonitoring = lazy(() => import('./pages/distributor/FleetMonitoring')
 const RouteRisk = lazy(() => import('./pages/distributor/RouteRisk'));
 const DGDAPortal = lazy(() => import('./pages/dgda/DGDAPortal'));
 const DoctorPortal = lazy(() => import('./pages/doctor/DoctorPortal'));
+const MedicineRegistry = lazy(() => import('./pages/MedicineRegistry'));
 
 function App() {
   return (
@@ -54,6 +55,8 @@ function App() {
                   <Route element={<ProtectedRoute />}>
                     <Route path="/dashboard" element={<DashboardLayout />}>
                       <Route index element={<Dashboard />} />
+                      <Route path="medicines" element={<MedicineRegistry />} />
+                      <Route path="registered-medicines" element={<MedicineRegistry />} />
                       <Route path="drug-passport" element={<DrugPassport />} />
                       <Route path="my-medicines" element={<MyMedicines />} />
                       <Route path="report-adr" element={<ReportADR />} />

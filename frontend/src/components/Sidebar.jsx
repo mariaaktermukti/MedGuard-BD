@@ -10,6 +10,7 @@ const Sidebar = ({ isTablet }) => {
 
     const citizenNavItems = [
         { path: '/dashboard', icon: <House size={20} weight="duotone" />, label: t('home') },
+        { path: '/dashboard/medicines', icon: <Pill size={20} weight="duotone" />, label: 'Medicine Registry' },
         { path: '/dashboard/drug-passport', icon: <QrCode size={20} weight="duotone" />, label: t('qr_scan') },
         { path: '/dashboard/my-medicines', icon: <Pill size={20} weight="duotone" />, label: t('my_medicines') },
         { path: '/dashboard/report-adr', icon: <WarningCircle size={20} weight="duotone" />, label: t('adr_report') },
@@ -19,6 +20,7 @@ const Sidebar = ({ isTablet }) => {
 
     const pharmacyNavItems = [
         { path: '/dashboard/pharmacy', icon: <House size={20} weight="duotone" />, label: t('home') },
+        { path: '/dashboard/medicines', icon: <Pill size={20} weight="duotone" />, label: 'Medicine Registry' },
         { path: '/dashboard/pharmacy/inventory', icon: <Package size={20} weight="duotone" />, label: 'Inventory' },
         { path: '/dashboard/pharmacy/verify', icon: <QrCode size={20} weight="duotone" />, label: 'Verify Batch' },
         { path: '/dashboard/pharmacy/sales', icon: <Receipt size={20} weight="duotone" />, label: 'Log Sale' },
@@ -30,6 +32,7 @@ const Sidebar = ({ isTablet }) => {
 
     const distributorNavItems = [
         { path: '/dashboard', icon: <House size={20} weight="duotone" />, label: t('home') },
+        { path: '/dashboard/medicines', icon: <Pill size={20} weight="duotone" />, label: 'Medicine Registry' },
         { path: '/dashboard/distributor/warehouses', icon: <Warehouse size={20} weight="duotone" />, label: 'Warehouses' },
         { path: '/dashboard/distributor/shipments', icon: <Truck size={20} weight="duotone" />, label: 'Shipments' },
         { path: '/dashboard/distributor/analytics', icon: <ChartBar size={20} weight="duotone" />, label: 'Analytics' },
@@ -40,6 +43,7 @@ const Sidebar = ({ isTablet }) => {
 
     const dgdaNavItems = [
         { path: '/dashboard/dgda/command-center', icon: <MapPin size={20} weight="duotone" />, label: t('command_center') },
+        { path: '/dashboard/medicines', icon: <Pill size={20} weight="duotone" />, label: 'Medicine Registry' },
         { path: '/dashboard/dgda/live-monitoring', icon: <Crosshair size={20} weight="duotone" />, label: t('monitoring') },
         { path: '/dashboard/dgda/investigations', icon: <ShieldWarning size={20} weight="duotone" />, label: t('investigations') },
         { path: '/dashboard/dgda/recalls', icon: <WarningCircle size={20} weight="duotone" />, label: t('recalls') },
@@ -53,6 +57,7 @@ const Sidebar = ({ isTablet }) => {
 
     const manufacturerNavItems = [
         { path: '/dashboard/manufacturer', icon: <Factory size={20} weight="duotone" />, label: t('mfg_dashboard') },
+        { path: '/dashboard/medicines', icon: <Pill size={20} weight="duotone" />, label: 'Medicine Registry' },
         { path: '/dashboard/manufacturer/register', icon: <ClipboardText size={20} weight="duotone" />, label: t('mfg_register_medicine') },
         { path: '/dashboard/manufacturer/batch', icon: <Package size={20} weight="duotone" />, label: t('mfg_create_batch') },
         { path: '/dashboard/manufacturer/verify', icon: <QrCode size={20} weight="duotone" />, label: t('mfg_verify_batch') },

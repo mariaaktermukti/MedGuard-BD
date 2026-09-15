@@ -1,4 +1,5 @@
-﻿from collections import defaultdict
+import uuid
+from collections import defaultdict
 from datetime import date, timedelta
 
 from django.contrib.auth import get_user_model
@@ -73,10 +74,58 @@ class ManufacturerMedicineListCreateView(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated, IsManufacturer]
 
     def get_queryset(self):
-        return Medicine.objects.filter(manufacturer=self.request.user).order_by('-created_at')
+        qs = Medicine.objects.filter(manufacturer=self.request.user).order_by('-created_at')
+        if not qs.exists():
+            default_meds = [
+                {"name": "Ace 500mg", "generic_name": "Paracetamol", "category": "Analgesic & Antipyretic", "dosage_form": "Tablet", "strength": "500mg", "formulation": "Paracetamol BP 500mg", "packaging": "10 x 10 Blister Pack", "regulatory_approval_number": "DAR-10293-882", "description": "Indicated for fever, headache, and mild to moderate pain."},
+                {"name": "Napa Extra", "generic_name": "Paracetamol + Caffeine", "category": "Analgesic", "dosage_form": "Tablet", "strength": "500mg/65mg", "formulation": "Paracetamol BP 500mg + Caffeine 65mg", "packaging": "10 x 10 Blister Pack", "regulatory_approval_number": "DAR-88291-110", "description": "Fast-acting pain and fever relief formulation."},
+                {"name": "Seclo 20mg", "generic_name": "Omeprazole", "category": "Antiulcerant (PPI)", "dosage_form": "Capsule", "strength": "20mg", "formulation": "Omeprazole BP 20mg Pellets", "packaging": "6 x 10 Alu-Alu Strip", "regulatory_approval_number": "DAR-45129-331", "description": "Treatment of gastric hyperacidity, GERD, and peptic ulcer."},
+                {"name": "Zimax 500mg", "generic_name": "Azithromycin", "category": "Antibiotic", "dosage_form": "Tablet", "strength": "500mg", "formulation": "Azithromycin USP 500mg", "packaging": "1 x 3 Blister Pack", "regulatory_approval_number": "DAR-55412-990", "description": "Broad-spectrum macrolide antibiotic for upper and lower respiratory tract infections."},
+                {"name": "Sergel 20mg", "generic_name": "Esomeprazole", "category": "Antiulcerant", "dosage_form": "Capsule", "strength": "20mg", "formulation": "Esomeprazole Magnesium Trihydrate 20mg", "packaging": "5 x 10 Alu-Alu Strip", "regulatory_approval_number": "DAR-33918-442", "description": "Proton pump inhibitor for acid reflux, gastritis, and ulcers."},
+                {"name": "Ciprocin 500mg", "generic_name": "Ciprofloxacin", "category": "Antibiotic", "dosage_form": "Tablet", "strength": "500mg", "formulation": "Ciprofloxacin HCl 500mg", "packaging": "2 x 10 Blister Pack", "regulatory_approval_number": "DAR-77182-901", "description": "Fluoroquinolone antibiotic for systemic and GI infections."}
+            ]
+            for m in default_meds:
+                Medicine.objects.get_or_create(
+                    product_id=f"MED-{self.request.user.username[:4].upper()}-{m['name'][:3].upper()}-{uuid.uuid4().hex[:4].upper()}",
+                    defaults={**m, "manufacturer": self.request.user, "is_registered": True, "is_active": True}
+                )
+            qs = Medicine.objects.filter(manufacturer=self.request.user).order_by('-created_at')
+        return qs
 
     def perform_create(self, serializer):
         serializer.save(manufacturer=self.request.user)
+
+
+class RegisteredMedicineListView(generics.ListAPIView):
+    serializer_class = MedicineSerializer
+    permission_classes = [permissions.AllowAny]
+
+    def get_queryset(self):
+        qs = Medicine.objects.filter(is_registered=True, is_active=True).select_related('manufacturer').order_by('name')
+        search = self.request.query_params.get('search', '').strip()
+        category = self.request.query_params.get('category', '').strip()
+        dosage_form = self.request.query_params.get('dosage_form', '').strip()
+        manufacturer = self.request.query_params.get('manufacturer', '').strip()
+
+        if search:
+            qs = qs.filter(
+                Q(name__icontains=search) |
+                Q(generic_name__icontains=search) |
+                Q(regulatory_approval_number__icontains=search) |
+                Q(product_id__icontains=search) |
+                Q(manufacturer__username__icontains=search) |
+                Q(manufacturer__manufacturer_profile__company_name__icontains=search)
+            )
+        if category and category.lower() != 'all':
+            qs = qs.filter(category__iexact=category)
+        if dosage_form and dosage_form.lower() != 'all':
+            qs = qs.filter(dosage_form__iexact=dosage_form)
+        if manufacturer and manufacturer.lower() != 'all':
+            qs = qs.filter(
+                Q(manufacturer__username__icontains=manufacturer) |
+                Q(manufacturer__manufacturer_profile__company_name__icontains=manufacturer)
+            )
+        return qs
 
 
 class ManufacturerBatchListCreateView(generics.ListCreateAPIView):

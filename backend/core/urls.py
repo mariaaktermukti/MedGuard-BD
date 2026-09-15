@@ -46,6 +46,7 @@ from .views import (
     PersonalMedicineRecordView,
     RecallListCreateView,
     CitizenDashboardView,
+    RegisteredMedicineListView,
 )
 from .dgda_views import (
     DGDACommandCenterView,
@@ -65,6 +66,7 @@ from .dgda_views import (
 )
 
 urlpatterns = [
+    path('medicines/', RegisteredMedicineListView.as_view(), name='registered-medicines-list'),
     path('passport/<str:qr_code>/', DrugPassportView.as_view(), name='drug-passport'),
     path('medicines/personal/', PersonalMedicineRecordView.as_view(), name='personal-medicines'),
     path('medicines/personal/<int:pk>/', PersonalMedicineRecordDetailView.as_view(), name='personal-medicines-detail'),

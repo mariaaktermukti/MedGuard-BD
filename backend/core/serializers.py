@@ -26,10 +26,20 @@ LOW_STOCK_THRESHOLD = 20
 
 
 class MedicineSerializer(serializers.ModelSerializer):
+    manufacturer_name = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = Medicine
         fields = '__all__'
         read_only_fields = ['product_id', 'manufacturer', 'created_at', 'updated_at']
+
+    def get_manufacturer_name(self, obj):
+        if obj.manufacturer:
+            prof = getattr(obj.manufacturer, 'manufacturer_profile', None)
+            if prof and prof.company_name:
+                return prof.company_name
+            return obj.manufacturer.full_name or obj.manufacturer.username
+        return "Unknown Manufacturer"
 
 
 class ShipmentSerializer(serializers.ModelSerializer):
