@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { QrCode, CheckCircle, Warning, XCircle } from '@phosphor-icons/react';
+import { QrCode, CheckCircle, Warning, XCircle, Camera } from '@phosphor-icons/react';
 import api from '../../services/api';
+import QRScanner from '../../components/QRScanner';
 
 const inputStyle = {
     width: '100%',
@@ -26,6 +27,7 @@ const BatchVerify = () => {
     const [result, setResult] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [showScanner, setShowScanner] = useState(false);
 
     const handleVerify = async (event) => {
         event.preventDefault();
@@ -59,12 +61,23 @@ const BatchVerify = () => {
             </div>
 
             <div className="glass-panel" style={{ padding: '2rem' }}>
-                <form onSubmit={handleVerify} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '1rem' }}>
+                <form onSubmit={handleVerify} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '1rem' }}>
                     <input value={qrCode} onChange={(e) => setQrCode(e.target.value)} placeholder="Scan or paste batch QR code" style={inputStyle} />
+                    <button type="button" className="ui-btn ui-btn-secondary" onClick={() => setShowScanner((open) => !open)} style={{ width: 'auto', padding: '0.75rem 1.25rem' }}>
+                        <Camera size={18} /> {showScanner ? 'Hide' : 'Scan'}
+                    </button>
                     <button type="submit" className="ui-btn ui-btn-primary" disabled={loading} style={{ width: 'auto', padding: '0.75rem 1.5rem' }}>
                         <QrCode size={18} /> Verify
                     </button>
                 </form>
+                {showScanner && (
+                    <div style={{ marginTop: '1rem' }}>
+                        <QRScanner
+                            onScan={(decodedText) => { setQrCode(decodedText.trim()); setShowScanner(false); }}
+                            onClose={() => setShowScanner(false)}
+                        />
+                    </div>
+                )}
                 {error && <p style={{ marginTop: '1rem', color: 'var(--danger)' }}>{error}</p>}
             </div>
 

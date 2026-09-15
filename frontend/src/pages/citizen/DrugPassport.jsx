@@ -1,33 +1,31 @@
 import React, { useState } from 'react';
-import { QrCode, Camera, Lightning, Image as ImageIcon, WarningCircle, CheckCircle, ShieldCheck, Factory, Pill, Thermometer, MapPinLine, ArrowLeft, Warning, Plus } from '@phosphor-icons/react';
+import { QrCode, WarningCircle, CheckCircle, ShieldCheck, Factory, Pill, Thermometer, MapPinLine, ArrowLeft, Warning, Plus } from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../../services/api';
+import QRScanner from '../../components/QRScanner';
 
 const DrugPassport = () => {
     const [scanned, setScanned] = useState(false);
     const [isScanning, setIsScanning] = useState(false);
     const [batchData, setBatchData] = useState(null);
+    const [scanError, setScanError] = useState('');
 
-    const handleSimulateScan = async () => {
+    const handleSimulateScan = async (qrCode) => {
         setIsScanning(true);
+        setScanError('');
         try {
-            // Attempt to fetch a real batch if one exists, otherwise mock
-            const response = await api.get('core/passport/DEMO-QR/');
+            const response = await api.get(`core/passport/${encodeURIComponent(qrCode.trim())}/`);
             setBatchData(response.data);
-        } catch (error) {
-            console.log("No real QR found, using mock data for demo");
-            setBatchData({
-                medicine: { name: 'Napa Extra', formulation: 'Paracetamol 500mg + Caffeine 65mg' },
-                status: 'active',
-                batch_number: 'BX-2023-99',
-                manufacturing_date: '2023-10-15',
-                expiry_date: '2025-10-15'
-            });
-        } finally {
             setTimeout(() => {
                 setScanned(true);
                 setIsScanning(false);
             }, 1000);
+        } catch (error) {
+            // Never fall back to mock data: an unregistered code must not render as authentic
+            setIsScanning(false);
+            setScanError(error.response?.status === 404
+                ? 'This QR code is not registered with MedGuard. Do not use this medicine; it may be counterfeit.'
+                : 'Could not verify this QR code right now. Please try again.');
         }
     };
 
@@ -39,15 +37,16 @@ const DrugPassport = () => {
                 background: '#000', borderRadius: '1.5rem', overflow: 'hidden', position: 'relative'
             }}
         >
-            {/* Camera Viewfinder UI Mock */}
+            {/* Camera viewfinder */}
             <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ position: 'absolute', top: '1.5rem', left: '0', width: '100%', display: 'flex', justifyContent: 'space-between', padding: '0 1.5rem', zIndex: 10 }}>
-                    <button style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: 'white', padding: '0.75rem', borderRadius: '50%', cursor: 'pointer' }}><Lightning size={24} /></button>
-                    <button style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: 'white', padding: '0.75rem', borderRadius: '50%', cursor: 'pointer' }}><ImageIcon size={24} /></button>
-                </div>
+                {!isScanning && (
+                    <div style={{ width: '100%', maxWidth: '420px', padding: '0 1.5rem' }}>
+                        <QRScanner onScan={handleSimulateScan} />
+                    </div>
+                )}
                 
                 {/* Viewfinder brackets */}
-                <div style={{ width: '250px', height: '250px', position: 'relative' }}>
+                {isScanning && <div style={{ width: '250px', height: '250px', position: 'relative' }}>
                     <div style={{ position: 'absolute', top: 0, left: 0, width: '40px', height: '40px', borderTop: '4px solid var(--success)', borderLeft: '4px solid var(--success)', borderTopLeftRadius: '1rem' }} />
                     <div style={{ position: 'absolute', top: 0, right: 0, width: '40px', height: '40px', borderTop: '4px solid var(--success)', borderRight: '4px solid var(--success)', borderTopRightRadius: '1rem' }} />
                     <div style={{ position: 'absolute', bottom: 0, left: 0, width: '40px', height: '40px', borderBottom: '4px solid var(--success)', borderLeft: '4px solid var(--success)', borderBottomLeftRadius: '1rem' }} />
@@ -60,19 +59,13 @@ const DrugPassport = () => {
                             style={{ position: 'absolute', left: '10%', width: '80%', height: '2px', background: 'var(--success)', boxShadow: '0 0 10px var(--success)' }}
                         />
                     )}
-                </div>
+                </div>}
             </div>
 
             <div style={{ padding: '2rem', background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', textAlign: 'center', color: 'white' }}>
                 <h3 style={{ margin: '0 0 0.5rem 0' }}>Scan Medicine QR</h3>
                 <p style={{ margin: '0 0 1.5rem 0', opacity: 0.8, fontSize: '0.9rem' }}>Align the QR code on the packaging within the frame</p>
-                <button 
-                    onClick={handleSimulateScan}
-                    className="ui-btn ui-btn-primary" 
-                    style={{ background: 'var(--success)', color: 'white' }}
-                >
-                    <Camera size={20} weight="fill" /> Simulate Scan
-                </button>
+                {scanError && <p role="alert" style={{ margin: 0, color: '#fecaca', fontWeight: 600 }}>{scanError}</p>}
             </div>
         </motion.div>
     );
