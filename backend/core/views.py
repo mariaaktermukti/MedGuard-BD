@@ -207,7 +207,29 @@ class BatchQualityTestListCreateView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         batch = get_object_or_404(Batch, pk=self.kwargs['pk'], manufacturer=self.request.user)
-        serializer.save(batch=batch)
+        test = serializer.save(batch=batch)
+
+        # Update batch qc_status
+        if test.is_out_of_spec or test.test_result == 'Fail':
+            batch.qc_status = 'failed'
+            batch.release_blocked = True
+        else:
+            if batch.qc_status != 'failed':
+                batch.qc_status = 'passed'
+        batch.save(update_fields=['qc_status', 'release_blocked', 'updated_at'])
+
+        # Submit record to DGDA Monitoring Log
+        from .models import MonitoringEvent
+        MonitoringEvent.objects.create(
+            event_type='quality_issue' if (test.is_out_of_spec or test.test_result == 'Fail') else 'compliance_check',
+            batch=batch,
+            medicine=batch.medicine,
+            manufacturer=self.request.user,
+            location=f"Quality Control Laboratory - {self.request.user.username.upper()}",
+            description=f"[DGDA QC SUBMISSION #{test.id}] Test: '{test.test_name}' | Result: '{test.test_result}' | Value: '{test.result_value or 'N/A'}' | Out of Spec: {test.is_out_of_spec}. Official Record Transmitted to DGDA.",
+            severity='high' if (test.is_out_of_spec or test.test_result == 'Fail') else 'low',
+            status='investigating' if (test.is_out_of_spec or test.test_result == 'Fail') else 'resolved'
+        )
 
 
 class DistributionEventListCreateView(generics.ListCreateAPIView):

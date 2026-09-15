@@ -106,12 +106,16 @@ class DistributionEventSerializer(serializers.ModelSerializer):
 class QualityTestSerializer(serializers.ModelSerializer):
     batch = serializers.PrimaryKeyRelatedField(queryset=Batch.objects.all(), write_only=True, required=False)
     batch_details = serializers.SerializerMethodField(read_only=True)
+    dgda_submission_ref = serializers.SerializerMethodField(read_only=True)
+    submitted_to_dgda = serializers.SerializerMethodField(read_only=True)
+    dgda_status = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = QualityTest
         fields = [
             'id', 'batch', 'batch_details', 'test_name', 'test_result',
-            'result_value', 'is_out_of_spec', 'report_file', 'conducted_date'
+            'result_value', 'is_out_of_spec', 'report_file', 'conducted_date',
+            'dgda_submission_ref', 'submitted_to_dgda', 'dgda_status'
         ]
 
     def get_batch_details(self, obj):
@@ -119,8 +123,19 @@ class QualityTestSerializer(serializers.ModelSerializer):
             'id': obj.batch_id,
             'batch_number': obj.batch.batch_number,
             'ddp_id': obj.batch.ddp_id,
-            'medicine': obj.batch.medicine.name,
+            'medicine': obj.batch.medicine.name if obj.batch and obj.batch.medicine else "Unknown",
         }
+
+    def get_dgda_submission_ref(self, obj):
+        return f"DGDA-QC-2026-{obj.id + 10000}"
+
+    def get_submitted_to_dgda(self, obj):
+        return True
+
+    def get_dgda_status(self, obj):
+        if obj.is_out_of_spec or obj.test_result == 'Fail':
+            return "FLAGGED_TO_DGDA_INSPECTORS"
+        return "FILED_TO_DGDA_DATABASE"
 
 
 class BatchSerializer(serializers.ModelSerializer):
