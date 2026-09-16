@@ -333,3 +333,32 @@ class MonitoringEvent(models.Model):
     def __str__(self):
         return f"[{self.event_id}] {self.title} ({self.get_severity_display()})"
 
+
+class CounterfeitReport(models.Model):
+    CATEGORY_CHOICES = [
+        ('wrong_packaging', 'Wrong Packaging'),
+        ('suspicious_price', 'Suspicious Price'),
+        ('failed_verification', 'Failed Verification'),
+        ('other', 'Other'),
+    ]
+
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('reviewed', 'Reviewed'),
+        ('confirmed', 'Confirmed'),
+        ('dismissed', 'Dismissed'),
+    ]
+
+    reporter = models.ForeignKey(User, on_delete=models.RESTRICT, related_name='counterfeit_reports')
+    qr_code = models.CharField(max_length=255, blank=True, null=True, db_index=True)
+    medicine_name = models.CharField(max_length=150)
+    location = models.CharField(max_length=255, blank=True, null=True)
+    category = models.CharField(max_length=30, choices=CATEGORY_CHOICES)
+    description = models.TextField()
+    photo = models.FileField(upload_to="counterfeit-reports/", blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.medicine_name} ({self.get_category_display()}) - {self.get_status_display()}"
+

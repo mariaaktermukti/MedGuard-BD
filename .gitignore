@@ -26,3 +26,6 @@ original_schema.sql
 .DS_Store
 .mcp.json
 .claude/
+
+# Uploaded media files
+backend/media/

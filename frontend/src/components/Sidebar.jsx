@@ -13,6 +13,7 @@ const Sidebar = ({ isTablet }) => {
         { path: '/dashboard/drug-passport', icon: <QrCode size={20} weight="duotone" />, label: t('qr_scan') },
         { path: '/dashboard/my-medicines', icon: <Pill size={20} weight="duotone" />, label: t('my_medicines') },
         { path: '/dashboard/report-adr', icon: <WarningCircle size={20} weight="duotone" />, label: t('adr_report') },
+        { path: '/dashboard/report-counterfeit', icon: <ShieldWarning size={20} weight="duotone" />, label: 'Report Counterfeit' },
         { path: '/dashboard/find-pharmacy', icon: <MapPin size={20} weight="duotone" />, label: t('pharmacy') },
         { path: '/dashboard/ai-assistant', icon: <ChatText size={20} weight="duotone" />, label: t('ai_assistant') },
     ];
@@ -25,6 +26,7 @@ const Sidebar = ({ isTablet }) => {
         { path: '/dashboard/pharmacy/alerts', icon: <WarningCircle size={20} weight="duotone" />, label: 'Alerts' },
         { path: '/dashboard/pharmacy/forecast', icon: <ChartLineUp size={20} weight="duotone" />, label: 'Forecast' },
         { path: '/dashboard/pharmacy/complaints', icon: <ChatCenteredText size={20} weight="duotone" />, label: 'Complaints' },
+        { path: '/dashboard/pharmacy/report-counterfeit', icon: <ShieldWarning size={20} weight="duotone" />, label: 'Report Counterfeit' },
         { path: '/dashboard/pharmacy/suppliers', icon: <Truck size={20} weight="duotone" />, label: 'Suppliers' },
     ];
 
