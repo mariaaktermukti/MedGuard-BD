@@ -63,6 +63,13 @@ from .dgda_views import (
     DGDAPolicyAnalyticsView,
     DGDAEmergencyResponseView,
 )
+
+from .counterfeit_intel_views import (
+    DGDACounterfeitReportListView,
+    DGDACounterfeitReportStatusView,
+    DGDACounterfeitReportSummaryView,
+)
+
 from .counterfeit_report_views import CounterfeitReportListCreateView
 
 urlpatterns = [
@@ -129,5 +136,8 @@ urlpatterns = [
     path('dgda/risk-intelligence/', DGDAAIRiskIntelligenceView.as_view(), name='dgda-risk-intelligence'),
     path('dgda/policy-analytics/', DGDAPolicyAnalyticsView.as_view(), name='dgda-policy-analytics'),
     path('dgda/emergency-response/', DGDAEmergencyResponseView.as_view(), name='dgda-emergency-response'),
+    path('dgda/counterfeit-reports/', DGDACounterfeitReportListView.as_view(), name='dgda-counterfeit-reports'),
+    path('dgda/counterfeit-reports/summary/', DGDACounterfeitReportSummaryView.as_view(), name='dgda-counterfeit-reports-summary'),
+    path('dgda/counterfeit-reports/<int:pk>/', DGDACounterfeitReportStatusView.as_view(), name='dgda-counterfeit-report-status'),
 ]
 

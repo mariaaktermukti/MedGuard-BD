@@ -2,7 +2,7 @@ import React, { useContext } from 'react';
 import { NavLink } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { LanguageContext } from '../context/LanguageContext';
-import { House, QrCode, Pill, WarningCircle, MapPin, ChatText, Bell, Gear, UserCircle, Package, Truck, Receipt, ChartLineUp, ChatCenteredText, Warehouse, ChartBar, Crosshair, ShieldWarning, ClipboardText, Buildings, MapTrifold, Brain, Factory } from '@phosphor-icons/react';
+import { House, QrCode, Pill, WarningCircle, MapPin, ChatText, Bell, Gear, UserCircle, Package, Truck, Receipt, ChartLineUp, ChatCenteredText, Warehouse, ChartBar, Crosshair, ShieldWarning, ClipboardText, Buildings, MapTrifold, Brain, Factory, SealWarning } from '@phosphor-icons/react';
 
 const Sidebar = ({ isTablet }) => {
     const { user, logout } = useContext(AuthContext);
@@ -44,6 +44,7 @@ const Sidebar = ({ isTablet }) => {
         { path: '/dashboard/dgda/command-center', icon: <MapPin size={20} weight="duotone" />, label: t('command_center') },
         { path: '/dashboard/dgda/live-monitoring', icon: <Crosshair size={20} weight="duotone" />, label: t('monitoring') },
         { path: '/dashboard/dgda/investigations', icon: <ShieldWarning size={20} weight="duotone" />, label: t('investigations') },
+        { path: '/dashboard/dgda/counterfeit-intel', icon: <SealWarning size={20} weight="duotone" />, label: 'Counterfeit Intel' },
         { path: '/dashboard/dgda/recalls', icon: <WarningCircle size={20} weight="duotone" />, label: t('recalls') },
         { path: '/dashboard/dgda/inspections', icon: <ClipboardText size={20} weight="duotone" />, label: t('inspections') },
         { path: '/dashboard/dgda/entities', icon: <Buildings size={20} weight="duotone" />, label: t('entities') },
