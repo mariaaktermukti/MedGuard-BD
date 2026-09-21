@@ -38,6 +38,7 @@ const RouteOptimization = lazy(() => import('./pages/distributor/RouteOptimizati
 const FleetMonitoring = lazy(() => import('./pages/distributor/FleetMonitoring'));
 const RouteRisk = lazy(() => import('./pages/distributor/RouteRisk'));
 const DGDAPortal = lazy(() => import('./pages/dgda/DGDAPortal'));
+const CounterfeitIntel = lazy(() => import('./pages/dgda/CounterfeitIntel'));
 const DoctorPortal = lazy(() => import('./pages/doctor/DoctorPortal'));
 
 function App() {
@@ -73,6 +74,7 @@ function App() {
                       <Route path="pharmacy" element={<PharmacyDashboard />} />
                       <Route path="pharmacy/inventory" element={<Inventory />} />
                       <Route element={<ProtectedRoute allowedRoles={['dgda']} />}>
+                      <Route path="dgda/counterfeit-intel" element={<CounterfeitIntel />} />
                         <Route path="dgda/*" element={<DGDAPortal />} />
                       </Route>
                       <Route path="doctor/*" element={<DoctorPortal />} />
