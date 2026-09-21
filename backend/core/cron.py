@@ -3,8 +3,11 @@ import time
 from datetime import date, datetime
 import logging
 
+# pyrefly: ignore [missing-import]
 from django.contrib.auth import get_user_model
+# pyrefly: ignore [missing-import]
 from django.utils import timezone
+# pyrefly: ignore [missing-import]
 from django.db import close_old_connections
 
 logger = logging.getLogger(__name__)

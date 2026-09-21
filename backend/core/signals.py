@@ -1,8 +1,10 @@
+# pyrefly: ignore [missing-import]
 from django.db.models.signals import post_save
 # pyrefly: ignore [missing-import]
 from django.dispatch import receiver
 # pyrefly: ignore [missing-import]
 from django.utils import timezone
+# pyrefly: ignore [missing-import]
 from django.contrib.auth import get_user_model
 User = get_user_model()
 
