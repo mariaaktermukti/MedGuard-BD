@@ -1,8 +1,10 @@
+# pyrefly: ignore [missing-import]
 from django.urls import path
 from .views import (
     ADRReportCreateView,
     AIAssistantView,
     BatchQualityTestListCreateView,
+    ManufacturerQualityTestListView,
     BatchQRExportView,
     BatchReleaseView,
     ComplianceDashboardView,
@@ -91,6 +93,7 @@ urlpatterns = [
     path('manufacturer/batches/<int:pk>/release/', BatchReleaseView.as_view(), name='manufacturer-batch-release'),
     path('manufacturer/batches/<int:pk>/qr-export/', BatchQRExportView.as_view(), name='manufacturer-batch-qr-export'),
     path('manufacturer/batches/<int:pk>/quality-tests/', BatchQualityTestListCreateView.as_view(), name='manufacturer-batch-quality-tests'),
+    path('manufacturer/quality-tests/', ManufacturerQualityTestListView.as_view(), name='manufacturer-all-quality-tests'),
     path('manufacturer/batches/<int:pk>/distribution-events/', DistributionEventListCreateView.as_view(), name='manufacturer-batch-distribution-events'),
     path('manufacturer/recalls/', RecallListCreateView.as_view(), name='manufacturer-recalls'),
     path('manufacturer/compliance/', ComplianceDashboardView.as_view(), name='manufacturer-compliance'),

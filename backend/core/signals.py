@@ -1,32 +1,61 @@
 from django.db.models.signals import post_save
+# pyrefly: ignore [missing-import]
 from django.dispatch import receiver
+# pyrefly: ignore [missing-import]
 from django.utils import timezone
+from django.contrib.auth import get_user_model
+User = get_user_model()
 
-from .models import Notification, QualityTest, Recall, Sale, Shipment
+from .models import Notification, QualityTest, Recall, Sale, Shipment, MonitoringEvent, DosageSchedule
 
 @receiver(post_save, sender=Recall)
 def create_recall_notifications(sender, instance, created, **kwargs):
     if created or instance.status == 'active':
-        sales = Sale.objects.filter(batch=instance.batch).select_related('citizen')
-        shipments = Shipment.objects.filter(batch=instance.batch).select_related('to_user')
-
-        recipients = {sale.citizen for sale in sales}
-        recipients.update(shipment.to_user for shipment in shipments)
-
-        title = f"URGENT: Drug Recall - {instance.batch.medicine.name}"
-        message = (
-            f"Batch {instance.batch.batch_number} of {instance.batch.medicine.name} has been recalled. "
-            f"Reason: {instance.reason}. Sales have been halted and downstream partners were notified."
-        )
-
-        for citizen in recipients:
-            Notification.objects.get_or_create(user=citizen, title=title, message=message)
-
         batch = instance.batch
+        med_name = batch.medicine.name if batch.medicine else "Medicine"
+
+        # Lock batch immediately
         batch.status = 'recalled'
         batch.release_blocked = True
         batch.qr_activated_at = batch.qr_activated_at or timezone.now()
         batch.save(update_fields=['status', 'release_blocked', 'qr_activated_at', 'updated_at'])
+
+        # Gather all target recipients across entities
+        recipients = set()
+
+        # 1. Citizens who bought or hold dosage for this batch/medicine
+        sales = Sale.objects.filter(batch=batch).select_related('citizen')
+        recipients.update(sale.citizen for sale in sales if sale.citizen)
+        schedules = DosageSchedule.objects.filter(medicine=batch.medicine).select_related('citizen')
+        recipients.update(sched.citizen for sched in schedules if sched.citizen)
+
+        # 2. All active Pharmacies, Distributors, and DGDA Officers
+        entity_users = User.objects.filter(role__in=['pharmacy', 'distributor', 'dgda'])
+        recipients.update(entity_users)
+
+        title = f"🚨 URGENT RECALL: {med_name} (Batch #{batch.batch_number})"
+        message = (
+            f"MANDATORY SAFETY HALT: Batch {batch.batch_number} of {med_name} has been RECALLED. "
+            f"Reason: {instance.reason}. All sales, distribution, and consumption must stop immediately."
+        )
+
+        for user in recipients:
+            Notification.objects.get_or_create(user=user, title=title, message=message)
+
+        # 3. Create DGDA MonitoringEvent for Incident Control & Inspection Dashboard
+        if not MonitoringEvent.objects.filter(batch=batch, event_type='quality_issue', status='escalated').exists():
+            MonitoringEvent.objects.create(
+                batch=batch,
+                medicine=batch.medicine,
+                manufacturer=batch.manufacturer,
+                event_type='quality_issue',
+                title=f"MANDATORY BATCH RECALL DIRECTIVE: {med_name} (Batch #{batch.batch_number})",
+                description=f"Manufacturer {instance.issued_by_user.full_name or instance.issued_by_user.username} initiated recall for Batch {batch.batch_number}. Reason: {instance.reason}. Sales halted downstream.",
+                severity='critical',
+                risk_score=95,
+                status='escalated',
+                source='Manufacturer Recall Sentinel',
+            )
 
         instance.progress_percent = 100 if instance.status == 'completed' else instance.progress_percent
         instance.notified_downstream_at = timezone.now()

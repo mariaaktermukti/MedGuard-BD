@@ -1,3 +1,4 @@
+# pyrefly: ignore [missing-import]
 from rest_framework import serializers
 
 from users.models import PharmacyProfile
@@ -284,9 +285,12 @@ class WarehouseSerializer(serializers.ModelSerializer):
 
 
 class PharmacyProfileSerializer(serializers.ModelSerializer):
+    user_id = serializers.ReadOnlyField(source='user.id')
+    user_full_name = serializers.ReadOnlyField(source='user.full_name')
+
     class Meta:
         model = PharmacyProfile
-        fields = '__all__'
+        fields = ['user_id', 'user_full_name', 'pharmacy_name', 'registration_number', 'address', 'contact_person', 'contact_phone', 'license_number', 'trust_score']
 
 
 class DrugPassportSerializer(serializers.ModelSerializer):

@@ -67,7 +67,7 @@ const Sidebar = ({ isTablet }) => {
 
     const bottomNavItems = [
         { path: '/dashboard/notifications', icon: <Bell size={20} weight="duotone" />, label: t('notifications') },
-        ...(user?.role !== 'dgda' ? [{ path: '/dashboard/settings', icon: <Gear size={20} weight="duotone" />, label: t('settings') }] : [])
+        ...(!['dgda', 'manufacturer'].includes(user?.role) ? [{ path: '/dashboard/settings', icon: <Gear size={20} weight="duotone" />, label: t('settings') }] : [])
     ];
 
     return (
