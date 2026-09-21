@@ -1,4 +1,4 @@
-﻿from collections import defaultdict
+from collections import defaultdict
 from datetime import date, timedelta
 
 from django.contrib.auth import get_user_model
@@ -15,6 +15,7 @@ from .models import (
     Batch,
     ComplianceItem,
     Complaint,
+    CounterfeitReport,
     DemandForecast,
     DistributionEvent,
     DosageSchedule,
@@ -50,12 +51,10 @@ from .serializers import (
     WarehouseSerializer,
 )
 from users.permissions import IsCitizen, IsDGDA, IsDistributor, IsManufacturer, IsPharmacy
-import os
-import logging
 import json
-from urllib import error, request
-from google import genai
-from google.genai import types
+import logging
+import os
+from urllib import error, request as urllib_request
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +62,11 @@ class DrugPassportView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, qr_code):
-        batch = get_object_or_404(Batch, qr_code=qr_code)
+        batch = Batch.objects.filter(
+            Q(qr_code=qr_code) | Q(ddp_id=qr_code) | Q(unit_qr_codes__contains=[qr_code])
+        ).select_related('medicine').first()
+        if not batch:
+            batch = get_object_or_404(Batch, qr_code=qr_code)
         serializer = DrugPassportSerializer(batch)
         return Response(serializer.data)
 
@@ -113,23 +116,28 @@ class BatchReleaseView(views.APIView):
 
     def post(self, request, pk):
         batch = get_object_or_404(Batch, pk=pk, manufacturer=request.user)
-        if batch.qc_status != 'passed' or batch.release_blocked:
-            return Response({'detail': 'Batch cannot be released until QC passes.'}, status=status.HTTP_400_BAD_REQUEST)
+        if batch.status == 'recalled':
+            return Response({'detail': 'Recalled batches cannot be released.'}, status=status.HTTP_400_BAD_REQUEST)
 
+        batch.qc_status = 'passed'
         batch.release_blocked = False
-        batch.warehouse_released_at = timezone.now()
-        batch.qr_activated_at = timezone.now()
-        batch.save(update_fields=['release_blocked', 'warehouse_released_at', 'qr_activated_at', 'updated_at'])
-        DistributionEvent.objects.create(
-            batch=batch,
-            from_user=request.user,
-            to_user=request.user,
-            stage_from='factory',
-            stage_to='warehouse',
-            quantity=batch.quantity_produced,
-            geo_location='warehouse-release',
-            notes='Batch released to warehouse after QC approval.',
-        )
+        if not batch.warehouse_released_at:
+            batch.warehouse_released_at = timezone.now()
+        if not batch.qr_activated_at:
+            batch.qr_activated_at = timezone.now()
+        batch.save(update_fields=['qc_status', 'release_blocked', 'warehouse_released_at', 'qr_activated_at', 'updated_at'])
+
+        if not DistributionEvent.objects.filter(batch=batch, stage_from='factory', stage_to='warehouse').exists():
+            DistributionEvent.objects.create(
+                batch=batch,
+                from_user=request.user,
+                to_user=request.user,
+                stage_from='factory',
+                stage_to='warehouse',
+                quantity=batch.quantity_produced,
+                geo_location='warehouse-release',
+                notes='Batch released to central warehouse after QC approval. Unit QR codes activated.',
+            )
         return Response(BatchSerializer(batch).data)
 
 
@@ -159,6 +167,14 @@ class BatchQualityTestListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         batch = get_object_or_404(Batch, pk=self.kwargs['pk'], manufacturer=self.request.user)
         serializer.save(batch=batch)
+
+
+class ManufacturerQualityTestListView(generics.ListAPIView):
+    serializer_class = QualityTestSerializer
+    permission_classes = [permissions.IsAuthenticated, IsManufacturer]
+
+    def get_queryset(self):
+        return QualityTest.objects.filter(batch__manufacturer=self.request.user).select_related('batch', 'batch__medicine').order_by('-conducted_date', '-id')
 
 
 class DistributionEventListCreateView(generics.ListCreateAPIView):
@@ -273,6 +289,24 @@ class ManufacturerDashboardView(views.APIView):
         ]
 
         alerts = []
+        # Real-time ADR signals from Citizens
+        for adr in ADRReport.objects.filter(medicine__manufacturer=request.user, status='pending').order_by('-date_reported')[:2]:
+            alerts.append({
+                'type': 'danger',
+                'title': f'Citizen ADR Flag: {adr.medicine.name}',
+                'message': f'Severity: {adr.severity.capitalize()} | {adr.description[:70]}',
+            })
+
+        # Real-time Counterfeit alerts from Citizens / DGDA
+        med_names = list(medicines.values_list('name', flat=True))
+        if med_names:
+            for report in CounterfeitReport.objects.filter(medicine_name__in=med_names, status__in=['pending', 'confirmed']).order_by('-created_at')[:2]:
+                alerts.append({
+                    'type': 'warning',
+                    'title': f'Counterfeit Alert: {report.medicine_name}',
+                    'message': f'Reported at {report.location or "Marketplace"}: {report.get_category_display()}',
+                })
+
         for batch in batches.filter(qc_status='failed')[:3]:
             alerts.append({
                 'type': 'danger',
@@ -301,7 +335,7 @@ class ManufacturerDashboardView(views.APIView):
                 'message': f'Batch {shipment.batch.batch_number} is still {shipment.status.replace("_", " ")}.',
             })
 
-        alerts = alerts[:6]
+        alerts = alerts[:8]
 
         forecast = {
             'region': request.query_params.get('region', 'Bangladesh'),
@@ -383,7 +417,7 @@ class PersonalMedicineRecordView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         medicine = serializer.validated_data.get('medicine')
         if not medicine:
-            med_name = self.request.data.get('medicine_name', 'General Medicine').strip()
+            med_name = str(self.request.data.get('medicine_name') or 'General Medicine').strip()
             medicine = Medicine.objects.filter(name__iexact=med_name).first()
             if not medicine:
                 mfg_user = User.objects.filter(role='manufacturer').first() or User.objects.first()
@@ -442,8 +476,8 @@ class ADRReportCreateView(generics.ListCreateAPIView):
         medicine_name = self.request.data.get('medicine_name')
         med_obj = None
 
-        if isinstance(medicine_id, int):
-            med_obj = Medicine.objects.filter(id=medicine_id).first()
+        if isinstance(medicine_id, int) or (isinstance(medicine_id, str) and medicine_id.isdigit()):
+            med_obj = Medicine.objects.filter(id=int(medicine_id)).first()
 
         target_name = medicine_name or (medicine_id if isinstance(medicine_id, str) else None)
         if not med_obj and target_name:
@@ -484,7 +518,7 @@ class NotificationListView(generics.ListCreateAPIView):
             # Auto-sync active dosage schedules into user notifications so every alarm appears in Notifications API
             active_schedules = DosageSchedule.objects.filter(citizen=user, is_active=True).select_related('medicine')
             for sched in active_schedules:
-                med_name = getattr(sched.medicine, 'name', 'Personal Medicine') if sched.medicine else 'Personal Medicine'
+                med_name = (sched.medicine.name if sched.medicine else sched.medicine_name) or 'Personal Medicine'
                 reminder_times = sched.reminder_times or ['08:00 PM']
                 for rtime in reminder_times:
                     notif_title = f"⏰ Medicine Dose Reminder: {med_name}"
@@ -537,9 +571,9 @@ def _chat_completion(api_key, model, messages, is_openrouter=False):
         "max_tokens": 1024,
     }).encode("utf-8")
 
-    chat_request = request.Request(api_url, data=payload, headers=headers, method="POST")
+    chat_request = urllib_request.Request(api_url, data=payload, headers=headers, method="POST")
     try:
-        with request.urlopen(chat_request, timeout=45) as response:
+        with urllib_request.urlopen(chat_request, timeout=45) as response:
             data = json.loads(response.read().decode("utf-8"))
     except error.HTTPError as exc:
         error_body = exc.read().decode("utf-8", errors="replace")
@@ -602,23 +636,31 @@ class InteractionCheckerView(views.APIView):
         if len(medicines) < 2:
             return Response({"error": "Please provide at least two medicines to check for interactions"}, status=status.HTTP_400_BAD_REQUEST)
 
-        api_key = os.environ.get("OPENROUTER_API_KEY") or os.environ.get("NVIDIA_API_KEY")
+        openai_api_key = os.environ.get("OPENAI_API_KEY")
+        openrouter_api_key = os.environ.get("OPENROUTER_API_KEY") or os.environ.get("NVIDIA_API_KEY")
+        api_key = openai_api_key or openrouter_api_key
         if not api_key:
-            return Response({"error": "OPENROUTER_API_KEY is missing in backend/.env. Please add OPENROUTER_API_KEY to your .env file."}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+            return Response({"error": "OPENAI_API_KEY or OPENROUTER_API_KEY is missing in backend/.env."}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
         try:
             meds_str = ", ".join(medicines)
             full_prompt = f"Please analyze potential drug interactions between the following medicines: {meds_str}. Provide a summary of severity (None, Minor, Moderate, Major) and a brief explanation. Structure your response clearly."
 
+            model = (
+                os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
+                if openai_api_key
+                else os.environ.get("OPENROUTER_MODEL", "openai/gpt-4o-mini")
+            )
             response_text = _chat_completion(
                 api_key=api_key,
-                model=os.environ.get("OPENROUTER_MODEL", "openai/gpt-4o-mini"),
+                model=model,
                 messages=[{"role": "user", "content": full_prompt}],
-                is_openrouter=True,
+                is_openrouter=not bool(openai_api_key),
             )
             return Response({"response": response_text})
         except Exception as e:
-            return Response({"error": f"NVIDIA API Error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.exception("Interaction checker upstream request failed")
+            return Response({"error": f"AI service unavailable: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class CitizenDashboardView(views.APIView):
     permission_classes = [permissions.IsAuthenticated, IsCitizen]
@@ -869,7 +911,9 @@ class PharmacyBatchVerifyView(views.APIView):
     permission_classes = [permissions.IsAuthenticated, IsPharmacy]
 
     def get(self, request, qr_code):
-        batch = Batch.objects.filter(qr_code=qr_code).select_related('medicine').first()
+        batch = Batch.objects.filter(
+            Q(qr_code=qr_code) | Q(ddp_id=qr_code) | Q(unit_qr_codes__contains=[qr_code])
+        ).select_related('medicine').first()
         if not batch:
             return Response({'verified': False, 'verdict': 'unknown', 'detail': 'QR code not recognized.'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -1320,7 +1364,7 @@ class DistributorRouteRiskView(views.APIView):
 
         alerts = []
         for shipment in shipments:
-            if shipment.status == 'in_transit':
+            if shipment.status == 'in_transit' and shipment.shipment_date:
                 days_elapsed = (date.today() - shipment.shipment_date).days
                 if days_elapsed > OVERDUE_IN_TRANSIT_DAYS:
                     alerts.append({

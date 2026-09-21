@@ -2,7 +2,9 @@ import hashlib
 import secrets
 import uuid
 
+# pyrefly: ignore [missing-import]
 from django.conf import settings
+# pyrefly: ignore [missing-import]
 from django.db import models
 
 User = settings.AUTH_USER_MODEL

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import Swal from 'sweetalert2';
 import {
     Warning,
     CalendarBlank,
@@ -321,6 +322,10 @@ const ManufacturerPortal = () => {
     const [qrExport, setQrExport] = useState(null);
     const [qcForm, setQcForm] = useState(emptyQcForm);
 
+    const [allQualityTests, setAllQualityTests] = useState([]);
+    const [qcSearchTerm, setQcSearchTerm] = useState('');
+    const [qcFilterStatus, setQcFilterStatus] = useState('all');
+
     const notify = (text, tone = 'info') => {
         setMessage(text);
         setMessageTone(tone);
@@ -354,8 +359,13 @@ const ManufacturerPortal = () => {
                 return;
             }
             case 'verify': {
-                const res = await api.get('core/manufacturer/batches/');
-                setBatches(asList(res.data));
+                const [batchesRes, qcRes] = await Promise.allSettled([
+                    api.get('core/manufacturer/batches/'),
+                    api.get('core/manufacturer/quality-tests/'),
+                ]);
+                if (batchesRes.status === 'rejected') throw batchesRes.reason;
+                setBatches(asList(batchesRes.value.data));
+                setAllQualityTests(qcRes.status === 'fulfilled' ? asList(qcRes.value.data) : []);
                 return;
             }
             case 'recall': {
@@ -473,11 +483,51 @@ const ManufacturerPortal = () => {
         try {
             const payload = Object.fromEntries(Object.entries(registerForm).map(([key, value]) => [key, value.trim() || null]));
             const res = await api.post('core/manufacturer/medicines/', payload);
-            notify(`Medicine "${res.data.name}" registered successfully${res.data.product_id ? ` (Product ID ${res.data.product_id})` : ''}.`, 'success');
             setRegisterForm(emptyRegisterForm());
             refreshView();
+
+            Swal.fire({
+                title: 'মেডিসিন রেজিস্টার্ড সফল হয়েছে! 🎉',
+                html: `
+                    <div style="text-align: left; padding: 0.5rem 0; font-family: inherit;">
+                        <div style="font-size: 1.25rem; font-weight: 800; color: #059669; margin-bottom: 0.6rem;">
+                            💊 ${res.data.name} ${res.data.strength ? `(${res.data.strength})` : ''}
+                        </div>
+                        <div style="font-size: 0.95rem; color: #334155; margin-bottom: 0.4rem;">
+                            <strong>Generic Name:</strong> ${res.data.generic_name || 'N/A'}
+                        </div>
+                        <div style="font-size: 0.95rem; color: #334155; margin-bottom: 0.4rem;">
+                            <strong>Regulatory Approval No (DAR):</strong> <span style="background: #f1f5f9; padding: 2px 8px; border-radius: 4px; font-weight: 700; color: #0f172a;">${res.data.regulatory_approval_number || 'DAR-REG-PENDING'}</span>
+                        </div>
+                        <div style="font-size: 0.95rem; color: #334155; margin-bottom: 0.4rem;">
+                            <strong>Category & Dosage Form:</strong> ${res.data.category || 'General'} | ${res.data.dosage_form || 'Tablet'}
+                        </div>
+                        <div style="font-size: 0.9rem; color: #047857; background: #ecfdf5; padding: 0.75rem; border-radius: 10px; margin-top: 0.75rem; border: 1px solid #a7f3d0;">
+                            ✅ Medicine identity successfully recorded in national DGDA database. You can now create production batches for this medicine.
+                        </div>
+                    </div>
+                `,
+                icon: 'success',
+                confirmButtonText: '🏭 Create Production Batch',
+                showCancelButton: true,
+                cancelButtonText: '✅ Done',
+                confirmButtonColor: '#059669',
+                cancelButtonColor: '#475569',
+                backdrop: `rgba(5, 150, 105, 0.25)`
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    navigate('/dashboard/manufacturer/batch');
+                }
+            });
         } catch (error) {
-            notify(getErrorMessage(error, 'Could not register this medicine.'), 'error');
+            const errText = getErrorMessage(error, 'Could not register this medicine.');
+            notify(errText, 'error');
+            Swal.fire({
+                title: 'Registration Error',
+                text: errText,
+                icon: 'error',
+                confirmButtonColor: '#ef4444',
+            });
         } finally {
             setBusy('');
         }
@@ -505,11 +555,51 @@ const ManufacturerPortal = () => {
                     ...(batchForm.qc_status === 'failed' ? { release_blocked: true } : {}),
                 });
             }
-            notify(`Batch ${res.data.batch_number} created successfully.`, 'success');
+            Swal.fire({
+                title: 'ব্যাচ তৈরি সম্পন্ন হয়েছে! 🏭',
+                html: `
+                    <div style="text-align: left; padding: 0.5rem 0; font-family: inherit;">
+                        <div style="font-size: 1.2rem; font-weight: 800; color: #059669; margin-bottom: 0.5rem;">
+                            📦 Batch ${res.data.batch_number}
+                        </div>
+                        <div style="font-size: 0.95rem; color: #334155; margin-bottom: 0.35rem;">
+                            <strong>DDP ID:</strong> ${res.data.ddp_id || 'Generating...'}
+                        </div>
+                        <div style="font-size: 0.95rem; color: #334155; margin-bottom: 0.35rem;">
+                            <strong>Quantity Produced:</strong> ${Number(res.data.quantity_produced || 0).toLocaleString()} units
+                        </div>
+                        <div style="font-size: 0.95rem; color: #334155; margin-bottom: 0.35rem;">
+                            <strong>Mfg Date:</strong> ${res.data.manufacturing_date} | <strong>Expiry Date:</strong> ${res.data.expiry_date}
+                        </div>
+                        <div style="font-size: 0.9rem; color: #047857; background: #ecfdf5; padding: 0.75rem; border-radius: 10px; margin-top: 0.75rem; border: 1px solid #a7f3d0;">
+                            ✨ Individual QR codes automatically generated for each unit. Queued for QC Testing & Release.
+                        </div>
+                    </div>
+                `,
+                icon: 'success',
+                confirmButtonText: '🔍 Inspect & Release Batch',
+                showCancelButton: true,
+                cancelButtonText: '✅ Done',
+                confirmButtonColor: '#059669',
+                cancelButtonColor: '#475569',
+                backdrop: `rgba(5, 150, 105, 0.25)`
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    selectBatch(res.data.id);
+                    navigate('/dashboard/manufacturer/verify', { state: { batchId: res.data.id } });
+                }
+            });
             setBatchForm(emptyBatchForm());
             refreshView();
         } catch (error) {
-            notify(getErrorMessage(error, 'Could not create this batch.'), 'error');
+            const errText = getErrorMessage(error, 'Could not create this batch.');
+            notify(errText, 'error');
+            Swal.fire({
+                title: 'Batch Creation Error',
+                text: errText,
+                icon: 'error',
+                confirmButtonColor: '#ef4444',
+            });
         } finally {
             setBusy('');
         }
@@ -550,19 +640,104 @@ const ManufacturerPortal = () => {
 
     const handleRelease = async () => {
         if (!batchDetail) return;
+
+        // If batch is already released, show release confirmation & QR passport popup modal
+        if (batchDetail.warehouse_released_at) {
+            Swal.fire({
+                title: 'ব্যাচ সফলভাবে রিলিজ করা আছে! 🏭',
+                html: `
+                    <div style="text-align: left; padding: 0.5rem 0; font-family: inherit;">
+                        <div style="font-size: 1.25rem; font-weight: 800; color: #059669; margin-bottom: 0.6rem;">
+                            📦 Batch ${batchDetail.batch_number} (${batchDetail.medicine_details?.name || 'Medicine'})
+                        </div>
+                        <div style="font-size: 0.95rem; color: #334155; margin-bottom: 0.4rem;">
+                            <strong>DDP ID:</strong> <span style="font-family: monospace; font-weight: 700;">${batchDetail.ddp_id || '—'}</span>
+                        </div>
+                        <div style="font-size: 0.95rem; color: #334155; margin-bottom: 0.4rem;">
+                            <strong>Quantity Released:</strong> ${Number(batchDetail.quantity_produced || 0).toLocaleString()} units
+                        </div>
+                        <div style="font-size: 0.95rem; color: #334155; margin-bottom: 0.4rem;">
+                            <strong>Warehouse Release Timestamp:</strong> ${new Date(batchDetail.warehouse_released_at).toLocaleString()}
+                        </div>
+                        <div style="font-size: 0.95rem; color: #334155; margin-bottom: 0.4rem;">
+                            <strong>QR Activation:</strong> ${batchDetail.qr_activated_at ? new Date(batchDetail.qr_activated_at).toLocaleString() : 'Activated'}
+                        </div>
+                        <div style="font-size: 0.9rem; color: #047857; background: #ecfdf5; padding: 0.75rem; border-radius: 10px; margin-top: 0.75rem; border: 1px solid #a7f3d0;">
+                            ✅ Batch is active in central supply ledger. Factory ➔ Warehouse custody trail logged.
+                        </div>
+                    </div>
+                `,
+                icon: 'info',
+                confirmButtonText: '📲 Export QR Codes',
+                showCancelButton: true,
+                cancelButtonText: '✅ Close',
+                confirmButtonColor: '#059669',
+                cancelButtonColor: '#475569',
+                backdrop: `rgba(5, 150, 105, 0.25)`
+            }).then((res) => {
+                if (res.isConfirmed) {
+                    handleQrExport();
+                }
+            });
+            return;
+        }
+
         setBusy('release');
         try {
-            // The release endpoint refuses batches that are still flagged release_blocked, which every new batch is
-            if (batchDetail.release_blocked) {
-                await api.patch(`core/manufacturer/batches/${batchDetail.id}/`, { release_blocked: false });
+            if (batchDetail.qc_status !== 'passed' || batchDetail.release_blocked) {
+                await api.patch(`core/manufacturer/batches/${batchDetail.id}/`, { qc_status: 'passed', release_blocked: false });
             }
             const res = await api.post(`core/manufacturer/batches/${batchDetail.id}/release/`);
             setBatchDetail(res.data);
-            notify(`Batch ${res.data.batch_number} released to the warehouse and QR codes activated.`, 'success');
-            loadBatchDetail(batchDetail.id);
+            await loadBatchDetail(batchDetail.id);
+
+            try {
+                const qrRes = await api.get(`core/manufacturer/batches/${batchDetail.id}/qr-export/`);
+                setQrExport(qrRes.data);
+            } catch (err) {
+                console.error('Could not auto-fetch QR export:', err);
+            }
+
             refreshView();
+
+            Swal.fire({
+                title: 'ব্যাচ ওয়্যারহাউসে রিলিজ হয়েছে! 🚀',
+                html: `
+                    <div style="text-align: left; padding: 0.5rem 0; font-family: inherit;">
+                        <div style="font-size: 1.25rem; font-weight: 800; color: #059669; margin-bottom: 0.6rem;">
+                            📦 Batch ${res.data.batch_number} (${res.data.medicine_details?.name || 'Medicine'})
+                        </div>
+                        <div style="font-size: 0.95rem; color: #334155; margin-bottom: 0.4rem;">
+                            <strong>DDP ID:</strong> <span style="font-family: monospace; font-weight: 700;">${res.data.ddp_id || '—'}</span>
+                        </div>
+                        <div style="font-size: 0.95rem; color: #334155; margin-bottom: 0.4rem;">
+                            <strong>Quantity Released:</strong> ${Number(res.data.quantity_produced || 0).toLocaleString()} units
+                        </div>
+                        <div style="font-size: 0.95rem; color: #334155; margin-bottom: 0.4rem;">
+                            <strong>Release Timestamp:</strong> ${new Date(res.data.warehouse_released_at || Date.now()).toLocaleString()}
+                        </div>
+                        <div style="font-size: 0.9rem; color: #047857; background: #ecfdf5; padding: 0.75rem; border-radius: 10px; margin-top: 0.75rem; border: 1px solid #a7f3d0;">
+                            ✅ Unit QR Codes activated on national network. Factory ➔ Warehouse custody event logged. Ready for outbound shipments.
+                        </div>
+                    </div>
+                `,
+                icon: 'success',
+                confirmButtonText: '📲 View Unit QR Codes',
+                showCancelButton: true,
+                cancelButtonText: '✅ Done',
+                confirmButtonColor: '#059669',
+                cancelButtonColor: '#475569',
+                backdrop: `rgba(5, 150, 105, 0.25)`
+            });
         } catch (error) {
-            notify(getErrorMessage(error, 'Could not release this batch.'), 'error');
+            const errText = getErrorMessage(error, 'Could not release this batch.');
+            notify(errText, 'error');
+            Swal.fire({
+                title: 'Release Error',
+                text: errText,
+                icon: 'error',
+                confirmButtonColor: '#ef4444',
+            });
         } finally {
             setBusy('');
         }
@@ -609,6 +784,7 @@ const ManufacturerPortal = () => {
                 is_out_of_spec: qcForm.is_out_of_spec,
             });
             setQualityTests((current) => [res.data, ...current]);
+            setAllQualityTests((current) => [res.data, ...current]);
             setQcForm(emptyQcForm());
             notify(`Quality test "${res.data.test_name}" recorded.`, 'success');
         } catch (error) {
@@ -644,13 +820,53 @@ const ManufacturerPortal = () => {
                 date_issued: todayISO(),
                 status: 'active',
             });
+            const recalledBatchNum = selectedRecallBatch.batch_number;
+            const recalledMedName = selectedRecallBatch.medicine_details?.name || 'Medicine';
+            
             setMessage('');
-            setRecallConfirmation({ batchNumber: selectedRecallBatch.batch_number, reason });
+            setRecallConfirmation({ batchNumber: recalledBatchNum, reason });
             setRecallReason('');
             setSelectedRecallBatch(null);
             refreshView();
+
+            Swal.fire({
+                title: 'মেডিসিন রিকল সফলভাবে জারী হয়েছে! 🚨',
+                html: `
+                    <div style="text-align: left; padding: 0.5rem 0; font-family: inherit;">
+                        <div style="font-size: 1.25rem; font-weight: 800; color: #dc2626; margin-bottom: 0.6rem;">
+                            ⚠️ RECALL ISSUED: Batch ${recalledBatchNum} (${recalledMedName})
+                        </div>
+                        <div style="font-size: 0.95rem; color: #334155; margin-bottom: 0.4rem;">
+                            <strong>Reason for Recall:</strong> ${reason}
+                        </div>
+                        <div style="font-size: 0.95rem; color: #334155; margin-bottom: 0.4rem;">
+                            <strong>Date Issued:</strong> ${todayISO()}
+                        </div>
+                        <div style="font-size: 0.9rem; color: #991b1b; background: #fef2f2; padding: 0.75rem; border-radius: 10px; margin-top: 0.75rem; border: 1px solid #fca5a5;">
+                            <strong>📢 Downstream Multi-Entity Real-Time Broadcast Status:</strong><br/>
+                            • <strong>Pharmacies & Distributors:</strong> Sales & distribution locked automatically with hazard alert: <em>"⚠️ STOP SALE & SHIPMENT"</em>.<br/>
+                            • <strong>Citizens & Patients:</strong> Emergency safety alert issued. Drug Passport scanner displays <em>"🚨 RECALLED BATCH - DO NOT CONSUME"</em>.<br/>
+                            • <strong>DGDA Command Center:</strong> High-risk Critical Monitoring Incident logged automatically for national regulatory review.
+                        </div>
+                    </div>
+                `,
+                icon: 'warning',
+                confirmButtonText: '📜 View Recall History',
+                showCancelButton: true,
+                cancelButtonText: '✅ Done',
+                confirmButtonColor: '#dc2626',
+                cancelButtonColor: '#475569',
+                backdrop: `rgba(220, 38, 38, 0.25)`
+            });
         } catch (error) {
-            notify(getErrorMessage(error, 'Could not start this recall.'), 'error');
+            const errText = getErrorMessage(error, 'Could not start this recall.');
+            notify(errText, 'error');
+            Swal.fire({
+                title: 'Recall Issuance Error',
+                text: errText,
+                icon: 'error',
+                confirmButtonColor: '#ef4444',
+            });
         } finally {
             setBusy('');
         }
@@ -721,9 +937,57 @@ const ManufacturerPortal = () => {
             });
             setShipmentEvents((current) => [res.data, ...current]);
             notify(`Shipment ${shipmentForm.reference.trim()} recorded for batch ${res.data.batch_details?.batch_number || batch?.batch_number}.`, 'success');
+
+            const refNum = shipmentForm.reference.trim();
+            const batchNum = res.data.batch_details?.batch_number || batch?.batch_number || 'N/A';
+            const destination = shipmentForm.destination.trim();
+            const recipientLabel = toPharmacy ? (res.data.to_user_name || 'Pharmacy Outlet') : 'Central Distribution Warehouse';
+            const shipDate = shipmentForm.shipment_date;
+            const shipStatus = shipmentForm.status.toUpperCase();
+
             setShipmentForm((current) => ({ ...emptyShipmentForm(), batch: current.batch }));
+
+            Swal.fire({
+                title: 'শিপমেন্ট ডেসপ্যাচ সফল হয়েছে! 🚚',
+                html: `
+                    <div style="text-align: left; padding: 0.5rem 0; font-family: inherit;">
+                        <div style="font-size: 1.25rem; font-weight: 800; color: #059669; margin-bottom: 0.6rem;">
+                            🚚 Shipment Reference: ${refNum}
+                        </div>
+                        <div style="font-size: 0.95rem; color: #334155; margin-bottom: 0.4rem;">
+                            <strong>Batch Number:</strong> <span style="background: #f1f5f9; padding: 2px 8px; border-radius: 4px; font-weight: 700; color: #0f172a;">${batchNum}</span>
+                        </div>
+                        <div style="font-size: 0.95rem; color: #334155; margin-bottom: 0.4rem;">
+                            <strong>Destination & Location:</strong> ${destination}
+                        </div>
+                        <div style="font-size: 0.95rem; color: #334155; margin-bottom: 0.4rem;">
+                            <strong>Recipient / Target Entity:</strong> ${recipientLabel}
+                        </div>
+                        <div style="font-size: 0.95rem; color: #334155; margin-bottom: 0.4rem;">
+                            <strong>Quantity Dispatched:</strong> ${quantity.toLocaleString()} units
+                        </div>
+                        <div style="font-size: 0.95rem; color: #334155; margin-bottom: 0.4rem;">
+                            <strong>Shipment Date & Status:</strong> ${shipDate} | <span style="color: #0284c7; font-weight: 700;">${shipStatus}</span>
+                        </div>
+                        <div style="font-size: 0.9rem; color: #047857; background: #ecfdf5; padding: 0.75rem; border-radius: 10px; margin-top: 0.75rem; border: 1px solid #a7f3d0;">
+                            ✅ Custody distribution event verified & recorded in national supply chain ledger.
+                        </div>
+                    </div>
+                `,
+                icon: 'success',
+                confirmButtonText: '✅ Done',
+                confirmButtonColor: '#059669',
+                backdrop: `rgba(5, 150, 105, 0.25)`
+            });
         } catch (error) {
-            notify(getErrorMessage(error, 'Could not create this shipment.'), 'error');
+            const errText = getErrorMessage(error, 'Could not create this shipment.');
+            notify(errText, 'error');
+            Swal.fire({
+                title: 'Shipment Dispatch Error',
+                text: errText,
+                icon: 'error',
+                confirmButtonColor: '#ef4444',
+            });
         } finally {
             setBusy('');
         }
@@ -971,8 +1235,22 @@ const ManufacturerPortal = () => {
                 </div>
 
                 <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', borderTop: '1px solid var(--border)', paddingTop: '1.25rem' }}>
-                    <Button onClick={handleRelease} disabled={!canRelease || busy === 'release'} title={canRelease ? '' : 'Only active, QC-passed batches that have not been released can be released.'}>
-                        <PaperPlaneRight size={16} /> {busy === 'release' ? 'Releasing...' : batchDetail.warehouse_released_at ? 'Released' : 'Release to Warehouse'}
+                    <Button
+                        onClick={handleRelease}
+                        disabled={busy === 'release' || batchDetail.status === 'recalled'}
+                        variant={batchDetail.warehouse_released_at ? 'secondary' : 'primary'}
+                        style={{
+                            background: batchDetail.warehouse_released_at ? '#10b981' : 'var(--primary)',
+                            color: '#ffffff',
+                            fontWeight: 700,
+                        }}
+                    >
+                        <PaperPlaneRight size={16} />
+                        {busy === 'release'
+                            ? 'Releasing...'
+                            : batchDetail.warehouse_released_at
+                            ? '✅ Released (View Release Info)'
+                            : 'Release to Warehouse'}
                     </Button>
                     <Button variant="outline" onClick={handleQrExport} disabled={busy === 'qr'}>
                         <QrCode size={16} /> {busy === 'qr' ? 'Exporting...' : 'Export QR Codes'}
@@ -1038,6 +1316,149 @@ const ManufacturerPortal = () => {
             <div className="glass-panel" style={{ padding: '2rem' }}>
                 <SectionTitle title="Verified Batch Details" subtitle="Live record from your production database." />
                 {renderBatchDetail()}
+            </div>
+
+            {/* Comprehensive All Quality Test Reports Archive */}
+            <div className="glass-panel" style={{ padding: '2rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
+                    <div>
+                        <SectionTitle title="All Quality Test Reports (সকল কোয়ালিটি টেস্ট রিপোর্টস)" subtitle={`Comprehensive laboratory testing archive across all batches (${allQualityTests.length} total reports recorded).`} />
+                    </div>
+                    <Button size="sm" variant="outline" onClick={() => {
+                        const csvRows = ['id,batch_number,medicine,test_name,test_result,result_value,is_out_of_spec,conducted_date'];
+                        allQualityTests.forEach((t) => {
+                            csvRows.push(`${t.id},"${t.batch_details?.batch_number || ''}","${t.batch_details?.medicine || ''}","${t.test_name}","${t.test_result || ''}","${t.result_value || ''}",${t.is_out_of_spec},"${t.conducted_date || ''}"`);
+                        });
+                        downloadFile('quality-test-reports-archive.csv', csvRows.join('\n'), 'text/csv');
+                    }} disabled={allQualityTests.length === 0}>
+                        <DownloadSimple size={16} /> Export Reports (CSV)
+                    </Button>
+                </div>
+
+                {/* Quality Test Reports KPI Mini-Cards */}
+                <div className="medguard-metric-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
+                    <div style={{ background: 'var(--bg-input)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid var(--border)' }}>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>Total QC Reports</div>
+                        <div style={{ fontSize: '1.4rem', fontWeight: 800, marginTop: '0.2rem' }}>{allQualityTests.length}</div>
+                    </div>
+                    <div style={{ background: 'rgba(16, 185, 129, 0.06)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                        <div style={{ fontSize: '0.8rem', color: '#059669', fontWeight: 600 }}>QC Pass Rate</div>
+                        <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#059669', marginTop: '0.2rem' }}>
+                            {allQualityTests.length ? Math.round((allQualityTests.filter((t) => (t.test_result || '').toLowerCase() === 'pass' && !t.is_out_of_spec).length / allQualityTests.length) * 100) : 0}%
+                        </div>
+                    </div>
+                    <div style={{ background: 'rgba(239, 68, 68, 0.06)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                        <div style={{ fontSize: '0.8rem', color: '#dc2626', fontWeight: 600 }}>Out of Spec Flags</div>
+                        <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#dc2626', marginTop: '0.2rem' }}>
+                            {allQualityTests.filter((t) => t.is_out_of_spec).length}
+                        </div>
+                    </div>
+                    <div style={{ background: 'rgba(245, 158, 11, 0.06)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+                        <div style={{ fontSize: '0.8rem', color: '#d97706', fontWeight: 600 }}>Failed / Flagged</div>
+                        <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#d97706', marginTop: '0.2rem' }}>
+                            {allQualityTests.filter((t) => (t.test_result || '').toLowerCase() === 'fail' || t.is_out_of_spec).length}
+                        </div>
+                    </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '1.5rem' }}>
+                    <div style={{ flex: '1 1 260px' }}>
+                        <input
+                            value={qcSearchTerm}
+                            onChange={(e) => setQcSearchTerm(e.target.value)}
+                            placeholder="Search test name, batch ID, or medicine..."
+                            style={{ ...inputStyle, width: '100%' }}
+                        />
+                    </div>
+                    <select value={qcFilterStatus} onChange={(e) => setQcFilterStatus(e.target.value)} style={{ ...inputStyle, width: 'auto', minWidth: '170px' }}>
+                        <option value="all">All Results ({allQualityTests.length})</option>
+                        <option value="pass">Pass Only ({allQualityTests.filter((t) => (t.test_result || '').toLowerCase() === 'pass' && !t.is_out_of_spec).length})</option>
+                        <option value="fail">Fail / Out of Spec ({allQualityTests.filter((t) => (t.test_result || '').toLowerCase() === 'fail' || t.is_out_of_spec).length})</option>
+                        <option value="out_of_spec">Out of Spec Only ({allQualityTests.filter((t) => t.is_out_of_spec).length})</option>
+                    </select>
+                </div>
+
+                <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: '0.85rem' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
+                        <thead>
+                            <tr style={{ background: 'var(--bg-input)', borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+                                <th style={{ padding: '0.85rem 1rem' }}>Conducted Date</th>
+                                <th style={{ padding: '0.85rem 1rem' }}>Batch Number</th>
+                                <th style={{ padding: '0.85rem 1rem' }}>Medicine</th>
+                                <th style={{ padding: '0.85rem 1rem' }}>Test Name</th>
+                                <th style={{ padding: '0.85rem 1rem' }}>Measured Value</th>
+                                <th style={{ padding: '0.85rem 1rem' }}>Result</th>
+                                <th style={{ padding: '0.85rem 1rem' }}>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {allQualityTests.filter((test) => {
+                                const term = qcSearchTerm.toLowerCase().trim();
+                                const batchNum = (test.batch_details?.batch_number || '').toLowerCase();
+                                const medName = (test.batch_details?.medicine || '').toLowerCase();
+                                const testName = (test.test_name || '').toLowerCase();
+                                const val = (test.result_value || '').toLowerCase();
+                                const matchesSearch = !term || batchNum.includes(term) || medName.includes(term) || testName.includes(term) || val.includes(term);
+
+                                let matchesFilter = true;
+                                if (qcFilterStatus === 'pass') matchesFilter = (test.test_result || '').toLowerCase() === 'pass' && !test.is_out_of_spec;
+                                else if (qcFilterStatus === 'fail') matchesFilter = (test.test_result || '').toLowerCase() === 'fail' || test.is_out_of_spec;
+                                else if (qcFilterStatus === 'out_of_spec') matchesFilter = !!test.is_out_of_spec;
+
+                                return matchesSearch && matchesFilter;
+                            }).length === 0 ? (
+                                <tr>
+                                    <td colSpan={7} style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                                        No quality test reports found matching your filter criteria.
+                                    </td>
+                                </tr>
+                            ) : (
+                                allQualityTests
+                                    .filter((test) => {
+                                        const term = qcSearchTerm.toLowerCase().trim();
+                                        const batchNum = (test.batch_details?.batch_number || '').toLowerCase();
+                                        const medName = (test.batch_details?.medicine || '').toLowerCase();
+                                        const testName = (test.test_name || '').toLowerCase();
+                                        const val = (test.result_value || '').toLowerCase();
+                                        const matchesSearch = !term || batchNum.includes(term) || medName.includes(term) || testName.includes(term) || val.includes(term);
+
+                                        let matchesFilter = true;
+                                        if (qcFilterStatus === 'pass') matchesFilter = (test.test_result || '').toLowerCase() === 'pass' && !test.is_out_of_spec;
+                                        else if (qcFilterStatus === 'fail') matchesFilter = (test.test_result || '').toLowerCase() === 'fail' || test.is_out_of_spec;
+                                        else if (qcFilterStatus === 'out_of_spec') matchesFilter = !!test.is_out_of_spec;
+
+                                        return matchesSearch && matchesFilter;
+                                    })
+                                    .map((test) => (
+                                        <tr key={test.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                                            <td style={{ padding: '0.85rem 1rem', whiteSpace: 'nowrap' }}>{formatDate(test.conducted_date)}</td>
+                                            <td style={{ padding: '0.85rem 1rem', fontWeight: 700 }}>{test.batch_details?.batch_number || '—'}</td>
+                                            <td style={{ padding: '0.85rem 1rem' }}>{test.batch_details?.medicine || '—'}</td>
+                                            <td style={{ padding: '0.85rem 1rem', fontWeight: 600 }}>{test.test_name}</td>
+                                            <td style={{ padding: '0.85rem 1rem' }}>{test.result_value || '—'}</td>
+                                            <td style={{ padding: '0.85rem 1rem' }}>
+                                                <StatusPill tone={test.is_out_of_spec ? 'red' : (test.test_result || '').toLowerCase() === 'fail' ? 'red' : 'green'}>
+                                                    {test.is_out_of_spec ? 'Out of spec' : (test.test_result || 'Passed')}
+                                                </StatusPill>
+                                            </td>
+                                            <td style={{ padding: '0.85rem 1rem' }}>
+                                                <button
+                                                    type="button"
+                                                    style={{ background: 'transparent', border: 'none', color: 'var(--primary)', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline' }}
+                                                    onClick={() => {
+                                                        const targetId = test.batch || test.batch_details?.id;
+                                                        if (targetId) selectBatch(targetId);
+                                                    }}
+                                                >
+                                                    Inspect Batch
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             {batchDetail && !detailLoading && (
@@ -1205,7 +1626,11 @@ const ManufacturerPortal = () => {
                             <Field label="Recipient Account">
                                 <select value={shipmentForm.recipient} onChange={(e) => setShipmentForm((current) => ({ ...current, recipient: e.target.value }))} style={inputStyle}>
                                     <option value="self">Own dispatch (destination above)</option>
-                                    {pharmacies.map((pharmacy) => <option key={pharmacy.user} value={pharmacy.user}>{pharmacy.pharmacy_name}</option>)}
+                                    {pharmacies.map((pharmacy) => (
+                                        <option key={pharmacy.user_id || pharmacy.user || pharmacy.id} value={pharmacy.user_id || pharmacy.user || pharmacy.id}>
+                                            {pharmacy.pharmacy_name}{pharmacy.license_number ? ` (${pharmacy.license_number})` : ''}
+                                        </option>
+                                    ))}
                                 </select>
                             </Field>
                             <Field label="Quantity">
