@@ -1,3 +1,6 @@
+import logging
+from decimal import InvalidOperation
+
 from django.db.models import Count, Q
 from django.utils import timezone
 from datetime import timedelta, datetime
@@ -20,6 +23,8 @@ from .serializers import (
     ADRReportSerializer, DemandForecastSerializer, MonitoringEventSerializer
 )
 from .services.dgda_services import calculate_risk_score, generate_ai_situation_summary
+
+logger = logging.getLogger(__name__)
 
 
 class DGDACommandCenterView(views.APIView):
@@ -270,11 +275,19 @@ class DGDAEntitiesView(views.APIView):
 
         # 2. Pharmacies
         if entity_type in ['all', 'pharmacy']:
-            p_qs = PharmacyProfile.objects.select_related('user').all()
+            # trust_score is deferred on purpose: a value outside the column's max_digits raises
+            # decimal.InvalidOperation while the rows are fetched, which would 500 this whole endpoint.
+            # Deferring it moves that risk to the per-row read below, where it is caught.
+            p_qs = PharmacyProfile.objects.select_related('user').defer('trust_score')
             if search:
                 p_qs = p_qs.filter(Q(pharmacy_name__icontains=search) | Q(registration_number__icontains=search) | Q(address__icontains=search))
             for p in p_qs:
-                r_score = int((1.0 - float(p.trust_score or 0.8)) * 100)
+                try:
+                    trust = float(p.trust_score or 0.8)
+                except (InvalidOperation, TypeError, ValueError):
+                    logger.warning("Pharmacy %s has an unreadable trust_score; listing it without a risk score", p.user_id)
+                    trust = None
+                r_score = int((1.0 - trust) * 100) if trust is not None else None
                 entities.append({
                     "id": p.user_id,
                     "type": "pharmacy",
@@ -283,7 +296,7 @@ class DGDAEntitiesView(views.APIView):
                     "registration_number": p.registration_number,
                     "location": p.address or "Dhaka, Bangladesh",
                     "risk_score": r_score,
-                    "risk_level": "HIGH" if r_score >= 60 else "MEDIUM" if r_score >= 40 else "LOW",
+                    "risk_level": "UNKNOWN" if r_score is None else "HIGH" if r_score >= 60 else "MEDIUM" if r_score >= 40 else "LOW",
                     "status": "Licensed",
                     "last_updated": p.user.date_joined.strftime("%Y-%m-%d")
                 })
@@ -406,9 +419,36 @@ class DGDAEntitiesView(views.APIView):
                     "last_updated": b.updated_at.strftime("%Y-%m-%d")
                 })
 
+        # The DGDA portal's Entities tab reads data.manufacturers / data.pharmacies (the older
+        # DGDAEntityMonitoringView shape), so keep those keys alongside the newer summary/entities.
+        legacy_manufacturers = list(
+            ManufacturerProfile.objects.values('user_id', 'user__username', 'company_name', 'registration_number')
+        )
+        legacy_distributors = list(
+            DistributorProfile.objects.values('user_id', 'user__username', 'company_name', 'registration_number')
+        )
+        # Built row by row (not .values()) so an unreadable trust_score cannot raise during the fetch
+        legacy_pharmacies = []
+        for p in PharmacyProfile.objects.select_related('user').defer('trust_score'):
+            try:
+                p_trust = float(p.trust_score) if p.trust_score is not None else None
+            except (InvalidOperation, TypeError, ValueError):
+                logger.warning("Pharmacy %s has an unreadable trust_score; sending it without a trust value", p.user_id)
+                p_trust = None
+            legacy_pharmacies.append({
+                'user_id': p.user_id,
+                'user__username': p.user.username,
+                'pharmacy_name': p.pharmacy_name,
+                'registration_number': p.registration_number,
+                'trust_score': p_trust,
+            })
+
         return Response({
             "summary": summary,
-            "entities": entities
+            "entities": entities,
+            "manufacturers": legacy_manufacturers,
+            "pharmacies": legacy_pharmacies,
+            "distributors": legacy_distributors,
         })
 
 
@@ -485,7 +525,8 @@ class DGDAEntityDetailView(views.APIView):
 
         elif entity_type == 'pharmacy':
             try:
-                prof = PharmacyProfile.objects.select_related('user').get(user_id=entity_id)
+                # trust_score is deferred so an out-of-range value cannot fail this .get(); see the read below
+                prof = PharmacyProfile.objects.select_related('user').defer('trust_score').get(user_id=entity_id)
                 user = prof.user
                 basic_info = {
                     "name": prof.pharmacy_name,
@@ -499,7 +540,12 @@ class DGDAEntityDetailView(views.APIView):
                     "registration_date": user.date_joined.strftime("%B %d, %Y")
                 }
 
-                t_score = float(prof.trust_score or 0.85)
+                try:
+                    t_score = float(prof.trust_score or 0.85)
+                except (InvalidOperation, TypeError, ValueError):
+                    # Keep the existing default so the scores below stay numeric
+                    logger.warning("Pharmacy %s has an unreadable trust_score; falling back to the default for its risk score", entity_id)
+                    t_score = 0.85
                 overall_score = int((1.0 - t_score) * 100)
 
                 regulatory_info = {
