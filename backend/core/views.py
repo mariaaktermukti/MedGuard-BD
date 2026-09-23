@@ -5,7 +5,9 @@ from django.contrib.auth import get_user_model
 # pyrefly: ignore [missing-import]
 User = get_user_model()
 # pyrefly: ignore [missing-import]
-from django.db import models
+from decimal import Decimal
+
+from django.db import models, transaction
 # pyrefly: ignore [missing-import]
 from django.db.models import Sum, Q
 # pyrefly: ignore [missing-import]
@@ -36,7 +38,7 @@ from .models import (
     Shipment,
     Warehouse,
 )
-from users.models import PharmacyProfile
+from users.models import DistributorProfile, PharmacyProfile
 from .serializers import (
     ADRReportSerializer,
     BatchSerializer,
@@ -57,6 +59,7 @@ from .serializers import (
     PharmacyProfileSerializer,
     SaleSerializer,
     WarehouseSerializer,
+    DistributorProfileSerializer,
 )
 from users.permissions import IsCitizen, IsDGDA, IsDistributor, IsManufacturer, IsPharmacy
 import json
@@ -194,7 +197,22 @@ class DistributionEventListCreateView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         batch = get_object_or_404(Batch, pk=self.kwargs['pk'], manufacturer=self.request.user)
-        serializer.save(batch=batch, from_user=self.request.user)
+        with transaction.atomic():
+            event = serializer.save(batch=batch, from_user=self.request.user)
+
+            # A distribution event is only the audit trail. Every downstream inbox
+            # (distributor incoming, pharmacy incoming) reads Shipment, so a handoff
+            # to somebody else has to create one or the goods reach nobody.
+            if event.to_user_id and event.to_user_id != self.request.user.id:
+                Shipment.objects.create(
+                    batch=batch,
+                    from_user=self.request.user,
+                    to_user=event.to_user,
+                    quantity=event.quantity,
+                    shipment_date=date.today(),
+                    status='in_transit',
+                    geo_location=event.geo_location or '',
+                )
 
 
 class RecallListCreateView(generics.ListCreateAPIView):
@@ -220,7 +238,9 @@ class ComplianceDashboardView(generics.ListCreateAPIView):
     def get_permissions(self):
         if self.request.method == 'POST':
             return [permissions.IsAuthenticated(), IsManufacturer()]
-        return [permissions.IsAuthenticated(), IsDGDA()]
+        # get_queryset already narrows a manufacturer to its own rows, and the
+        # manufacturer portal's Compliance tab reads this endpoint.
+        return [permissions.IsAuthenticated(), (IsManufacturer | IsDGDA)()]
 
     def get_queryset(self):
         if getattr(self.request.user, 'role', None) == 'manufacturer':
@@ -516,6 +536,15 @@ class PharmacyFinderView(generics.ListAPIView):
     def get_queryset(self):
         return PharmacyProfile.objects.all().order_by('-trust_score')
 
+
+class DistributorFinderView(generics.ListAPIView):
+    """Recipient picker for whoever needs to hand goods to a distributor."""
+    serializer_class = DistributorProfileSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return DistributorProfile.objects.select_related('user').order_by('company_name')
+
 class NotificationListView(generics.ListCreateAPIView):
     serializer_class = NotificationSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -713,7 +742,7 @@ class CitizenDashboardView(views.APIView):
         ).select_related('medicine').order_by('-date_reported')[:5]
 
         for adr in adr_items:
-            m_name = adr.medicine_name or (adr.medicine.name if adr.medicine else 'Medicine')
+            m_name = adr.medicine.name if adr.medicine else 'Medicine'
             activities.append({
                 'id': f'adr-{adr.id}',
                 'dt': adr.date_reported,
@@ -725,7 +754,7 @@ class CitizenDashboardView(views.APIView):
         # 2. Real Dosage Schedules / Medicine Alarms
         dosage_items = DosageSchedule.objects.filter(citizen=user).select_related('medicine').order_by('-created_at')[:5]
         for ds in dosage_items:
-            m_name = ds.medicine.name if ds.medicine else (ds.medicine_name or 'Medicine')
+            m_name = ds.medicine.name if ds.medicine else 'Medicine'
             activities.append({
                 'id': f'ds-{ds.id}',
                 'dt': ds.created_at,
@@ -973,7 +1002,10 @@ class PharmacySaleListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         batch = serializer.validated_data['batch']
         quantity = serializer.validated_data['quantity']
+        buyer = serializer.validated_data['citizen']
 
+        if getattr(buyer, 'role', '') != 'citizen':
+            raise ValidationError('A sale can only be recorded against a citizen account.')
         if Recall.objects.filter(batch=batch, status='active').exists():
             raise ValidationError('This batch has an active recall and cannot be sold.')
         if batch.expiry_date < date.today():
@@ -1150,7 +1182,12 @@ class PharmacyDashboardView(views.APIView):
         else:
             trust_grade = 'C'
 
-        PharmacyProfile.objects.filter(user=request.user).update(trust_score=trust_score)
+        # The column is DecimalField(max_digits=3, decimal_places=2), i.e. a 0-1 ratio,
+        # and that is the scale every DGDA view reads (high risk is trust_score < 0.5).
+        # Writing the 0-100 figure straight in overflows the column and 500s this page.
+        PharmacyProfile.objects.filter(user=request.user).update(
+            trust_score=(Decimal(trust_score) / Decimal(100)).quantize(Decimal('0.01'))
+        )
 
         monthly_sales = defaultdict(int)
         medicine_sales = defaultdict(int)
@@ -1222,10 +1259,16 @@ class DistributorShipmentReceiveView(views.APIView):
         if shipment.status == 'delivered':
             return Response({'detail': 'Shipment already received.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        shipment.status = 'delivered'
-        shipment.delivery_date = date.today()
-        shipment.save(update_fields=['status', 'delivery_date', 'updated_at'])
-        return Response(DistributorShipmentSerializer(shipment).data)
+        with transaction.atomic():
+            shipment.status = 'delivered'
+            shipment.delivery_date = date.today()
+            shipment.save(update_fields=['status', 'delivery_date', 'updated_at'])
+            stocked = _credit_receiver_stock(shipment)
+
+        data = DistributorShipmentSerializer(shipment).data
+        if not stocked:
+            data['warning'] = 'Received, but no warehouse exists yet so the units are not counted in stock. Create a warehouse first.'
+        return Response(data)
 
 
 class DistributorOutgoingShipmentListCreateView(generics.ListCreateAPIView):
@@ -1238,7 +1281,9 @@ class DistributorOutgoingShipmentListCreateView(generics.ListCreateAPIView):
         ).order_by('-created_at')
 
     def perform_create(self, serializer):
-        serializer.save(from_user=self.request.user)
+        with transaction.atomic():
+            shipment = serializer.save(from_user=self.request.user)
+            _debit_sender_stock(shipment)
 
 
 class DistributorOutgoingShipmentDetailView(generics.RetrieveUpdateAPIView):
@@ -1397,6 +1442,61 @@ class DistributorRouteRiskView(views.APIView):
         })
 
 
+def _credit_receiver_stock(shipment):
+    """Move a delivered shipment's units into the receiver's stock.
+
+    A pharmacy holds stock against its own user id. Anything else (a distributor
+    taking goods into a depot) is credited to that user's first warehouse, which
+    is what the distributor dashboard totals up. Returns True when stock moved.
+    """
+    receiver = shipment.to_user
+    role = getattr(receiver, 'role', '')
+
+    if role == 'pharmacy':
+        entity_type, entity_id = 'pharmacy', receiver.id
+    else:
+        warehouse = Warehouse.objects.filter(distributor=receiver).order_by('id').first()
+        if not warehouse:
+            return False
+        entity_type, entity_id = 'warehouse', warehouse.id
+
+    inventory, _ = Inventory.objects.get_or_create(
+        entity_type=entity_type, entity_id=entity_id, batch=shipment.batch,
+        defaults={'quantity': 0},
+    )
+    inventory.quantity += shipment.quantity
+    inventory.save(update_fields=['quantity', 'last_updated'])
+    return True
+
+
+def _debit_sender_stock(shipment):
+    """Take a newly created shipment's units back off the sender's shelf.
+
+    Only depot stock is touched: a pharmacy's stock already moves on sale. Rows are
+    drawn down in order and the shipment is never blocked, because a distributor may
+    hold goods that predate warehouse tracking.
+    """
+    sender = shipment.from_user
+    if getattr(sender, 'role', '') != 'distributor':
+        return
+
+    warehouse_ids = list(Warehouse.objects.filter(distributor=sender).values_list('id', flat=True))
+    if not warehouse_ids:
+        return
+
+    remaining = shipment.quantity
+    rows = Inventory.objects.filter(
+        entity_type='warehouse', entity_id__in=warehouse_ids, batch=shipment.batch, quantity__gt=0
+    ).order_by('id')
+    for row in rows:
+        if remaining <= 0:
+            break
+        taken = min(row.quantity, remaining)
+        row.quantity -= taken
+        row.save(update_fields=['quantity', 'last_updated'])
+        remaining -= taken
+
+
 def _distributor_shipment_row(shipment, counterparty):
     """Row shape the distributor dashboard renders for recent shipments."""
     other_user = shipment.from_user if counterparty == 'from' else shipment.to_user
@@ -1517,22 +1617,28 @@ class DistributorConfirmDeliveryView(views.APIView):
         if not receiver_name:
             return Response({'detail': 'The receiver name is required for proof of delivery.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        shipment.status = 'delivered'
-        shipment.delivery_date = date.today()
-        shipment.save(update_fields=['status', 'delivery_date', 'updated_at'])
+        with transaction.atomic():
+            shipment.status = 'delivered'
+            shipment.delivery_date = date.today()
+            shipment.save(update_fields=['status', 'delivery_date', 'updated_at'])
 
-        # Proof of delivery is stored as a distribution event so it is traceable
-        # without adding fields to Shipment (which would need a shared-database migration)
-        DistributionEvent.objects.create(
-            batch=shipment.batch,
-            from_user=request.user,
-            to_user=shipment.to_user,
-            stage_from='distributor',
-            stage_to='pharmacy',
-            quantity=shipment.quantity,
-            geo_location=shipment.geo_location or '',
-            notes=f'POD | Received by: {receiver_name}' + (f' | Note: {signature_note}' if signature_note else ''),
-        )
+            # Confirming delivery is what puts the goods in the receiver's hands, so the
+            # stock has to move here too. Without this the pharmacy can no longer press
+            # Receive (the shipment already reads 'delivered') and the units are lost.
+            _credit_receiver_stock(shipment)
+
+            # Proof of delivery is stored as a distribution event so it is traceable
+            # without adding fields to Shipment (which would need a shared-database migration)
+            DistributionEvent.objects.create(
+                batch=shipment.batch,
+                from_user=request.user,
+                to_user=shipment.to_user,
+                stage_from='distributor',
+                stage_to=getattr(shipment.to_user, 'role', '') or 'pharmacy',
+                quantity=shipment.quantity,
+                geo_location=shipment.geo_location or '',
+                notes=f'POD | Received by: {receiver_name}' + (f' | Note: {signature_note}' if signature_note else ''),
+            )
 
         return Response(DistributorShipmentSerializer(shipment).data)
 

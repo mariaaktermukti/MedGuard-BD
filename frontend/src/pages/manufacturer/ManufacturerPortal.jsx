@@ -301,6 +301,7 @@ const ManufacturerPortal = () => {
     const [batches, setBatches] = useState([]);
     const [recalls, setRecalls] = useState([]);
     const [pharmacies, setPharmacies] = useState([]);
+    const [distributors, setDistributors] = useState([]);
 
     const [registerForm, setRegisterForm] = useState(emptyRegisterForm);
     const [batchForm, setBatchForm] = useState(emptyBatchForm);
@@ -378,13 +379,15 @@ const ManufacturerPortal = () => {
                 return;
             }
             case 'shipment': {
-                const [batchesRes, pharmaciesRes] = await Promise.allSettled([
+                const [batchesRes, pharmaciesRes, distributorsRes] = await Promise.allSettled([
                     api.get('core/manufacturer/batches/'),
                     api.get('core/pharmacies/'),
+                    api.get('core/distributors/'),
                 ]);
                 if (batchesRes.status === 'rejected') throw batchesRes.reason;
                 setBatches(asList(batchesRes.value.data));
                 setPharmacies(pharmaciesRes.status === 'fulfilled' ? asList(pharmaciesRes.value.data) : []);
+                setDistributors(distributorsRes.status === 'fulfilled' ? asList(distributorsRes.value.data) : []);
                 return;
             }
             default:
@@ -922,15 +925,19 @@ const ManufacturerPortal = () => {
                 return;
             }
         }
-        const toPharmacy = shipmentForm.recipient !== 'self';
+        const [recipientRole, recipientId] = shipmentForm.recipient === 'self'
+            ? ['self', String(user.id)]
+            : shipmentForm.recipient.split(':');
+        const toPharmacy = recipientRole === 'pharmacy';
+        const toDistributor = recipientRole === 'distributor';
         setBusy('shipment');
         try {
             const res = await api.post(`core/manufacturer/batches/${shipmentForm.batch}/distribution-events/`, {
                 batch: Number(shipmentForm.batch),
                 from_user: user.id,
-                to_user: toPharmacy ? Number(shipmentForm.recipient) : user.id,
+                to_user: recipientRole === 'self' ? user.id : Number(recipientId),
                 stage_from: 'manufacturer',
-                stage_to: toPharmacy ? 'pharmacy' : 'distribution',
+                stage_to: toPharmacy ? 'pharmacy' : (toDistributor ? 'distributor' : 'distribution'),
                 quantity,
                 geo_location: shipmentForm.destination.trim(),
                 notes: `Shipment ${shipmentForm.reference.trim()} | Date ${shipmentForm.shipment_date} | Status ${shipmentForm.status}`,
@@ -941,7 +948,7 @@ const ManufacturerPortal = () => {
             const refNum = shipmentForm.reference.trim();
             const batchNum = res.data.batch_details?.batch_number || batch?.batch_number || 'N/A';
             const destination = shipmentForm.destination.trim();
-            const recipientLabel = toPharmacy ? (res.data.to_user_name || 'Pharmacy Outlet') : 'Central Distribution Warehouse';
+            const recipientLabel = toPharmacy ? (res.data.to_user_name || 'Pharmacy Outlet') : (toDistributor ? (res.data.to_user_name || 'Distributor') : 'Central Distribution Warehouse');
             const shipDate = shipmentForm.shipment_date;
             const shipStatus = shipmentForm.status.toUpperCase();
 
@@ -1626,11 +1633,22 @@ const ManufacturerPortal = () => {
                             <Field label="Recipient Account">
                                 <select value={shipmentForm.recipient} onChange={(e) => setShipmentForm((current) => ({ ...current, recipient: e.target.value }))} style={inputStyle}>
                                     <option value="self">Own dispatch (destination above)</option>
-                                    {pharmacies.map((pharmacy) => (
-                                        <option key={pharmacy.user_id || pharmacy.user || pharmacy.id} value={pharmacy.user_id || pharmacy.user || pharmacy.id}>
-                                            {pharmacy.pharmacy_name}{pharmacy.license_number ? ` (${pharmacy.license_number})` : ''}
-                                        </option>
-                                    ))}
+                                    {distributors.length > 0 && (
+                                        <optgroup label="Distributors">
+                                            {distributors.map((distributor) => (
+                                                <option key={`dist-${distributor.user_id}`} value={`distributor:${distributor.user_id}`}>
+                                                    {distributor.company_name}{distributor.registration_number ? ` (${distributor.registration_number})` : ''}
+                                                </option>
+                                            ))}
+                                        </optgroup>
+                                    )}
+                                    <optgroup label="Pharmacies">
+                                        {pharmacies.map((pharmacy) => (
+                                            <option key={pharmacy.user_id || pharmacy.user || pharmacy.id} value={`pharmacy:${pharmacy.user_id || pharmacy.user || pharmacy.id}`}>
+                                                {pharmacy.pharmacy_name}{pharmacy.license_number ? ` (${pharmacy.license_number})` : ''}
+                                            </option>
+                                        ))}
+                                    </optgroup>
                                 </select>
                             </Field>
                             <Field label="Quantity">
