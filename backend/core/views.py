@@ -1396,3 +1396,143 @@ class DistributorRouteRiskView(views.APIView):
             'alerts': alerts[:10],
         })
 
+
+def _distributor_shipment_row(shipment, counterparty):
+    """Row shape the distributor dashboard renders for recent shipments."""
+    other_user = shipment.from_user if counterparty == 'from' else shipment.to_user
+    return {
+        'id': shipment.id,
+        'batch_number': shipment.batch.batch_number,
+        'medicine_name': shipment.batch.medicine.name,
+        'quantity': shipment.quantity,
+        'from_user': shipment.from_user.username,
+        'to_user': shipment.to_user.username,
+        'counterparty': other_user.username,
+        'shipment_date': shipment.shipment_date,
+        'status': shipment.status,
+    }
+
+
+class DistributorDashboardView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, IsDistributor]
+
+    def get(self, request):
+        incoming = Shipment.objects.filter(to_user=request.user).select_related(
+            'batch', 'batch__medicine', 'from_user', 'to_user'
+        )
+        outgoing = Shipment.objects.filter(from_user=request.user).select_related(
+            'batch', 'batch__medicine', 'from_user', 'to_user'
+        )
+
+        warehouse_ids = list(Warehouse.objects.filter(distributor=request.user).values_list('id', flat=True))
+        stock = Inventory.objects.filter(entity_type='warehouse', entity_id__in=warehouse_ids).select_related('batch')
+        expiry_horizon = date.today() + timedelta(days=90)
+
+        return Response({
+            'summary': {
+                'total_stock': stock.aggregate(total=Sum('quantity'))['total'] or 0,
+                'incoming_shipments': incoming.count(),
+                'outgoing_shipments': outgoing.count(),
+                'pending_deliveries': outgoing.filter(status__in=['pending', 'in_transit']).count(),
+                'completed_deliveries': outgoing.filter(status='delivered').count(),
+                'low_stock_alerts': stock.filter(quantity__gt=0, quantity__lte=LOW_STOCK_THRESHOLD).count(),
+                'expiring_alerts': stock.filter(batch__expiry_date__lte=expiry_horizon).count(),
+            },
+            'recent_incoming': [
+                _distributor_shipment_row(shipment, 'from')
+                for shipment in incoming.order_by('-created_at')[:5]
+            ],
+            'recent_outgoing': [
+                _distributor_shipment_row(shipment, 'to')
+                for shipment in outgoing.order_by('-created_at')[:5]
+            ],
+        })
+
+
+class DistributorBatchVerifyView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, IsDistributor]
+
+    def get(self, request, qr_code):
+        batch = Batch.objects.filter(
+            Q(qr_code=qr_code) | Q(ddp_id=qr_code) | Q(batch_number=qr_code) | Q(unit_qr_codes__contains=[qr_code])
+        ).select_related('medicine', 'manufacturer', 'manufacturer__manufacturer_profile').first()
+        if not batch:
+            return Response(
+                {'verified': False, 'verdict': 'unknown', 'detail': 'QR code or batch number not recognized.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        active_recall = Recall.objects.filter(batch=batch, status='active').first()
+        is_expired = batch.expiry_date < date.today()
+
+        if active_recall:
+            verdict = 'recalled'
+            detail = f'This batch is under an active recall: {active_recall.reason}'
+        elif is_expired:
+            verdict = 'expired'
+            detail = f'This batch expired on {batch.expiry_date}. Do not transport or deliver it.'
+        elif batch.qc_status == 'failed':
+            verdict = 'blocked'
+            detail = 'This batch failed quality control and must not move through the supply chain.'
+        elif batch.status != 'active' or batch.release_blocked:
+            verdict = 'blocked'
+            detail = 'This batch has not been released by the manufacturer.'
+        else:
+            verdict = 'authentic'
+            detail = 'Batch verified. Safe to transport.'
+
+        # The dashboard reads medicine_name / strength / manufacturer as flat fields,
+        # while DrugPassportSerializer nests the medicine and omits the manufacturer name
+        batch_data = DrugPassportSerializer(batch).data
+        manufacturer_profile = getattr(batch.manufacturer, 'manufacturer_profile', None)
+        batch_data['medicine_name'] = batch.medicine.name
+        batch_data['strength'] = batch.medicine.strength or ''
+        batch_data['manufacturer'] = (
+            manufacturer_profile.company_name if manufacturer_profile else batch.manufacturer.username
+        )
+
+        return Response({
+            'verified': verdict == 'authentic',
+            'verdict': verdict,
+            'detail': detail,
+            'recall_reason': active_recall.reason if active_recall else None,
+            'batch': batch_data,
+        })
+
+
+class DistributorConfirmDeliveryView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, IsDistributor]
+
+    def post(self, request, pk):
+        shipment = get_object_or_404(
+            Shipment.objects.select_related('batch', 'to_user'), pk=pk, from_user=request.user
+        )
+        if shipment.status == 'delivered':
+            return Response({'detail': 'This shipment is already marked delivered.'}, status=status.HTTP_400_BAD_REQUEST)
+        if shipment.status == 'cancelled':
+            return Response({'detail': 'A cancelled shipment cannot be delivered.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        receiver_name = (request.data.get('receiver_name') or '').strip()
+        signature_note = (request.data.get('signature_note') or '').strip()
+        if not receiver_name:
+            return Response({'detail': 'The receiver name is required for proof of delivery.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        shipment.status = 'delivered'
+        shipment.delivery_date = date.today()
+        shipment.save(update_fields=['status', 'delivery_date', 'updated_at'])
+
+        # Proof of delivery is stored as a distribution event so it is traceable
+        # without adding fields to Shipment (which would need a shared-database migration)
+        DistributionEvent.objects.create(
+            batch=shipment.batch,
+            from_user=request.user,
+            to_user=shipment.to_user,
+            stage_from='distributor',
+            stage_to='pharmacy',
+            quantity=shipment.quantity,
+            geo_location=shipment.geo_location or '',
+            notes=f'POD | Received by: {receiver_name}' + (f' | Note: {signature_note}' if signature_note else ''),
+        )
+
+        return Response(DistributorShipmentSerializer(shipment).data)
+

@@ -21,6 +21,9 @@ from .views import (
     DemandForecastView,
     DistributionEventListCreateView,
     DistributorAnalyticsView,
+    DistributorBatchVerifyView,
+    DistributorConfirmDeliveryView,
+    DistributorDashboardView,
     DistributorFleetMonitoringView,
     DistributorIncomingShipmentListView,
     DistributorOutgoingShipmentDetailView,
@@ -123,6 +126,9 @@ urlpatterns = [
     path('distributor/fleet-monitoring/', DistributorFleetMonitoringView.as_view(), name='distributor-fleet-monitoring'),
     path('distributor/fleet-monitoring/<int:pk>/update-location/', DistributorShipmentLocationUpdateView.as_view(), name='distributor-fleet-update-location'),
     path('distributor/route-risk/', DistributorRouteRiskView.as_view(), name='distributor-route-risk'),
+    path('distributor/dashboard/', DistributorDashboardView.as_view(), name='distributor-dashboard'),
+    path('distributor/verify/<str:qr_code>/', DistributorBatchVerifyView.as_view(), name='distributor-batch-verify'),
+    path('distributor/shipments/<int:pk>/confirm-delivery/', DistributorConfirmDeliveryView.as_view(), name='distributor-confirm-delivery'),
 
     # DGDA Portal Routes
     path('dgda/command-center/', DGDACommandCenterView.as_view(), name='dgda-command-center'),
