@@ -1,7 +1,7 @@
 import logging
 from decimal import InvalidOperation
 
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Sum
 from django.utils import timezone
 from datetime import timedelta, datetime
 from rest_framework import viewsets, views, status
@@ -9,10 +9,12 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from users.permissions import IsDGDA
 
+from django.db.models.functions import TruncMonth
+
 from .models import (
-    Medicine, Batch, QualityTest, Recall, Inspection, ADRReport, 
+    Medicine, Batch, QualityTest, Recall, Inspection, ADRReport,
     DemandForecast, DistributionEvent, Shipment, Sale, Inventory, MonitoringEvent,
-    Prescription, Consultation, ResearchDataset, Complaint
+    Prescription, Consultation, ResearchDataset, Complaint, ComplianceItem
 )
 from users.models import (
     CustomUser, ManufacturerProfile, PharmacyProfile, DistributorProfile, 
@@ -101,6 +103,14 @@ class DGDACommandCenterView(views.APIView):
         # AI Situation Summary
         ai_summary = generate_ai_situation_summary()
 
+        # Operational counts for the Command Center cards (Active Recalls, ADR Reports,
+        # Low Stock Alerts, Live Movements) — these read real tables, not MonitoringEvent.
+        # low_stock uses 0 < quantity < 20 to match the Emergency Response tab.
+        active_recalls_count = Recall.objects.filter(status='active').count()
+        total_adr_count = ADRReport.objects.count()
+        low_stock_alerts_count = Inventory.objects.filter(quantity__gt=0, quantity__lt=20).count()
+        live_movements_count = DistributionEvent.objects.count()
+
         return Response({
             "officer_info": officer_info,
             "kpis": {
@@ -110,6 +120,10 @@ class DGDACommandCenterView(views.APIView):
                 "open_monitoring_cases": open_cases_count,
                 "adr_signals": adr_signals_count,
                 "counterfeit_signals": counterfeit_signals_count,
+                "active_recalls": active_recalls_count,
+                "total_adr": total_adr_count,
+                "low_stock_alerts": low_stock_alerts_count,
+                "live_movements": live_movements_count,
             },
             "severity_overview": severity_overview,
             "live_alerts": live_alerts_serialized,
@@ -888,16 +902,69 @@ class DGDAEntityMonitoringView(views.APIView):
         })
 
 
+# Coordinates are static reference data for Bangladeshi districts; the counts on the
+# heatmap come from real MonitoringEvent rows, not from this table.
+DISTRICT_COORDINATES = {
+    'dhaka': (23.8103, 90.4125),
+    'chattogram': (22.3569, 91.7832),
+    'chittagong': (22.3569, 91.7832),
+    'khulna': (22.8456, 89.5403),
+    'rajshahi': (24.3745, 88.6042),
+    'sylhet': (24.8949, 91.8687),
+    'barishal': (22.7010, 90.3535),
+    'barisal': (22.7010, 90.3535),
+    'rangpur': (25.7439, 89.2752),
+    'mymensingh': (24.7471, 90.4203),
+    'gazipur': (23.9999, 90.4203),
+    'narayanganj': (23.6238, 90.5000),
+    'cumilla': (23.4607, 91.1809),
+    'comilla': (23.4607, 91.1809),
+    'jashore': (23.1664, 89.2081),
+    'jessore': (23.1664, 89.2081),
+    'bogura': (24.8465, 89.3773),
+    'narsingdi': (23.9322, 90.7151),
+    "cox's bazar": (21.4272, 92.0058),
+}
+
+SEVERITY_RANK = {'low': 1, 'medium': 2, 'high': 3, 'critical': 4}
+
+
+def _district_key(location):
+    """'Dhaka, Bangladesh' -> 'dhaka' so free-text locations group together."""
+    return (location or '').split(',')[0].strip().lower()
+
+
 class DGDAHeatmapDataView(views.APIView):
     permission_classes = [IsAuthenticated, IsDGDA]
+
     def get(self, request):
-        return Response([
-            {"id": 1, "district": "Dhaka", "lat": 23.8103, "lng": 90.4125, "type": "adr", "count": 150, "severity": "high"},
-            {"id": 2, "district": "Chittagong", "lat": 22.3569, "lng": 91.7832, "type": "adr", "count": 80, "severity": "medium"},
-            {"id": 3, "district": "Sylhet", "lat": 24.8949, "lng": 91.8687, "type": "shortage", "medicine": "Paracetamol", "severity": "critical"},
-            {"id": 4, "district": "Rajshahi", "lat": 24.3745, "lng": 88.6042, "type": "counterfeit", "count": 12, "severity": "high"},
-            {"id": 5, "district": "Khulna", "lat": 22.8456, "lng": 89.5403, "type": "adr", "count": 45, "severity": "low"}
-        ])
+        # Real per-district counts from MonitoringEvent; coordinates from the lookup above.
+        buckets = {}
+        for event in MonitoringEvent.objects.exclude(location__isnull=True).exclude(location=''):
+            key = _district_key(event.location)
+            if key not in DISTRICT_COORDINATES:
+                continue
+            bucket = buckets.setdefault(key, {'count': 0, 'types': {}, 'severity': 'low'})
+            bucket['count'] += 1
+            bucket['types'][event.event_type] = bucket['types'].get(event.event_type, 0) + 1
+            if SEVERITY_RANK.get(event.severity, 0) > SEVERITY_RANK.get(bucket['severity'], 0):
+                bucket['severity'] = event.severity
+
+        data = []
+        ordered = sorted(buckets.items(), key=lambda item: item[1]['count'], reverse=True)
+        for index, (key, bucket) in enumerate(ordered, start=1):
+            latitude, longitude = DISTRICT_COORDINATES[key]
+            dominant_type = max(bucket['types'].items(), key=lambda item: item[1])[0]
+            data.append({
+                "id": index,
+                "district": key.title(),
+                "lat": latitude,
+                "lng": longitude,
+                "type": dominant_type,
+                "count": bucket['count'],
+                "severity": bucket['severity'],
+            })
+        return Response(data)
 
 
 class DGDAAIRiskIntelligenceView(views.APIView):
@@ -949,10 +1016,44 @@ class DGDAAIRiskIntelligenceView(views.APIView):
 
 class DGDAPolicyAnalyticsView(views.APIView):
     permission_classes = [IsAuthenticated, IsDGDA]
+
     def get(self, request):
+        months = 6
+        window_start = (timezone.now() - timedelta(days=30 * months)).replace(hour=0, minute=0, second=0, microsecond=0)
+
+        # Consumption: real pharmacy sales when they exist, otherwise distributed units.
+        # The source is reported back so the dashboard never implies sales data it does not have.
+        sales = Sale.objects.filter(sale_date__gte=window_start)
+        if sales.exists():
+            source = 'pharmacy_sales'
+            rows = sales.annotate(month=TruncMonth('sale_date')).values('month').annotate(volume=Sum('quantity')).order_by('month')
+        else:
+            source = 'distributed_units'
+            rows = (DistributionEvent.objects.filter(event_date__gte=window_start)
+                    .annotate(month=TruncMonth('event_date')).values('month')
+                    .annotate(volume=Sum('quantity')).order_by('month'))
+
+        consumption = [
+            {"month": row['month'].strftime('%b'), "volume": int(row['volume'] or 0)}
+            for row in rows if row['month']
+        ]
+
+        # Compliance: share of compliance items approved; falls back to batch QC pass rate.
+        compliance_items = ComplianceItem.objects.count()
+        if compliance_items:
+            basis = 'compliance_items_approved'
+            compliance = round(ComplianceItem.objects.filter(status='approved').count() / compliance_items * 100)
+        else:
+            reviewed_batches = Batch.objects.exclude(qc_status='pending').count()
+            basis = 'batch_qc_pass_rate'
+            compliance = round(Batch.objects.filter(qc_status='passed').count() / reviewed_batches * 100) if reviewed_batches else 0
+
         return Response({
-            "consumption": [{"month": "Jan", "volume": 5000}, {"month": "Feb", "volume": 6000}],
-            "compliance": 92
+            "consumption": consumption,
+            "compliance": compliance,
+            "consumption_source": source,
+            "compliance_basis": basis,
+            "window_months": months,
         })
 
 
