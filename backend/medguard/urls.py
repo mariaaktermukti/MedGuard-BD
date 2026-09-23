@@ -43,4 +43,5 @@ urlpatterns = [
     path("api/users/", include("users.urls")),
     path("api/core/", include("core.urls")),
     path("api/doctor/", include("doctor.urls")),
+    path("api/researcher/", include("researcher.urls")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
