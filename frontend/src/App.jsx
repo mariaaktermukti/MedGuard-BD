@@ -37,9 +37,11 @@ const Analytics = lazy(() => import('./pages/distributor/Analytics'));
 const RouteOptimization = lazy(() => import('./pages/distributor/RouteOptimization'));
 const FleetMonitoring = lazy(() => import('./pages/distributor/FleetMonitoring'));
 const RouteRisk = lazy(() => import('./pages/distributor/RouteRisk'));
+const DistributorDashboard = lazy(() => import('./pages/distributor/DistributorDashboard'));
 const DGDAPortal = lazy(() => import('./pages/dgda/DGDAPortal'));
 const CounterfeitIntel = lazy(() => import('./pages/dgda/CounterfeitIntel'));
 const DoctorPortal = lazy(() => import('./pages/doctor/DoctorPortal'));
+const ResearcherPortal = lazy(() => import('./pages/researcher/ResearcherPortal'));
 
 function App() {
   return (
@@ -78,6 +80,9 @@ function App() {
                         <Route path="dgda/*" element={<DGDAPortal />} />
                       </Route>
                       <Route path="doctor/*" element={<DoctorPortal />} />
+                      <Route element={<ProtectedRoute allowedRoles={['researcher']} />}>
+                        <Route path="researcher/*" element={<ResearcherPortal />} />
+                      </Route>
                       <Route path="pharmacy/suppliers" element={<Suppliers />} />
                       <Route path="pharmacy/verify" element={<BatchVerify />} />
                       <Route path="pharmacy/sales" element={<SaleLogging />} />
@@ -85,6 +90,7 @@ function App() {
                       <Route path="pharmacy/forecast" element={<StockForecast />} />
                       <Route path="pharmacy/complaints" element={<Complaints />} />
                       <Route path="pharmacy/report-counterfeit" element={<PharmacyReportCounterfeit />} />
+                      <Route path="distributor" element={<DistributorDashboard />} />
                       <Route path="distributor/warehouses" element={<Warehouses />} />
                       <Route path="distributor/shipments" element={<Shipments />} />
                       <Route path="distributor/analytics" element={<Analytics />} />

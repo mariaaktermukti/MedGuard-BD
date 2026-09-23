@@ -101,6 +101,8 @@ const DistributorDashboard = () => {
     const [signatureNote, setSignatureNote] = useState('');
     const [podSubmitting, setPodSubmitting] = useState(false);
 
+    // TODO(backend): these three endpoints do not exist yet in core/urls.py, so this page shows its error banner until they are added:
+    // GET core/distributor/dashboard/, GET core/distributor/verify/<qr_code>/, POST core/distributor/shipments/<id>/confirm-delivery/
     const fetchDashboard = useCallback(async () => {
         setLoading(true);
         try {

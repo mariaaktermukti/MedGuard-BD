@@ -2,7 +2,7 @@ import React, { useContext } from 'react';
 import { NavLink } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { LanguageContext } from '../context/LanguageContext';
-import { House, QrCode, Pill, WarningCircle, MapPin, ChatText, Bell, Gear, UserCircle, Package, Truck, Receipt, ChartLineUp, ChatCenteredText, Warehouse, ChartBar, Crosshair, ShieldWarning, ClipboardText, Buildings, MapTrifold, Brain, Factory, SealWarning } from '@phosphor-icons/react';
+import { House, QrCode, Pill, WarningCircle, MapPin, ChatText, Bell, Gear, UserCircle, Package, Truck, Receipt, ChartLineUp, ChatCenteredText, Warehouse, ChartBar, Crosshair, ShieldWarning, ClipboardText, Buildings, MapTrifold, Brain, Factory, SealWarning, ShieldCheck, Pulse, SquaresFour, DownloadSimple, Graph, BookOpen, Lightbulb, UsersThree } from '@phosphor-icons/react';
 
 const Sidebar = ({ isTablet }) => {
     const { user, logout } = useContext(AuthContext);
@@ -31,7 +31,7 @@ const Sidebar = ({ isTablet }) => {
     ];
 
     const distributorNavItems = [
-        { path: '/dashboard', icon: <House size={20} weight="duotone" />, label: t('home') },
+        { path: '/dashboard/distributor', icon: <House size={20} weight="duotone" />, label: t('home') },
         { path: '/dashboard/distributor/warehouses', icon: <Warehouse size={20} weight="duotone" />, label: 'Warehouses' },
         { path: '/dashboard/distributor/shipments', icon: <Truck size={20} weight="duotone" />, label: 'Shipments' },
         { path: '/dashboard/distributor/analytics', icon: <ChartBar size={20} weight="duotone" />, label: 'Analytics' },
@@ -63,7 +63,19 @@ const Sidebar = ({ isTablet }) => {
         { path: '/dashboard/manufacturer/shipment', icon: <Truck size={20} weight="duotone" />, label: t('mfg_create_shipment') },
     ];
 
-    const navItems = user?.role === 'pharmacy' ? pharmacyNavItems : user?.role === 'distributor' ? distributorNavItems : user?.role === 'dgda' ? dgdaNavItems : user?.role === 'manufacturer' ? manufacturerNavItems : citizenNavItems;
+    // Paths, labels and icons mirror the tabs array in pages/researcher/ResearcherPortal.jsx
+    const researcherNavItems = [
+        { path: '/dashboard/researcher/ethics-access', icon: <ShieldCheck size={20} weight="duotone" />, label: 'Ethics-Governed Access' },
+        { path: '/dashboard/researcher/signals', icon: <Pulse size={20} weight="duotone" />, label: 'ADR Signal Detection' },
+        { path: '/dashboard/researcher/dashboards', icon: <SquaresFour size={20} weight="duotone" />, label: 'Custom Dashboards' },
+        { path: '/dashboard/researcher/export', icon: <DownloadSimple size={20} weight="duotone" />, label: 'Dataset Export' },
+        { path: '/dashboard/researcher/knowledge-graph', icon: <Graph size={20} weight="duotone" />, label: 'Knowledge Graph' },
+        { path: '/dashboard/researcher/literature', icon: <BookOpen size={20} weight="duotone" />, label: 'Literature Mining' },
+        { path: '/dashboard/researcher/hypotheses', icon: <Lightbulb size={20} weight="duotone" />, label: 'Hypothesis Generation' },
+        { path: '/dashboard/researcher/workspace', icon: <UsersThree size={20} weight="duotone" />, label: 'Collaboration Workspace' },
+    ];
+
+    const navItems = user?.role === 'pharmacy' ? pharmacyNavItems : user?.role === 'distributor' ? distributorNavItems : user?.role === 'dgda' ? dgdaNavItems : user?.role === 'manufacturer' ? manufacturerNavItems : user?.role === 'researcher' ? researcherNavItems : citizenNavItems;
 
     const bottomNavItems = [
         { path: '/dashboard/notifications', icon: <Bell size={20} weight="duotone" />, label: t('notifications') },
@@ -90,7 +102,7 @@ const Sidebar = ({ isTablet }) => {
                     <NavLink 
                         key={index} 
                         to={item.path}
-                        end={item.path === '/dashboard' || item.path === '/dashboard/pharmacy' || item.path === '/dashboard/dgda' || item.path === '/dashboard/manufacturer'}
+                        end={item.path === '/dashboard' || item.path === '/dashboard/pharmacy' || item.path === '/dashboard/dgda' || item.path === '/dashboard/manufacturer' || item.path === '/dashboard/distributor'}
                         style={({ isActive }) => ({
                             display: 'flex',
                             alignItems: 'center',
