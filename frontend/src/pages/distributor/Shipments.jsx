@@ -156,7 +156,7 @@ const Shipments = () => {
                             <select value={toUser} onChange={(e) => setToUser(e.target.value)} style={inputStyle}>
                                 <option value="">Select pharmacy</option>
                                 {pharmacies.map((pharmacy) => (
-                                    <option key={pharmacy.user} value={pharmacy.user}>{pharmacy.pharmacy_name}</option>
+                                    <option key={pharmacy.user_id} value={pharmacy.user_id}>{pharmacy.pharmacy_name}</option>
                                 ))}
                             </select>
                         </Field>
