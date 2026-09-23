@@ -306,19 +306,19 @@ const DGDAPortal = () => {
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
                             <Card padding="md" style={{ textAlign: 'center' }}>
                                 <h3 style={{ fontSize: '1rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Active Recalls</h3>
-                                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--danger)' }}>{data?.active_recalls || 0}</div>
+                                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--danger)' }}>{data?.kpis?.active_recalls || 0}</div>
                             </Card>
                             <Card padding="md" style={{ textAlign: 'center' }}>
                                 <h3 style={{ fontSize: '1rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>ADR Reports</h3>
-                                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--warning)' }}>{data?.total_adr || 0}</div>
+                                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--warning)' }}>{data?.kpis?.total_adr || 0}</div>
                             </Card>
                             <Card padding="md" style={{ textAlign: 'center' }}>
                                 <h3 style={{ fontSize: '1rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Low Stock Alerts</h3>
-                                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--info)' }}>{data?.low_stock_alerts || 0}</div>
+                                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--info)' }}>{data?.kpis?.low_stock_alerts || 0}</div>
                             </Card>
                             <Card padding="md" style={{ textAlign: 'center' }}>
                                 <h3 style={{ fontSize: '1rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Live Movements</h3>
-                                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--primary)' }}>{data?.live_movements || 0}</div>
+                                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--primary)' }}>{data?.kpis?.live_movements || 0}</div>
                             </Card>
                         </div>
 
