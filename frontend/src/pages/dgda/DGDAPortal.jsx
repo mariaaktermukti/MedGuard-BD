@@ -167,7 +167,7 @@ const DGDAPortal = () => {
             const endpoint = TAB_ENDPOINTS[tab] || null;
             const payload = endpoint ? (await api.get(endpoint)).data : null;
             if (requestId === requestIdRef.current) setData(payload);
-        } catch(err) {
+        } catch (err) {
             console.error("Error fetching data for tab", tab, err);
             if (requestId === requestIdRef.current && !silent) {
                 setError(getErrorMessage(err, 'The server could not provide data for this module.'));
@@ -286,7 +286,7 @@ const DGDAPortal = () => {
     );
 
     const renderTabContent = () => {
-        if(isLoading) return <div style={{ padding: '4rem', textAlign: 'center', color: 'var(--text-muted)' }}>Loading intelligence data...</div>;
+        if (isLoading) return <div style={{ padding: '4rem', textAlign: 'center', color: 'var(--text-muted)' }}>Loading intelligence data...</div>;
 
         if (error) {
             return (
@@ -299,7 +299,7 @@ const DGDAPortal = () => {
             );
         }
 
-        switch(activeTab) {
+        switch (activeTab) {
             case 'command-center':
                 return (
                     <div className="animate-fade-in">
@@ -686,7 +686,8 @@ const DGDAPortal = () => {
             }
             case 'emergency': {
                 const stock = asList(data);
-                const term = stockSearch.trim().toLowerCase();
+                // The table renders the id as "#4", so accept a typed "#" prefix that the data doesn't contain
+                const term = stockSearch.trim().replace(/^#+/, '').toLowerCase();
                 const rows = stock
                     .filter(row => !term || [row.medicine, row.entity_type, row.entity_id].some(value => String(value ?? '').toLowerCase().includes(term)))
                     .sort((a, b) => a.quantity - b.quantity);
