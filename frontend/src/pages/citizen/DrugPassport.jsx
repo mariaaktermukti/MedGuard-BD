@@ -9,6 +9,7 @@ const DrugPassport = () => {
     const [isScanning, setIsScanning] = useState(false);
     const [batchData, setBatchData] = useState(null);
     const [scanError, setScanError] = useState('');
+    const [manualCode, setManualCode] = useState('');
 
     const handleSimulateScan = async (qrCode) => {
         setIsScanning(true);
@@ -64,7 +65,41 @@ const DrugPassport = () => {
 
             <div style={{ padding: '2rem', background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', textAlign: 'center', color: 'white' }}>
                 <h3 style={{ margin: '0 0 0.5rem 0' }}>Scan Medicine QR</h3>
-                <p style={{ margin: '0 0 1.5rem 0', opacity: 0.8, fontSize: '0.9rem' }}>Align the QR code on the packaging within the frame</p>
+                <p style={{ margin: '0 0 1.25rem 0', opacity: 0.8, fontSize: '0.9rem' }}>Align the QR code on the packaging within the frame</p>
+
+                {/* Without this there is no way to verify a medicine when the camera is
+                    blocked or broken, or when the code is only printed as text. */}
+                <form
+                    onSubmit={(event) => { event.preventDefault(); if (manualCode.trim()) handleSimulateScan(manualCode); }}
+                    style={{ display: 'flex', gap: '0.6rem', maxWidth: '460px', margin: '0 auto 1rem', flexWrap: 'wrap' }}
+                >
+                    <label htmlFor="manual-qr" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>
+                        Batch QR code
+                    </label>
+                    <input
+                        id="manual-qr"
+                        value={manualCode}
+                        onChange={(e) => setManualCode(e.target.value)}
+                        placeholder="Or type the code printed on the pack"
+                        style={{
+                            flex: '1 1 220px', minWidth: 0, padding: '0.7rem 0.9rem', borderRadius: '0.6rem',
+                            border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(0,0,0,0.35)',
+                            color: 'white', fontSize: '0.95rem', outline: 'none',
+                        }}
+                    />
+                    <button
+                        type="submit"
+                        disabled={!manualCode.trim() || isScanning}
+                        style={{
+                            padding: '0.7rem 1.4rem', borderRadius: '0.6rem', border: 'none', fontWeight: 700,
+                            background: manualCode.trim() ? 'var(--success)' : 'rgba(255,255,255,0.2)',
+                            color: 'white', cursor: manualCode.trim() ? 'pointer' : 'not-allowed',
+                        }}
+                    >
+                        {isScanning ? 'Checking…' : 'Verify'}
+                    </button>
+                </form>
+
                 {scanError && <p role="alert" style={{ margin: 0, color: '#fecaca', fontWeight: 600 }}>{scanError}</p>}
             </div>
         </motion.div>

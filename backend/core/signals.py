@@ -8,7 +8,20 @@ from django.utils import timezone
 from django.contrib.auth import get_user_model
 User = get_user_model()
 
-from .models import Notification, QualityTest, Recall, Sale, Shipment, MonitoringEvent, DosageSchedule
+from django.db.models import Q
+
+from .models import (
+    DistributionEvent,
+    DosageSchedule,
+    Inventory,
+    MonitoringEvent,
+    Notification,
+    QualityTest,
+    Recall,
+    Sale,
+    Shipment,
+    Warehouse,
+)
 
 @receiver(post_save, sender=Recall)
 def create_recall_notifications(sender, instance, created, **kwargs):
@@ -31,9 +44,32 @@ def create_recall_notifications(sender, instance, created, **kwargs):
         schedules = DosageSchedule.objects.filter(medicine=batch.medicine).select_related('citizen')
         recipients.update(sched.citizen for sched in schedules if sched.citizen)
 
-        # 2. All active Pharmacies, Distributors, and DGDA Officers
-        entity_users = User.objects.filter(role__in=['pharmacy', 'distributor', 'dgda'])
-        recipients.update(entity_users)
+        # 2. Only the businesses that actually touched this batch, plus the regulator.
+        # Alerting every pharmacy and distributor in the country about a batch they
+        # never held trains people to ignore the word RECALL.
+        holder_ids = set(
+            Inventory.objects.filter(batch=batch, quantity__gt=0).values_list('entity_id', flat=True)
+        )
+        warehouse_owner_ids = set(
+            Warehouse.objects.filter(id__in=holder_ids).values_list('distributor_id', flat=True)
+        )
+        handler_ids = set(
+            Shipment.objects.filter(batch=batch).values_list('from_user_id', flat=True)
+        ) | set(
+            Shipment.objects.filter(batch=batch).values_list('to_user_id', flat=True)
+        ) | set(
+            DistributionEvent.objects.filter(batch=batch).values_list('to_user_id', flat=True)
+        )
+
+        involved = User.objects.filter(
+            Q(id__in=holder_ids, role='pharmacy')
+            | Q(id__in=warehouse_owner_ids)
+            | Q(id__in=handler_ids)
+        ).exclude(role='citizen')
+        recipients.update(involved)
+
+        # The regulator always hears about a recall.
+        recipients.update(User.objects.filter(role='dgda', is_active=True))
 
         title = f"🚨 URGENT RECALL: {med_name} (Batch #{batch.batch_number})"
         message = (

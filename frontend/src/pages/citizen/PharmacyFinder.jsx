@@ -3,6 +3,15 @@ import { MapTrifold, MapPin, Star, ShieldCheck, WarningCircle, Clock, Magnifying
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../../services/api';
 
+// The trust_score column is a 0-1 ratio. Anything above 1 is a leftover from when
+// a 0-100 figure was written into it and saturated at the column maximum, so it is
+// reported as unknown rather than dressed up as a percentage.
+const toTrustPercent = (raw) => {
+    const value = Number(raw);
+    if (!Number.isFinite(value) || value < 0 || value > 1) return null;
+    return Math.round(value * 100);
+};
+
 const PharmacyFinder = () => {
     const [selectedPharmacy, setSelectedPharmacy] = useState(null);
     const [pharmacies, setPharmacies] = useState([]);
@@ -14,12 +23,16 @@ const PharmacyFinder = () => {
                 const mappedPharmacies = response.data.map(pharm => ({
                     id: pharm.id,
                     name: pharm.name,
-                    trustScore: pharm.trust_score,
+                    // trust_score is stored as a 0-1 ratio. A few legacy rows hold a
+                    // saturated value from when a 0-100 figure was written straight in
+                    // (the column caps at 9.99); those are not a real rating, so they
+                    // show as unrated instead of an invented 999%.
+                    trustScore: toTrustPercent(pharm.trust_score),
                     status: 'open', // Mock status
                     distance: '1.2 km', // Mock distance
                     address: pharm.address,
                     phone: pharm.contact_number,
-                    verified: pharm.trust_score > 4.0
+                    verified: toTrustPercent(pharm.trust_score) >= 80
                 }));
                 setPharmacies(mappedPharmacies);
             } catch (error) {
@@ -29,11 +42,15 @@ const PharmacyFinder = () => {
         fetchPharmacies();
     }, []);
 
+    // score arrives as a 0-100 percentage, or null when the stored value is unusable
     const getTrustColor = (score) => {
-        if (score >= 4.5) return 'var(--success)';
-        if (score >= 3.5) return '#F39C12';
+        if (score === null) return 'var(--text-muted)';
+        if (score >= 90) return 'var(--success)';
+        if (score >= 70) return '#F39C12';
         return 'var(--danger)';
     };
+
+    const showTrust = (score) => (score === null ? '—' : `${score}%`);
 
     return (
         <div style={{ position: 'relative', height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column', borderRadius: '1.5rem', overflow: 'hidden' }}>
@@ -63,7 +80,7 @@ const PharmacyFinder = () => {
                 {pharmacies.map((pharm, i) => (
                     <div key={i} onClick={() => setSelectedPharmacy(pharm)} style={{ position: 'absolute', top: `${30 + i * 15}%`, left: `${40 + i * 20}%`, transform: 'translate(-50%, -50%)', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                         <div style={{ background: 'white', padding: '0.25rem 0.5rem', borderRadius: '1rem', fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.25rem', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
-                            {pharm.trustScore} <Star weight="fill" color={getTrustColor(pharm.trustScore)} style={{ display: 'inline' }} />
+                            {showTrust(pharm.trustScore)} <Star weight="fill" color={getTrustColor(pharm.trustScore)} style={{ display: 'inline' }} />
                         </div>
                         <MapPin size={32} weight="fill" color={getTrustColor(pharm.trustScore)} style={{ filter: 'drop-shadow(0 4px 4px rgba(0,0,0,0.3))' }} />
                     </div>
@@ -92,7 +109,7 @@ const PharmacyFinder = () => {
                                         {pharm.verified && <ShieldCheck size={16} color="var(--success)" weight="fill" />}
                                     </h4>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', background: 'rgba(243, 156, 18, 0.1)', color: '#F39C12', padding: '0.25rem 0.5rem', borderRadius: '1rem', fontSize: '0.85rem', fontWeight: 700 }}>
-                                        <Star size={14} weight="fill" /> {pharm.trustScore}
+                                        <Star size={14} weight="fill" /> {showTrust(pharm.trustScore)}
                                     </div>
                                 </div>
                                 <div style={{ display: 'flex', gap: '1rem', fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
@@ -139,7 +156,7 @@ const PharmacyFinder = () => {
                                 <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', color: 'var(--primary)' }}>Trust Score Breakdown</h3>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginBottom: '1rem' }}>
                                     <div style={{ fontSize: '3rem', fontWeight: 800, color: getTrustColor(selectedPharmacy.trustScore), lineHeight: 1 }}>
-                                        {selectedPharmacy.trustScore}
+                                        {showTrust(selectedPharmacy.trustScore)}
                                     </div>
                                     <div style={{ flex: 1 }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem' }}><span>Authentic Medicines</span><span>98%</span></div>
