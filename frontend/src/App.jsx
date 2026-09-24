@@ -38,6 +38,7 @@ const RouteOptimization = lazy(() => import('./pages/distributor/RouteOptimizati
 const FleetMonitoring = lazy(() => import('./pages/distributor/FleetMonitoring'));
 const RouteRisk = lazy(() => import('./pages/distributor/RouteRisk'));
 const DistributorDashboard = lazy(() => import('./pages/distributor/DistributorDashboard'));
+const Settings = lazy(() => import('./pages/Settings'));
 const DGDAPortal = lazy(() => import('./pages/dgda/DGDAPortal'));
 const CounterfeitIntel = lazy(() => import('./pages/dgda/CounterfeitIntel'));
 const DoctorPortal = lazy(() => import('./pages/doctor/DoctorPortal'));
@@ -97,6 +98,7 @@ function App() {
                       <Route path="distributor/route-optimization" element={<RouteOptimization />} />
                       <Route path="distributor/fleet-monitoring" element={<FleetMonitoring />} />
                       <Route path="distributor/route-risk" element={<RouteRisk />} />
+                      <Route path="settings" element={<Settings />} />
                       <Route path="*" element={<Navigate to="/dashboard" replace />} />
                     </Route>
                   </Route>

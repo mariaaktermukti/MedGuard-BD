@@ -165,30 +165,30 @@ const Dashboard = () => {
             {/* 4 Interactive Responsive Stat Cards */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem', marginBottom: '2.25rem' }}>
                 <StatCard 
-                    icon={<QrCode size={26} weight="fill" />} 
-                    label="Total Scans" 
-                    value={stats.total_scans || 42} 
-                    color="primary" 
-                    onClick={() => navigate('/dashboard/drug-passport')}
+                    icon={<Warning size={26} weight="fill" />} 
+                    label="Recall Alerts" 
+                    value={stats.recall_alerts ?? 0} 
+                    color={stats.recall_alerts ? 'danger' : 'primary'} 
+                    onClick={() => navigate('/dashboard/my-medicines')}
                 />
                 <StatCard 
                     icon={<Pill size={26} weight="fill" />} 
                     label="Active Medicines" 
-                    value={stats.active_medicines || 5} 
+                    value={stats.active_medicines ?? 0} 
                     color="success" 
                     onClick={() => navigate('/dashboard/my-medicines')}
                 />
                 <StatCard 
                     icon={<Clipboard size={26} weight="fill" />} 
                     label="Reports Submitted" 
-                    value={stats.reports_submitted || 4} 
+                    value={stats.reports_submitted ?? 0} 
                     color="warning" 
                     onClick={() => navigate('/dashboard/report-adr')}
                 />
                 <StatCard 
                     icon={<Storefront size={26} weight="fill" />} 
                     label="Pharmacy Visits" 
-                    value={stats.pharmacy_visits || 8} 
+                    value={stats.pharmacy_visits ?? 0} 
                     color="info" 
                     onClick={() => navigate('/dashboard/find-pharmacy')}
                 />

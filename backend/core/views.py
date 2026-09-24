@@ -523,10 +523,22 @@ class ADRReportCreateView(generics.ListCreateAPIView):
         if not med_obj:
             med_obj = Medicine.objects.first()
 
+        # Tie the report to the batch the citizen actually holds where we can.
+        # Without it DGDA learns that a medicine caused a reaction but not which
+        # batch, which is the whole point of batch-level traceability.
+        batch = serializer.validated_data.get('batch')
+        if not batch and med_obj:
+            recent_sale = Sale.objects.filter(
+                citizen=self.request.user, batch__medicine=med_obj
+            ).select_related('batch').order_by('-sale_date').first()
+            if recent_sale:
+                batch = recent_sale.batch
+
         serializer.save(
             reported_by_user=self.request.user,
             citizen=self.request.user,
-            medicine=med_obj
+            medicine=med_obj,
+            batch=batch,
         )
 
 class PharmacyFinderView(generics.ListAPIView):
@@ -535,6 +547,23 @@ class PharmacyFinderView(generics.ListAPIView):
 
     def get_queryset(self):
         return PharmacyProfile.objects.all().order_by('-trust_score')
+
+
+class MedicineLookupView(generics.ListAPIView):
+    """Registered medicines, searchable by name or generic name.
+
+    The citizen ADR form used to offer four names hardcoded in the frontend, so a
+    real registered medicine could only be entered as free text.
+    """
+    serializer_class = MedicineSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        queryset = Medicine.objects.filter(is_active=True).order_by('name')
+        term = (self.request.query_params.get('search') or '').strip()
+        if term:
+            queryset = queryset.filter(Q(name__icontains=term) | Q(generic_name__icontains=term))
+        return queryset[:50]
 
 
 class DistributorFinderView(generics.ListAPIView):
@@ -705,16 +734,20 @@ class CitizenDashboardView(views.APIView):
     def get(self, request):
         user = request.user
         
-        # 1. Total Scans (Baseline 42 + user scans/reports)
-        user_scans = ADRReport.objects.filter(
-            Q(reported_by_user=user) | Q(citizen=user)
-        ).count() * 3 + DosageSchedule.objects.filter(citizen=user).count() * 5
-        total_scans = 42 + user_scans
-        
-        # 2. Active Medicines
+        # Nothing in the app records a QR scan, so the old "total scans" figure was
+        # invented (a flat 42 plus a multiple of the user's reports). It is replaced
+        # by a count that is both real and worth surfacing: recalls on the medicines
+        # this citizen is actually holding.
+        held_medicine_ids = set(
+            DosageSchedule.objects.filter(citizen=user, is_active=True).values_list('medicine_id', flat=True)
+        ) | set(
+            Sale.objects.filter(citizen=user).values_list('batch__medicine_id', flat=True)
+        )
+        recall_alerts = Recall.objects.filter(
+            status='active', batch__medicine_id__in=held_medicine_ids
+        ).count()
+
         active_medicines = DosageSchedule.objects.filter(citizen=user, is_active=True).count()
-        if active_medicines == 0:
-            active_medicines = 5
 
         # 3. Reports Submitted
         user_email = getattr(user, 'email', None)
@@ -725,10 +758,7 @@ class CitizenDashboardView(views.APIView):
             (Q(citizen__email=user_email) if user_email else Q(id__in=[]))
         ).distinct().count()
 
-        # 4. Pharmacy Visits
         pharmacy_visits = Sale.objects.filter(citizen=user).values('pharmacy').distinct().count()
-        if pharmacy_visits == 0:
-            pharmacy_visits = 8
 
         # Dynamic Recent Activity from real user actions in DB
         activities = []
@@ -867,7 +897,7 @@ class CitizenDashboardView(views.APIView):
 
         return Response({
             'stats': {
-                'total_scans': total_scans,
+                'recall_alerts': recall_alerts,
                 'active_medicines': active_medicines,
                 'reports_submitted': reports_submitted,
                 'pharmacy_visits': pharmacy_visits,
@@ -978,12 +1008,16 @@ class PharmacyCitizenLookupView(views.APIView):
     permission_classes = [permissions.IsAuthenticated, IsPharmacy]
 
     def get(self, request):
-        phone = request.query_params.get('phone', '').strip()
-        if not phone:
-            return Response({'detail': 'A phone number is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        term = (request.query_params.get('phone') or request.query_params.get('q') or '').strip()
+        if not term:
+            return Response({'detail': 'A phone number or username is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Phone only was too strict: a citizen who registered without one could
+        # never be sold to, and there was no way to add a number afterwards.
         User = get_user_model()
-        matches = User.objects.filter(role='citizen', phone=phone)
+        matches = User.objects.filter(
+            Q(phone=term) | Q(username__iexact=term), role='citizen'
+        ).distinct()
         return Response([
             {'id': citizen.id, 'username': citizen.username, 'full_name': citizen.full_name, 'phone': citizen.phone}
             for citizen in matches

@@ -160,7 +160,7 @@ const SaleLogging = () => {
             <div className="glass-panel" style={{ padding: '1.5rem' }}>
                 <h2 style={{ margin: '0 0 1rem', fontSize: '1.1rem' }}>2. Find Buyer</h2>
                 <form onSubmit={handleLookupCitizen} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '1rem' }}>
-                    <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Citizen's registered phone number" style={inputStyle} />
+                    <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Citizen's phone number or username" style={inputStyle} />
                     <button type="submit" className="ui-btn ui-btn-primary" disabled={lookingUp} style={{ width: 'auto', padding: '0.75rem 1.25rem' }}>
                         <MagnifyingGlass size={18} /> Lookup
                     </button>

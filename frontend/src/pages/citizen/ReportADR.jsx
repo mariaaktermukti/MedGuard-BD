@@ -19,18 +19,35 @@ const ReportADR = () => {
     const [isLoadingHistory, setIsLoadingHistory] = useState(false);
     const [historySearch, setHistorySearch] = useState('');
 
-    const initialMedicines = [
-        { id: 'Napa Extra', name: 'Napa Extra', type: 'Tablet (Paracetamol 500mg + Caffeine)' },
-        { id: 'Seclo 20mg', name: 'Seclo 20mg', type: 'Capsule (Omeprazole)' },
-        { id: 'Ace 500mg', name: 'Ace 500mg', type: 'Tablet (Paracetamol)' },
-        { id: 'Sergel 20mg', name: 'Sergel 20mg', type: 'Capsule (Esomeprazole)' },
-        { id: 'Fexo 120mg', name: 'Fexo 120mg', type: 'Tablet (Fexofenadine)' }
-    ];
+    // The list used to be five names hardcoded here, so a real registered
+    // medicine could only ever be entered as free text.
+    const [medicineOptions, setMedicineOptions] = useState([]);
+    const [isLoadingMedicines, setIsLoadingMedicines] = useState(false);
 
-    const filteredMedicines = initialMedicines.filter(m => 
-        m.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-        m.type.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    useEffect(() => {
+        let cancelled = false;
+        const timer = setTimeout(async () => {
+            setIsLoadingMedicines(true);
+            try {
+                const res = await api.get('core/medicines/', { params: { search: searchQuery.trim() } });
+                const rows = Array.isArray(res.data) ? res.data : (res.data?.results || []);
+                if (!cancelled) {
+                    setMedicineOptions(rows.map((m) => ({
+                        id: m.name,
+                        name: m.name,
+                        type: [m.dosage_form, m.strength, m.generic_name].filter(Boolean).join(' · ') || 'Registered medicine',
+                    })));
+                }
+            } catch {
+                if (!cancelled) setMedicineOptions([]);
+            } finally {
+                if (!cancelled) setIsLoadingMedicines(false);
+            }
+        }, 250);
+        return () => { cancelled = true; clearTimeout(timer); };
+    }, [searchQuery]);
+
+    const filteredMedicines = medicineOptions;
 
     const fetchHistory = async () => {
         setIsLoadingHistory(true);
@@ -236,7 +253,9 @@ const ReportADR = () => {
 
                                 {/* Medicine Cards List */}
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '360px', overflowY: 'auto' }}>
-                                    {filteredMedicines.length > 0 ? (
+                                    {isLoadingMedicines && filteredMedicines.length === 0 ? (
+                                        <p style={{ margin: 0, padding: '1rem 0', color: 'var(--text-muted)' }}>Searching the medicine register…</p>
+                                    ) : filteredMedicines.length > 0 ? (
                                         filteredMedicines.map(med => (
                                             <div 
                                                 key={med.id} 
