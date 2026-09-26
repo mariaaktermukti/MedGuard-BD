@@ -189,8 +189,8 @@ const DistributorDashboard = () => {
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
                 <div>
-                    <h1 style={{ fontSize: '2rem', fontWeight: 800, margin: '0 0 0.35rem 0', color: 'var(--text-main)' }}>
-                        Distributor Operations Portal
+                    <h1 style={{ fontSize: '2rem', fontWeight: 800, margin: '0 0 0.35rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                        <Truck size={32} weight="duotone" color="var(--primary)" /> Distributor Portal
                     </h1>
                     <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.925rem' }}>
                         Real-time supply chain tracking, warehouse inventory, shipments, batch verification, and delivery management.

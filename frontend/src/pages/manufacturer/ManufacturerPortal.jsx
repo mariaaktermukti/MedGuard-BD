@@ -29,7 +29,7 @@ import Input from '../../components/ui/Input';
 
 const viewMeta = {
     dashboard: {
-        title: 'Manufacturer Dashboard',
+        title: 'Manufacturer Portal',
         subtitle: 'Operational overview for medicine registration, batches, quality checks, recalls, and shipments.',
         icon: <Factory size={30} />,
     },

@@ -2,7 +2,7 @@ import React, { useContext } from 'react';
 import { NavLink } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { LanguageContext } from '../context/LanguageContext';
-import { House, QrCode, Pill, WarningCircle, MapPin, ChatText, Bell, Gear, UserCircle, Package, Truck, Receipt, ChartLineUp, ChatCenteredText, Warehouse, ChartBar, Crosshair, ShieldWarning, ClipboardText, Buildings, MapTrifold, Brain, Factory, SealWarning, ShieldCheck, Pulse, SquaresFour, DownloadSimple, Graph, BookOpen, Lightbulb, UsersThree } from '@phosphor-icons/react';
+import { House, QrCode, Pill, WarningCircle, MapPin, ChatText, Bell, Gear, UserCircle, Package, Truck, Receipt, ChartLineUp, ChatCenteredText, Warehouse, ChartBar, Crosshair, ShieldWarning, ClipboardText, Buildings, MapTrifold, Brain, Factory, SealWarning, ShieldCheck, Pulse, SquaresFour, DownloadSimple, Graph, BookOpen, Lightbulb, UsersThree, Users, MagnifyingGlass, Star, Database, VideoCamera } from '@phosphor-icons/react';
 
 const Sidebar = ({ isTablet }) => {
     const { user, logout } = useContext(AuthContext);
@@ -75,7 +75,23 @@ const Sidebar = ({ isTablet }) => {
         { path: '/dashboard/researcher/workspace', icon: <UsersThree size={20} weight="duotone" />, label: 'Collaboration Workspace' },
     ];
 
-    const navItems = user?.role === 'pharmacy' ? pharmacyNavItems : user?.role === 'distributor' ? distributorNavItems : user?.role === 'dgda' ? dgdaNavItems : user?.role === 'manufacturer' ? manufacturerNavItems : user?.role === 'researcher' ? researcherNavItems : citizenNavItems;
+    // Paths, labels and icons mirror the tabs array in pages/doctor/DoctorPortal.jsx.
+    // Without this a doctor fell through to the citizen menu below and was offered
+    // patient pages - QR Scan, My Medicines, Report Counterfeit - instead of their own.
+    const doctorNavItems = [
+        { path: '/dashboard/doctor/patient-history', icon: <Users size={20} weight="duotone" />, label: 'Patient Medicine History' },
+        { path: '/dashboard/doctor/prescriptions', icon: <ClipboardText size={20} weight="duotone" />, label: 'Digital Prescription' },
+        { path: '/dashboard/doctor/interaction-checker', icon: <ShieldWarning size={20} weight="duotone" />, label: 'Drug Interaction Checker' },
+        { path: '/dashboard/doctor/medicine-lookup', icon: <MagnifyingGlass size={20} weight="duotone" />, label: 'Medicine Lookup' },
+        { path: '/dashboard/doctor/drug-passport', icon: <QrCode size={20} weight="duotone" />, label: 'Digital Drug Passport' },
+        { path: '/dashboard/doctor/adr-report', icon: <WarningCircle size={20} weight="duotone" />, label: 'Report ADR' },
+        { path: '/dashboard/doctor/recall-alerts', icon: <Bell size={20} weight="duotone" />, label: 'Recall Notifications' },
+        { path: '/dashboard/doctor/medicine-library', icon: <Star size={20} weight="duotone" />, label: 'My Medicine Library' },
+        { path: '/dashboard/doctor/research-datasets', icon: <Database size={20} weight="duotone" />, label: 'Research Datasets' },
+        { path: '/dashboard/doctor/consultations', icon: <VideoCamera size={20} weight="duotone" />, label: 'Consultations' },
+    ];
+
+    const navItems = user?.role === 'pharmacy' ? pharmacyNavItems : user?.role === 'distributor' ? distributorNavItems : user?.role === 'dgda' ? dgdaNavItems : user?.role === 'manufacturer' ? manufacturerNavItems : user?.role === 'researcher' ? researcherNavItems : user?.role === 'doctor' ? doctorNavItems : citizenNavItems;
 
     const bottomNavItems = [
         { path: '/dashboard/notifications', icon: <Bell size={20} weight="duotone" />, label: t('notifications') },

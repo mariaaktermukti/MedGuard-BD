@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { QrCode, Pill, Clipboard, MapPin, Intersect, Alarm, CalendarBlank, Warning, ChatCircle, Pill as PillIcon, XCircle, CheckCircle, Storefront, Lightbulb, Timer, ArrowRight } from '@phosphor-icons/react';
+import { QrCode, Pill, Clipboard, MapPin, Intersect, Alarm, CalendarBlank, Warning, ChatCircle, Pill as PillIcon, XCircle, CheckCircle, Storefront, Lightbulb, Timer, ArrowRight, UserCircle } from '@phosphor-icons/react';
 import api from '../services/api';
 import Card, { CardContent, CardHeader } from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
@@ -7,6 +7,14 @@ import Button from '../components/ui/Button';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { DashboardSkeleton } from '../components/ui/Skeleton';
+
+// trust_score is a 0-1 ratio. Legacy rows saturated above 1 are not a rating, so
+// they are reported as unknown rather than turned into an impossible percentage.
+const trustPercent = (raw) => {
+    const value = Number(raw);
+    if (!Number.isFinite(value) || value < 0 || value > 1) return null;
+    return Math.round(value * 100);
+};
 
 const StatCard = ({ icon, label, value, color, onClick }) => (
     <Card 
@@ -78,6 +86,7 @@ const Dashboard = () => {
 
     const [isLoading, setIsLoading] = useState(true);
     const [currentTime, setCurrentTime] = useState(new Date());
+    const [pharmacies, setPharmacies] = useState([]);
 
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -97,6 +106,20 @@ const Dashboard = () => {
             }
         };
         fetchDashboardData();
+    }, []);
+
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            try {
+                const response = await api.get('core/pharmacies/');
+                const rows = Array.isArray(response.data) ? response.data : (response.data?.results || []);
+                if (!cancelled) setPharmacies(rows.slice(0, 3));
+            } catch {
+                if (!cancelled) setPharmacies([]);
+            }
+        })();
+        return () => { cancelled = true; };
     }, []);
 
     const { stats, recent_activity, upcoming_dose, recalls } = data;
@@ -153,9 +176,15 @@ const Dashboard = () => {
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
                 <div>
-                    <h1 style={{ fontSize: '2rem', margin: '0 0 0.5rem 0', color: 'var(--text-main)', fontWeight: 800 }}>
-                        Welcome, {userName} 👋
+                    {/* Every other portal heads its page with the portal's name; this one
+                        greeted the person instead, so it read as a different product. The
+                        greeting moves to the line below. */}
+                    <h1 style={{ fontSize: '2rem', margin: '0 0 0.5rem 0', color: 'var(--text-main)', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                        <UserCircle size={32} weight="duotone" color="var(--primary)" /> Citizen Portal
                     </h1>
+                    <p style={{ margin: '0 0 0.75rem', color: 'var(--text-muted)' }}>
+                        Welcome, {userName} 👋 — your medicines, reactions and pharmacy visits in one place.
+                    </p>
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: 'var(--primary-light)', color: 'var(--primary)', padding: '0.5rem 1rem', borderRadius: '2rem', fontSize: '0.85rem', fontWeight: 700 }}>
                         <CalendarBlank size={16} /> {today}
                     </div>
@@ -327,29 +356,45 @@ const Dashboard = () => {
                         </Card>
                     )}
 
-                    {/* Nearby Pharmacy */}
+                    {/* Registered pharmacies. The app has no location permission, so
+                        these are the highest-trust registered pharmacies, not the closest
+                        ones; the old card invented two names and their distances. */}
                     <Card padding="md">
                         <CardHeader 
-                            title="Nearby Pharmacies" 
+                            title="Registered Pharmacies" 
                             action={<a href="/dashboard/find-pharmacy" style={{ fontSize: '0.85rem', color: 'var(--primary)', textDecoration: 'none', fontWeight: 600 }}>View All</a>}
                         />
                         <CardContent>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '1rem', borderBottom: '1px solid var(--border)' }}>
-                                    <div>
-                                        <div style={{ fontWeight: 600, color: 'var(--text-main)' }}>MedPlus</div>
-                                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>1.2 km away</div>
-                                    </div>
-                                    <Badge variant="success">Trust 87</Badge>
+                            {pharmacies.length === 0 ? (
+                                <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                                    No pharmacies are registered yet.
+                                </p>
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                    {pharmacies.map((pharm, index) => (
+                                        <div
+                                            key={pharm.user_id}
+                                            style={{
+                                                display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem',
+                                                paddingBottom: index < pharmacies.length - 1 ? '1rem' : 0,
+                                                borderBottom: index < pharmacies.length - 1 ? '1px solid var(--border)' : 'none',
+                                            }}
+                                        >
+                                            <div style={{ minWidth: 0 }}>
+                                                <div style={{ fontWeight: 600, color: 'var(--text-main)' }}>{pharm.pharmacy_name}</div>
+                                                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                    {pharm.address || 'Address not listed'}
+                                                </div>
+                                            </div>
+                                            {trustPercent(pharm.trust_score) === null
+                                                ? <Badge variant="default">Unrated</Badge>
+                                                : <Badge variant={trustPercent(pharm.trust_score) >= 70 ? 'success' : 'warning'}>
+                                                    Trust {trustPercent(pharm.trust_score)}%
+                                                  </Badge>}
+                                        </div>
+                                    ))}
                                 </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <div>
-                                        <div style={{ fontWeight: 600, color: 'var(--text-main)' }}>Lazz Pharma</div>
-                                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>2.5 km away</div>
-                                    </div>
-                                    <Badge variant="success">Trust 92</Badge>
-                                </div>
-                            </div>
+                            )}
                         </CardContent>
                     </Card>
 
