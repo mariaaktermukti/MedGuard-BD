@@ -124,8 +124,9 @@ const Shipments = () => {
         setReceivingId(shipment.id);
         setMessage('');
         try {
-            await api.post(`core/distributor/shipments/incoming/${shipment.id}/receive/`);
-            setMessage(`Shipment ${shipment.batch_details.batch_number} marked as received.`);
+            const res = await api.post(`core/distributor/shipments/incoming/${shipment.id}/receive/`);
+            setMessage(res.data?.warning
+                || `Shipment ${shipment.batch_details.batch_number} marked as received.`);
             fetchAll();
         } catch (error) {
             setMessage(error.response?.data?.detail || 'Could not mark this shipment as received.');
@@ -150,7 +151,7 @@ const Shipments = () => {
                 <form onSubmit={handleCreate} style={{ display: 'grid', gap: '1.25rem' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '1.25rem' }}>
                         <Field label="Batch QR Code">
-                            <input value={qrCode} onChange={(e) => setQrCode(e.target.value)} placeholder="Scan or paste batch QR code" style={inputStyle} />
+                            <input value={qrCode} onChange={(e) => setQrCode(e.target.value)} placeholder="Scan or paste batch QR code, DDP ID or batch number" style={inputStyle} />
                         </Field>
                         <Field label="Ship To (Pharmacy)">
                             <select value={toUser} onChange={(e) => setToUser(e.target.value)} style={inputStyle}>
