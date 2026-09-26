@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Swal from 'sweetalert2';
 import {
     Warning,
@@ -297,6 +297,10 @@ const ManufacturerPortal = () => {
     const [dashboard, setDashboard] = useState(null);
     const [complianceItems, setComplianceItems] = useState([]);
     const [generatedForecast, setGeneratedForecast] = useState(null);
+    // The QR panel renders below the fold, so an export that only fills it in
+    // looks like a button that did nothing - especially when a release dialog
+    // has already populated it and nothing on screen changes.
+    const qrPanelRef = useRef(null);
     const [medicines, setMedicines] = useState([]);
     const [batches, setBatches] = useState([]);
     const [recalls, setRecalls] = useState([]);
@@ -457,7 +461,12 @@ const ManufacturerPortal = () => {
         try {
             const res = await api.get('core/manufacturer/demand-forecast/');
             setGeneratedForecast(res.data);
-            notify(`Demand forecast saved: ${res.data.predicted_demand} units expected by ${formatDate(res.data.forecast_date)}.`, 'success');
+            notify(
+                res.data.predicted_demand === null
+                    ? 'No pharmacy sales in the last 90 days, so there is nothing to project yet.'
+                    : `Forecast: ${res.data.predicted_demand} units expected by ${formatDate(res.data.forecast_date)}.`,
+                'success',
+            );
         } catch (error) {
             notify(getErrorMessage(error, 'Could not generate a demand forecast.'), 'error');
         } finally {
@@ -687,9 +696,11 @@ const ManufacturerPortal = () => {
 
         setBusy('release');
         try {
-            if (batchDetail.qc_status !== 'passed' || batchDetail.release_blocked) {
-                await api.patch(`core/manufacturer/batches/${batchDetail.id}/`, { qc_status: 'passed', release_blocked: false });
-            }
+            // Releasing used to PATCH qc_status='passed' and release_blocked=false
+            // first, so the screen granted the QC pass it was about to ask the
+            // server for - and a batch whose lab result had failed came out
+            // marked as passed even though the release was then refused.
+            // Whether a batch may be released is the server's call alone.
             const res = await api.post(`core/manufacturer/batches/${batchDetail.id}/release/`);
             setBatchDetail(res.data);
             await loadBatchDetail(batchDetail.id);
@@ -752,6 +763,12 @@ const ManufacturerPortal = () => {
         try {
             const res = await api.get(`core/manufacturer/batches/${batchDetail.id}/qr-export/`);
             setQrExport(res.data);
+            const units = Math.max(0, (res.data.export_csv || '').split('\n').length - 1);
+            notify(
+                `${units.toLocaleString()} unit QR codes ready for ${res.data.batch_number}. Use Download CSV below to save them.`,
+                'success',
+            );
+            setTimeout(() => qrPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
         } catch (error) {
             notify(getErrorMessage(error, 'Could not export QR codes for this batch.'), 'error');
         } finally {
@@ -1047,7 +1064,7 @@ const ManufacturerPortal = () => {
                         )}
                         <ExpiryBars data={asList(dashboard?.charts?.expiry_forecast)} />
                         <Button variant="secondary" size="sm" fullWidth onClick={handleGenerateForecast} disabled={busy === 'forecast'} style={{ marginTop: '1rem' }}>
-                            <ChartLineUp size={16} /> {busy === 'forecast' ? 'Generating...' : 'Generate & Save New Forecast'}
+                            <ChartLineUp size={16} /> {busy === 'forecast' ? 'Recalculating...' : 'Recalculate Forecast'}
                         </Button>
                     </div>
                 </div>
@@ -1268,7 +1285,7 @@ const ManufacturerPortal = () => {
                 </div>
 
                 {qrExport && (
-                    <div style={{ padding: '1.25rem', borderRadius: '1rem', border: '1px dashed var(--border)', background: 'rgba(59, 130, 246, 0.04)', display: 'grid', gap: '1rem' }}>
+                    <div ref={qrPanelRef} style={{ padding: '1.25rem', borderRadius: '1rem', border: '1px dashed var(--border)', background: 'rgba(59, 130, 246, 0.04)', display: 'grid', gap: '1rem' }}>
                         <div className="medguard-two-col" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '1rem' }}>
                             <DetailItem label="Batch QR Code"><span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{qrExport.qr_code || '—'}</span></DetailItem>
                             <DetailItem label="Digital Drug Passport ID"><span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{qrExport.ddp_id || '—'}</span></DetailItem>
@@ -1603,7 +1620,15 @@ const ManufacturerPortal = () => {
     );
 
     const renderShipment = () => {
-        const shippableBatches = batches.filter((batch) => batch.status === 'active');
+        // status === 'active' alone let a QC-failed batch and one never released
+        // from the warehouse sit in this list. The server refuses both, but a
+        // name that cannot be shipped has no business being offered.
+        const shippableBatches = batches.filter((batch) => (
+            batch.status === 'active'
+            && batch.qc_status !== 'failed'
+            && !batch.release_blocked
+            && Boolean(batch.warehouse_released_at)
+        ));
         return (
             <div style={{ display: 'grid', gap: '1rem' }}>
                 <div className="glass-panel" style={{ padding: '2rem' }}>
