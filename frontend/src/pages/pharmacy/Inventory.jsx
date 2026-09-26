@@ -89,8 +89,8 @@ const Inventory = () => {
                 <h2 style={{ margin: '0 0 1rem', fontSize: '1.1rem' }}>Add / Update Stock</h2>
                 <form onSubmit={handleAddStock} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr auto', gap: '1rem', alignItems: 'end' }}>
                     <div className="input-group" style={{ marginBottom: 0 }}>
-                        <label>Batch QR Code</label>
-                        <input value={qrCode} onChange={(e) => setQrCode(e.target.value)} placeholder="Scan or paste batch QR code" style={inputStyle} />
+                        <label>Batch QR Code or Number</label>
+                        <input value={qrCode} onChange={(e) => setQrCode(e.target.value)} placeholder="Scan or paste batch QR code, DDP ID or batch number" style={inputStyle} />
                     </div>
                     <div className="input-group" style={{ marginBottom: 0 }}>
                         <label>Quantity</label>

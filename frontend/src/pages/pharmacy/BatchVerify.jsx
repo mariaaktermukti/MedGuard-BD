@@ -62,7 +62,7 @@ const BatchVerify = () => {
 
             <div className="glass-panel" style={{ padding: '2rem' }}>
                 <form onSubmit={handleVerify} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '1rem' }}>
-                    <input value={qrCode} onChange={(e) => setQrCode(e.target.value)} placeholder="Scan or paste batch QR code" style={inputStyle} />
+                    <input value={qrCode} onChange={(e) => setQrCode(e.target.value)} placeholder="Scan or paste batch QR code, DDP ID or batch number" style={inputStyle} />
                     <button type="button" className="ui-btn ui-btn-secondary" onClick={() => setShowScanner((open) => !open)} style={{ width: 'auto', padding: '0.75rem 1.25rem' }}>
                         <Camera size={18} /> {showScanner ? 'Hide' : 'Scan'}
                     </button>
