@@ -121,7 +121,12 @@ const DistributorDashboard = () => {
     const handleVerifyBatch = async (e) => {
         e.preventDefault();
         const code = qrQuery.trim();
-        if (!code) return;
+        if (!code) {
+            // Returning silently made this button look broken: a click, and
+            // nothing at all on screen to say why.
+            setVerifyResult({ verified: false, verdict: 'unknown', detail: 'Enter a QR code, DDP ID or batch number first.' });
+            return;
+        }
 
         setVerifying(true);
         setVerifyResult(null);
@@ -141,8 +146,13 @@ const DistributorDashboard = () => {
 
     const handleReceiveIncoming = async (shipmentId) => {
         try {
-            await api.post(`core/distributor/shipments/incoming/${shipmentId}/receive/`);
-            setNotice({ tone: 'success', text: 'Shipment received successfully! Warehouse stock has been updated.' });
+            const res = await api.post(`core/distributor/shipments/incoming/${shipmentId}/receive/`);
+            // A recalled or QC-failed batch is delivered but kept out of
+            // sellable stock, so the old fixed "stock has been updated" line
+            // would have been untrue for exactly the batches that matter.
+            setNotice(res.data?.warning
+                ? { tone: 'error', text: res.data.warning }
+                : { tone: 'success', text: 'Shipment received successfully! Warehouse stock has been updated.' });
             fetchDashboard();
         } catch (err) {
             setNotice({ tone: 'error', text: err.response?.data?.detail || 'Failed to receive shipment.' });

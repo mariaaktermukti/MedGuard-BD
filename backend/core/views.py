@@ -77,8 +77,30 @@ class DrugPassportView(views.APIView):
         batch = Batch.objects.filter(
             Q(qr_code=qr_code) | Q(ddp_id=qr_code) | Q(unit_qr_codes__contains=[qr_code])
         ).select_related('medicine').first()
+
         if not batch:
-            batch = get_object_or_404(Batch, qr_code=qr_code)
+            # People type the batch number, because that is what every screen
+            # shows them - the distributor's own verify box already accepts it,
+            # so refusing it here made two boxes in one portal behave
+            # differently. Tried only after the codes, and batch numbers are
+            # not unique (two batches are called "1111"), so an ambiguous one
+            # is reported rather than guessed at.
+            by_number = Batch.objects.filter(batch_number=qr_code).select_related('medicine')
+            if by_number.count() > 1:
+                return Response(
+                    {'detail': (
+                        f'{by_number.count()} batches are numbered {qr_code}. '
+                        f'Use the batch QR code or DDP ID instead.'
+                    )},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            batch = by_number.first()
+
+        if not batch:
+            return Response(
+                {'detail': f'No batch found for "{qr_code}". Enter a batch QR code, DDP ID or batch number.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
         serializer = DrugPassportSerializer(batch)
         return Response(serializer.data)
 
@@ -1496,14 +1518,28 @@ class DistributorShipmentReceiveView(views.APIView):
         if shipment.status == 'delivered':
             return Response({'detail': 'Shipment already received.'}, status=status.HTTP_400_BAD_REQUEST)
 
+        batch = shipment.batch
+        blocked = _batch_sale_blockers(batch)
+
+        # The boxes arrived, so the delivery is recorded either way - leaving it
+        # in transit would be its own lie. What a blocked batch does not get is
+        # a place in sellable warehouse stock, the same line the pharmacy draws.
         with transaction.atomic():
             shipment.status = 'delivered'
             shipment.delivery_date = date.today()
             shipment.save(update_fields=['status', 'delivery_date', 'updated_at'])
-            stocked = _credit_receiver_stock(shipment)
+            stocked = False if blocked else _credit_receiver_stock(shipment)
 
         data = DistributorShipmentSerializer(shipment).data
-        if not stocked:
+        data['added_to_stock'] = bool(stocked)
+        if blocked:
+            medicine = batch.medicine.name if batch.medicine else 'This medicine'
+            data['warning'] = (
+                f'Delivery recorded, but {medicine} batch {batch.batch_number} was not '
+                f'added to warehouse stock: it {_join_reasons(blocked)}. Quarantine it '
+                f'and contact the manufacturer.'
+            )
+        elif not stocked:
             data['warning'] = 'Received, but no warehouse exists yet so the units are not counted in stock. Create a warehouse first.'
         return Response(data)
 
@@ -1518,6 +1554,24 @@ class DistributorOutgoingShipmentListCreateView(generics.ListCreateAPIView):
         ).order_by('-created_at')
 
     def perform_create(self, serializer):
+        # The middle link. A recalled or QC-failed batch cannot leave the
+        # factory and cannot be stocked or sold by a pharmacy, but a
+        # distributor could still forward one - and the pharmacy only refuses
+        # it at Receive, by which point the boxes are on their counter and can
+        # be sold outside the system.
+        #
+        # warehouse_released_at is deliberately not checked here: it is a
+        # manufacturer-side flag that predates some stock already sitting in
+        # warehouses, and a batch that reached a distributor at all has moved.
+        batch = serializer.validated_data.get('batch')
+        blocked = _batch_sale_blockers(batch) if batch else []
+        if blocked:
+            medicine = batch.medicine.name if batch.medicine else 'This medicine'
+            raise ValidationError({'detail': (
+                f'{medicine} batch {batch.batch_number} cannot be shipped on: it '
+                f'{_join_reasons(blocked)}. Quarantine it and contact the manufacturer.'
+            )})
+
         with transaction.atomic():
             shipment = serializer.save(from_user=self.request.user)
             _debit_sender_stock(shipment)

@@ -138,7 +138,7 @@ const SaleLogging = () => {
             <div className="glass-panel" style={{ padding: '1.5rem' }}>
                 <h2 style={{ margin: '0 0 1rem', fontSize: '1.1rem' }}>1. Verify Batch</h2>
                 <form onSubmit={handleCheckBatch} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '1rem' }}>
-                    <input value={qrCode} onChange={(e) => setQrCode(e.target.value)} placeholder="Scan or paste batch QR code" style={inputStyle} />
+                    <input value={qrCode} onChange={(e) => setQrCode(e.target.value)} placeholder="Scan or paste batch QR code, DDP ID or batch number" style={inputStyle} />
                     <button type="button" className="ui-btn ui-btn-secondary" onClick={() => setShowScanner((open) => !open)} style={{ width: 'auto', padding: '0.75rem 1.25rem' }}>
                         <Camera size={18} /> {showScanner ? 'Hide' : 'Scan'}
                     </button>
