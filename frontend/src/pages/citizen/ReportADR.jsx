@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Warning, Pill, ArrowRight, ArrowLeft, Image as ImageIcon, Microphone, CheckCircle, WarningCircle, MagnifyingGlass, Clock, ClockCounterClockwise, FileText, CalendarBlank, ShieldCheck, Tag } from '@phosphor-icons/react';
+import { Warning, Pill, ArrowRight, ArrowLeft, Image as ImageIcon, CheckCircle, WarningCircle, MagnifyingGlass, Clock, ClockCounterClockwise, FileText, CalendarBlank, ShieldCheck, Tag } from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../../services/api';
 import Swal from 'sweetalert2';
@@ -21,6 +21,7 @@ const ReportADR = () => {
 
     // The list used to be five names hardcoded here, so a real registered
     // medicine could only ever be entered as free text.
+    const [attachment, setAttachment] = useState(null);
     const [medicineOptions, setMedicineOptions] = useState([]);
     const [isLoadingMedicines, setIsLoadingMedicines] = useState(false);
 
@@ -33,9 +34,16 @@ const ReportADR = () => {
                 const rows = Array.isArray(res.data) ? res.data : (res.data?.results || []);
                 if (!cancelled) {
                     setMedicineOptions(rows.map((m) => ({
-                        id: m.name,
+                        // The register holds several medicines under one name, so the row's
+                        // own id is what identifies the pick - keying on the name collided.
+                        id: m.id,
                         name: m.name,
                         type: [m.dosage_form, m.strength, m.generic_name].filter(Boolean).join(' · ') || 'Registered medicine',
+                        // Several companies register the same brand name with the same
+                        // strength, form and generic. Without the maker they read as one
+                        // medicine repeated, and there is no way to pick the right one.
+                        maker: m.manufacturer_name || null,
+                        licence: m.regulatory_approval_number || null,
                     })));
                 }
             } catch {
@@ -69,19 +77,43 @@ const ReportADR = () => {
         setIsSubmitting(true);
         try {
             let medPayload = selectedMed;
+            let medicineId = null;
             if (typeof selectedMed === 'string' && selectedMed.startsWith('custom-')) {
                 medPayload = selectedMed.replace('custom-', '');
             } else if (!selectedMed && searchQuery.trim()) {
                 medPayload = searchQuery.trim();
+            } else if (selectedMed) {
+                // A row picked from the register: send its id so the reaction lands on that
+                // exact medicine. Resolving by name attaches it to whichever row comes back
+                // first, and several registered medicines share a name.
+                medicineId = selectedMed;
+                medPayload = medicineOptions.find((m) => m.id === selectedMed)?.name || '';
             }
 
-            const payload = {
-                medicine_name: medPayload ? String(medPayload) : 'Napa Extra',
-                description: reaction,
-                severity: severity || 'mild'
-            };
+            // Filing the report against a hardcoded medicine when none was chosen
+            // put a reaction on the wrong drug's record.
+            if (!medicineId && (!medPayload || !String(medPayload).trim())) {
+                Swal.fire({ title: 'Choose a medicine', text: 'Pick the medicine you reacted to before submitting.', icon: 'warning' });
+                setIsSubmitting(false);
+                return;
+            }
 
-            await api.post('core/adr/', payload);
+            const fields = {
+                description: reaction,
+                severity: severity || 'mild',
+            };
+            if (medicineId != null) fields.medicine = medicineId;
+            if (medPayload && String(medPayload).trim()) fields.medicine_name = String(medPayload).trim();
+
+            if (attachment) {
+                const body = new FormData();
+                Object.entries(fields).forEach(([key, value]) => body.append(key, value));
+                body.append('attachment', attachment);
+                // The shared axios instance sends JSON by default, which would drop the file.
+                await api.post('core/adr/', body, { headers: { 'Content-Type': 'multipart/form-data' } });
+            } else {
+                await api.post('core/adr/', fields);
+            }
             await fetchHistory(); // Immediately refresh history
 
             setStep(4);
@@ -237,7 +269,7 @@ const ReportADR = () => {
                                                 setSelectedMed(`custom-${e.target.value}`);
                                             }
                                         }}
-                                        placeholder="Search medicine name (e.g. Napa Extra, Seclo, Sergel)..." 
+                                        placeholder="Search the medicine register by name or generic name..." 
                                         style={{ 
                                             width: '100%', 
                                             padding: '0.75rem 1rem 0.75rem 2.6rem', 
@@ -291,6 +323,14 @@ const ReportADR = () => {
                                                 <div style={{ flex: 1, minWidth: '200px' }}>
                                                     <h3 style={{ margin: '0 0 0.2rem 0', fontSize: '1.05rem', color: 'var(--text-main)', fontWeight: 700 }}>{med.name}</h3>
                                                     <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 500 }}>{med.type}</span>
+                                                    {med.maker && (
+                                                        <div style={{ fontSize: '0.85rem', color: 'var(--primary)', fontWeight: 600, marginTop: '0.2rem' }}>
+                                                            {med.maker}
+                                                            {med.licence && (
+                                                                <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}> &middot; {med.licence}</span>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                 </div>
                                                 <div style={{ 
                                                     width: '22px', 
@@ -340,37 +380,38 @@ const ReportADR = () => {
                                     }}
                                 />
                                 
-                                <div style={{ display: 'flex', gap: '1rem', marginTop: '1.25rem', flexWrap: 'wrap' }}>
-                                    <button type="button" style={{ 
-                                        flex: '1 1 200px', 
-                                        padding: '1.25rem', 
-                                        display: 'flex', 
-                                        flexDirection: 'column', 
-                                        alignItems: 'center', 
-                                        gap: '0.5rem', 
-                                        border: '1px dashed var(--border)', 
-                                        borderRadius: '12px',
-                                        cursor: 'pointer', 
-                                        background: 'var(--bg-card)' 
-                                    }}>
+                                <div style={{ marginTop: '1.25rem' }}>
+                                    <label
+                                        htmlFor="adr-photo"
+                                        style={{
+                                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem',
+                                            padding: '1.25rem', border: '1px dashed var(--border)', borderRadius: '12px',
+                                            cursor: 'pointer', background: 'var(--bg-card)',
+                                        }}
+                                    >
                                         <ImageIcon size={28} color="var(--primary)" />
-                                        <span style={{ fontSize: '0.85rem', color: 'var(--text-main)', fontWeight: 600 }}>Upload Photo</span>
-                                    </button>
-                                    <button type="button" style={{ 
-                                        flex: '1 1 200px', 
-                                        padding: '1.25rem', 
-                                        display: 'flex', 
-                                        flexDirection: 'column', 
-                                        alignItems: 'center', 
-                                        gap: '0.5rem', 
-                                        border: '1px dashed var(--border)', 
-                                        borderRadius: '12px',
-                                        cursor: 'pointer', 
-                                        background: 'var(--bg-card)' 
-                                    }}>
-                                        <Microphone size={28} color="var(--danger)" />
-                                        <span style={{ fontSize: '0.85rem', color: 'var(--text-main)', fontWeight: 600 }}>Record Voice</span>
-                                    </button>
+                                        <span style={{ fontSize: '0.85rem', color: 'var(--text-main)', fontWeight: 600 }}>
+                                            {attachment ? attachment.name : 'Upload a photo (optional)'}
+                                        </span>
+                                        {attachment && (
+                                            <span
+                                                role="button"
+                                                tabIndex={0}
+                                                onClick={(e) => { e.preventDefault(); setAttachment(null); }}
+                                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); setAttachment(null); } }}
+                                                style={{ fontSize: '0.8rem', color: 'var(--danger)', fontWeight: 600 }}
+                                            >
+                                                Remove
+                                            </span>
+                                        )}
+                                    </label>
+                                    <input
+                                        id="adr-photo"
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={(e) => setAttachment(e.target.files?.[0] || null)}
+                                        style={{ display: 'none' }}
+                                    />
                                 </div>
                             </motion.div>
                         )}

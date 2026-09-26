@@ -34,15 +34,25 @@ const MyMedicines = () => {
         notes: ''
     });
 
-    const commonMedicines = [
-        'Napa Extra (Paracetamol + Caffeine)',
-        'Seclo 20mg (Omeprazole)',
-        'Ace 500mg (Paracetamol)',
-        'Sergel 20mg (Esomeprazole)',
-        'Fexo 120mg (Fexofenadine)',
-        'Ciprocin 500mg (Ciprofloxacin)',
-        'Azithrocin 500mg (Azithromycin)'
-    ];
+    // The suggestions were seven names written into this file, so none of the
+    // medicines actually registered in MedGuard could be picked from the list.
+    const [commonMedicines, setCommonMedicines] = useState([]);
+
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            try {
+                const response = await api.get('core/medicines/');
+                const rows = Array.isArray(response.data) ? response.data : (response.data?.results || []);
+                if (!cancelled) {
+                    setCommonMedicines(rows.map((m) => [m.name, m.strength].filter(Boolean).join(' ')));
+                }
+            } catch {
+                if (!cancelled) setCommonMedicines([]);
+            }
+        })();
+        return () => { cancelled = true; };
+    }, []);
 
     const fetchMedicines = async () => {
         setIsLoading(true);
@@ -620,7 +630,7 @@ const MyMedicines = () => {
                                     list="medicine-suggestions"
                                     value={formData.medicine_name}
                                     onChange={e => setFormData({ ...formData, medicine_name: e.target.value })}
-                                    placeholder="Type or select medicine (e.g. Napa Extra, Seclo 20mg)..."
+                                    placeholder="Type or pick a registered medicine..."
                                     required
                                     style={{
                                         width: '100%',
