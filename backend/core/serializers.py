@@ -157,6 +157,24 @@ class BatchSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at'
         ]
 
+    def validate(self, attrs):
+        # qc_status is what a pharmacy reads to decide whether a batch is safe
+        # to stock and sell, so a batch with an out-of-spec lab result must not
+        # be written back to 'passed' - the release screen used to PATCH exactly
+        # that before asking to release, which left a failed batch marked as
+        # passed even when the release itself was refused.
+        batch = self.instance
+        if batch is None:
+            return attrs
+        wants_pass = attrs.get('qc_status') == 'passed'
+        wants_unblock = attrs.get('release_blocked') is False
+        if (wants_pass or wants_unblock) and batch.quality_tests.filter(is_out_of_spec=True).exists():
+            raise serializers.ValidationError({'detail': (
+                f'{batch.batch_number} has a quality test that came back out of '
+                f'specification, so it cannot be marked as passed or unblocked.'
+            )})
+        return attrs
+
 
 class RecallSerializer(serializers.ModelSerializer):
     batch = serializers.PrimaryKeyRelatedField(queryset=Batch.objects.all())

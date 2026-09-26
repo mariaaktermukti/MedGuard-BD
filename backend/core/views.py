@@ -103,15 +103,19 @@ class ManufacturerBatchListCreateView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         batch = serializer.save(manufacturer=self.request.user, release_blocked=True, qc_status='pending')
+        # A batch that has just been made is on the factory floor, not in the
+        # warehouse. Recording it as factory -> warehouse here claimed a
+        # custody transfer that had not happened, and left the trail saying
+        # "queued for QC release" even after the batch was released.
         DistributionEvent.objects.create(
             batch=batch,
             from_user=self.request.user,
             to_user=self.request.user,
-            stage_from='factory',
-            stage_to='warehouse',
+            stage_from='production',
+            stage_to='factory',
             quantity=batch.quantity_produced,
-            geo_location='factory-release',
-            notes='Batch created and queued for QC release.',
+            geo_location='factory-floor',
+            notes='Batch produced. Held in the factory pending QC release.',
         )
 
 
@@ -131,6 +135,30 @@ class BatchReleaseView(views.APIView):
         if batch.status == 'recalled':
             return Response({'detail': 'Recalled batches cannot be released.'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Release used to write qc_status='passed' whatever the lab had found,
+        # or had not found: a batch with no tests at all could be released and
+        # the trail would record it as "released after QC approval". Pharmacies
+        # then read that same qc_status field to decide what is safe to stock,
+        # so this is the field that has to be earned.
+        tests = batch.quality_tests.all()
+        failed = [t for t in tests if t.is_out_of_spec]
+        if failed:
+            return Response(
+                {'detail': (
+                    f'{batch.batch_number} cannot be released: '
+                    f'{_plural(len(failed), "quality test")} came back out of specification.'
+                )},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if not tests:
+            return Response(
+                {'detail': (
+                    f'{batch.batch_number} cannot be released until a quality test is '
+                    f'recorded for it. Record the lab result first.'
+                )},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         batch.qc_status = 'passed'
         batch.release_blocked = False
         if not batch.warehouse_released_at:
@@ -139,7 +167,11 @@ class BatchReleaseView(views.APIView):
             batch.qr_activated_at = timezone.now()
         batch.save(update_fields=['qc_status', 'release_blocked', 'warehouse_released_at', 'qr_activated_at', 'updated_at'])
 
-        if not DistributionEvent.objects.filter(batch=batch, stage_from='factory', stage_to='warehouse').exists():
+        # Keyed on the release marker, not on factory -> warehouse: batches made
+        # before this change already carry a factory -> warehouse row from
+        # creation, and matching on that swallowed the release event entirely -
+        # while the dialog told the user it had been logged.
+        if not DistributionEvent.objects.filter(batch=batch, geo_location='warehouse-release').exists():
             DistributionEvent.objects.create(
                 batch=batch,
                 from_user=request.user,
@@ -198,6 +230,21 @@ class DistributionEventListCreateView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         batch = get_object_or_404(Batch, pk=self.kwargs['pk'], manufacturer=self.request.user)
+
+        # The factory's own outbound door. A pharmacy cannot stock a recalled or
+        # QC-failed batch and cannot sell one, and it cannot be released to the
+        # warehouse without a passing lab result - but nothing stopped it being
+        # shipped out of here, which is the one gate upstream of all of those.
+        blocked = _batch_sale_blockers(batch)
+        if not batch.warehouse_released_at:
+            blocked.append('has not been released from the warehouse yet')
+        if blocked:
+            medicine = batch.medicine.name if batch.medicine else 'This medicine'
+            raise ValidationError({'detail': (
+                f'{medicine} batch {batch.batch_number} cannot be shipped: it '
+                f'{_join_reasons(blocked)}.'
+            )})
+
         with transaction.atomic():
             event = serializer.save(batch=batch, from_user=self.request.user)
 
@@ -287,10 +334,6 @@ class ManufacturerDashboardView(views.APIView):
         else:
             compliance_grade = 'C'
 
-        recent_sales = Sale.objects.filter(batch__manufacturer=request.user, sale_date__gte=timezone.now() - timedelta(days=90)).count()
-        # No sales history means no demand signal, not a floor of 50 units.
-        forecast_value = max(production_volume // max(total_batches, 1), recent_sales * 2)
-
         monthly_production = defaultdict(int)
         for batch in batches:
             monthly_production[batch.created_at.strftime('%Y-%m')] += batch.quantity_produced
@@ -367,14 +410,11 @@ class ManufacturerDashboardView(views.APIView):
 
         alerts = alerts[:8]
 
-        forecast = {
-            'region': request.query_params.get('region', 'Bangladesh'),
-            'forecast_date': date.today() + timedelta(days=30),
-            'predicted_demand': forecast_value,
-            'confidence_score': '0.78',
-            'seasonal_signal': 'Current quarter trend',
-            'source_summary': ['production volume', 'recent sales', 'qc trend'],
-        }
+        # Same figures as /manufacturer/demand-forecast/, from one place, so
+        # the dashboard card and the forecast page cannot disagree.
+        forecast = manufacturer_demand_forecast(
+            request.user, request.query_params.get('region', 'Bangladesh')
+        )
 
         production_vs_sales = []
         production_by_month = {month: value for month, value in monthly_production.items()}
@@ -417,28 +457,83 @@ class ManufacturerDashboardView(views.APIView):
         })
 
 
+# How far a 90-day sales history is trusted. Both forecasts are arithmetic on
+# past sales, not a model, so the ceiling stays low however many sales there
+# are - and thin history says so rather than rounding up to a confident number.
+_CONFIDENCE_BY_SALES = ((5, 0.25), (20, 0.45), (50, 0.60))
+_CONFIDENCE_CEILING = 0.75
+
+
+def _plural(count, word):
+    return f'{count} {word}' if count == 1 else f'{count} {word}s'
+
+
+def manufacturer_demand_forecast(user, region='Bangladesh'):
+    """Next month's demand for a manufacturer, from what pharmacies actually sold.
+
+    Production volume is deliberately not part of this. How much a factory
+    chose to make measures its own decisions, not what anyone wanted, and
+    using it made a manufacturer holding two large batches look like it faced
+    5500 units of demand against 5 units actually sold.
+    """
+    cutoff = timezone.now() - timedelta(days=90)
+    sales = Sale.objects.filter(batch__manufacturer=user, sale_date__gte=cutoff)
+    sales_count = sales.count()
+    units_sold_90d = sales.aggregate(total=Sum('quantity'))['total'] or 0
+    units_shipped_90d = Shipment.objects.filter(
+        from_user=user, created_at__gte=cutoff
+    ).aggregate(total=Sum('quantity'))['total'] or 0
+    recent_batches = Batch.objects.filter(manufacturer=user).order_by('-created_at')[:5]
+
+    if sales_count == 0:
+        predicted_demand = None
+        confidence = None
+        basis = (
+            'No pharmacy sales of your medicines recorded in the last 90 days, '
+            'so demand cannot be projected yet. It will fill in as pharmacies '
+            'log sales.'
+        )
+    else:
+        predicted_demand = max(round(units_sold_90d * 30 / 90), 1)
+        confidence = _forecast_confidence(sales_count)
+        basis = (
+            f'Projected from {units_sold_90d} units sold across '
+            f'{_plural(sales_count, "sale")} at pharmacies in the last 90 days. '
+            + ('Thin history, so treat this as a rough guide.' if sales_count < 20
+               else 'Arithmetic on recorded sales, not a trained model.')
+        )
+
+    return {
+        'region': region,
+        'forecast_date': date.today() + timedelta(days=30),
+        'predicted_demand': predicted_demand,
+        'confidence_score': confidence,
+        'seasonal_signal': basis,
+        'source_summary': [
+            _plural(sales_count, 'pharmacy sale') + ' in last 90 days',
+            f'{units_sold_90d} units sold in last 90 days',
+            f'{units_shipped_90d} units shipped out in last 90 days',
+            'Recent batches: ' + (', '.join(b.batch_number for b in recent_batches) or 'none'),
+        ],
+        'notes': 'Heuristic demand forecast based on recorded pharmacy sales.',
+    }
+
+
+def _forecast_confidence(sales_count):
+    for threshold, value in _CONFIDENCE_BY_SALES:
+        if sales_count < threshold:
+            return value
+    return _CONFIDENCE_CEILING
+
+
 class DemandForecastView(views.APIView):
     permission_classes = [permissions.IsAuthenticated, IsManufacturer]
 
     def get(self, request):
-        region = request.query_params.get('region', 'Bangladesh')
-        recent_batches = Batch.objects.filter(manufacturer=request.user).order_by('-created_at')[:5]
-        recent_sales = Sale.objects.filter(batch__manufacturer=request.user, sale_date__gte=timezone.now() - timedelta(days=90)).count()
-        predicted_demand = max(
-            sum(batch.quantity_produced for batch in recent_batches) // max(len(recent_batches), 1),
-            recent_sales * 2,
+        data = manufacturer_demand_forecast(
+            request.user, request.query_params.get('region', 'Bangladesh')
         )
-        forecast = DemandForecast.objects.create(
-            region=region,
-            forecast_date=date.today() + timedelta(days=30),
-            predicted_demand=predicted_demand,
-            confidence_score=0.78,
-            seasonal_signal='Auto-generated from recent production and sales patterns',
-            source_summary=[batch.batch_number for batch in recent_batches],
-            created_by=request.user,
-            notes='Heuristic demand forecast generated from available sales and production data.',
-        )
-        return Response(DemandForecastSerializer(forecast).data)
+        return Response(DemandForecastSerializer(DemandForecast(created_by=request.user, **data)).data)
 
 class PersonalMedicineRecordView(generics.ListCreateAPIView):
     serializer_class = DosageScheduleSerializer
@@ -1174,12 +1269,6 @@ class PharmacyExpiryAlertsView(views.APIView):
 class PharmacyDemandForecastView(views.APIView):
     permission_classes = [permissions.IsAuthenticated, IsPharmacy]
 
-    # How far a 90-day sales history is trusted. Every forecast here is
-    # arithmetic on past sales, not a model, so the ceiling stays low however
-    # many sales there are - and thin history says so rather than rounding up.
-    CONFIDENCE_BY_SALES = ((5, 0.25), (20, 0.45), (50, 0.60))
-    CONFIDENCE_CEILING = 0.75
-
     def get(self, request):
         region = request.query_params.get('region', 'Bangladesh')
         recent_sales = Sale.objects.filter(
@@ -1206,14 +1295,10 @@ class PharmacyDemandForecastView(views.APIView):
             # left out: holding a lot of something means it is selling slowly,
             # so counting it as demand had the sign backwards.
             predicted_demand = max(round(units_sold_90d * 30 / 90), 1)
-            confidence = self.CONFIDENCE_CEILING
-            for threshold, value in self.CONFIDENCE_BY_SALES:
-                if sales_count < threshold:
-                    confidence = value
-                    break
+            confidence = _forecast_confidence(sales_count)
             basis = (
-                f'Projected from {units_sold_90d} units across {sales_count} '
-                f'{"sale" if sales_count == 1 else "sales"} in the last 90 days. '
+                f'Projected from {units_sold_90d} units across '
+                f'{_plural(sales_count, "sale")} in the last 90 days. '
                 + ('Thin history, so treat this as a rough guide.' if sales_count < 20
                    else 'Arithmetic on past sales, not a trained model.')
             )
@@ -1227,7 +1312,7 @@ class PharmacyDemandForecastView(views.APIView):
             confidence_score=confidence,
             seasonal_signal=basis,
             source_summary=[
-                f'{sales_count} sales in last 90 days',
+                _plural(sales_count, 'sale') + ' in last 90 days',
                 f'{units_sold_90d} units sold in last 90 days',
                 f'{current_stock} units in current stock',
             ],
