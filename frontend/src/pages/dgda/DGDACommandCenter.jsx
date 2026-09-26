@@ -8,9 +8,11 @@ import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 
-const DGDACommandCenter = ({ onNavigateTab }) => {
-    const [data, setData] = useState(null);
-    const [isLoading, setIsLoading] = useState(true);
+// initialData lets the portal hand over the command-center response it has
+// already fetched, so the endpoint is not requested twice for one screen.
+const DGDACommandCenter = ({ onNavigateTab, initialData = null }) => {
+    const [data, setData] = useState(initialData);
+    const [isLoading, setIsLoading] = useState(!initialData);
     const [isRefreshing, setIsRefreshing] = useState(false);
 
     const fetchData = async () => {
@@ -26,8 +28,13 @@ const DGDACommandCenter = ({ onNavigateTab }) => {
     };
 
     useEffect(() => {
+        if (initialData) {
+            setData(initialData);
+            setIsLoading(false);
+            return;
+        }
         fetchData();
-    }, []);
+    }, [initialData]);
 
     if (isLoading) {
         return (

@@ -3,7 +3,7 @@ import { useLocation, useNavigate, Link } from 'react-router-dom';
 import {
     MapPin, Crosshair, ShieldWarning, WarningCircle, ClipboardText,
     Buildings, MapTrifold, Brain, ChartLineUp, Ambulance, Shield, CheckCircle,
-    ArrowClockwise, Factory, Storefront, MagnifyingGlass, ShieldCheck } from '@phosphor-icons/react';
+    ArrowClockwise, MagnifyingGlass, ShieldCheck } from '@phosphor-icons/react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import MapComponent from '../../components/MapComponent';
@@ -52,15 +52,6 @@ const getErrorMessage = (error, fallback) => {
     return fieldErrors.length ? fieldErrors.join(' | ') : fallback;
 };
 
-// trust_score is stored as a 0–9.99 decimal but some code paths write 0–100; normalise to a percentage
-const trustScoreMeta = (raw) => {
-    const score = parseFloat(raw);
-    if (Number.isNaN(score) || score === 0) return { label: 'Unrated', variant: 'neutral' };
-    const percent = score <= 10 ? score * 10 : score;
-    const variant = percent >= 80 ? 'success' : percent >= 50 ? 'warning' : 'danger';
-    return { label: `Trust ${raw}`, variant };
-};
-
 const stockLevel = (quantity) => {
     if (quantity <= CRITICAL_STOCK_THRESHOLD) return { label: 'Critical', variant: 'danger', background: 'rgba(239, 68, 68, 0.08)', border: 'var(--danger)' };
     if (quantity < LOW_STOCK_THRESHOLD) return { label: 'Low', variant: 'warning', background: 'rgba(245, 158, 11, 0.08)', border: 'var(--warning)' };
@@ -100,6 +91,7 @@ const DGDAPortal = () => {
     const activeTabRef = useRef('command-center');
 
     const [formNotice, setFormNotice] = useState(null);
+    const carryOverRef = useRef(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [recallForm, setRecallForm] = useState(emptyRecallForm);
     const [recallBatch, setRecallBatch] = useState(null);
@@ -186,9 +178,49 @@ const DGDAPortal = () => {
         const tabId = currentTab ? currentTab.id : 'command-center';
         setActiveTab(tabId);
         activeTabRef.current = tabId;
-        setFormNotice(null);
+        // A tab change normally clears the notice, which also wiped the line
+        // explaining where a carried-over batch number came from. Keep it for
+        // the one navigation that set it deliberately.
+        if (carryOverRef.current) {
+            carryOverRef.current = false;
+        } else {
+            setFormNotice(null);
+        }
         fetchTabData(tabId);
     }, [pathname]);
+
+    // The three buttons on the Risk tab had no onClick at all - a DGDA officer
+    // could press "Initiate Recall" under a critical QC failure and nothing
+    // would happen, which reads as "recall started" when nothing started.
+    // The threat rows already carry batch_number (and medicine, for a
+    // shortage), so each button now opens the page that does the work with
+    // that batch already filled in.
+    const openRecallFor = (batchNumber, from) => {
+        carryOverRef.current = true;
+        setRecallForm({ ...emptyRecallForm(), batchNumber });
+        setRecallBatch(null);
+        setFormNotice({ tone: 'error', text: `Batch ${batchNumber} carried over from ${from}. Look it up, then document the reason.` });
+        handleNavigateTab('recalls');
+    };
+
+    const handleThreatAction = (threat) => {
+        if (threat.type === 'qc' && threat.batch_number) {
+            openRecallFor(threat.batch_number, 'Risk Detection');
+            return;
+        }
+        if (threat.type === 'adr' && threat.batch_number) {
+            carryOverRef.current = true;
+            setFormNotice({ tone: 'error', text: `Reviewing batch ${threat.batch_number} - its reports are in the list below.` });
+            handleNavigateTab('investigations');
+            return;
+        }
+        setFormNotice({
+            tone: 'error',
+            text: threat.medicine
+                ? `${threat.medicine} is running low. Contact its suppliers from the Entities tab - no automated supplier alert exists yet.`
+                : 'No action is wired to this alert yet.',
+        });
+    };
 
     const handleNavigateTab = (tabId) => {
         const target = tabs.find(t => t.id === tabId) || tabs[0];
@@ -341,24 +373,36 @@ const DGDAPortal = () => {
 
         switch (activeTab) {
             case 'command-center':
+                // This case used to render four KPI cards of its own, which meant
+                // DGDACommandCenter - the 428-line screen built for this endpoint -
+                // only ever appeared under `default:`, where the switch never
+                // reaches it. Six KPIs, the severity breakdown, ten live alerts
+                // and eight recent activities were computed on every request and
+                // shown to nobody. It renders here now, with the supply map kept
+                // below it, and is handed the response already fetched.
                 return (
                     <div className="animate-fade-in">
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+                        <DGDACommandCenter onNavigateTab={handleNavigateTab} initialData={data} />
+
+                        {/* These four are not in DGDACommandCenter, which covers the
+                            alert-side KPIs. Dropping them when it was wired in would
+                            have hidden four real figures to reveal six others. */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', margin: '2rem 0' }}>
                             <Card padding="md" style={{ textAlign: 'center' }}>
                                 <h3 style={{ fontSize: '1rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Active Recalls</h3>
-                                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--danger)' }}>{data?.kpis?.active_recalls || 0}</div>
+                                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--danger)' }}>{data?.kpis?.active_recalls ?? 0}</div>
                             </Card>
                             <Card padding="md" style={{ textAlign: 'center' }}>
                                 <h3 style={{ fontSize: '1rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>ADR Reports</h3>
-                                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--warning)' }}>{data?.kpis?.total_adr || 0}</div>
+                                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--warning)' }}>{data?.kpis?.total_adr ?? 0}</div>
                             </Card>
                             <Card padding="md" style={{ textAlign: 'center' }}>
                                 <h3 style={{ fontSize: '1rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Low Stock Alerts</h3>
-                                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--info)' }}>{data?.kpis?.low_stock_alerts || 0}</div>
+                                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--info)' }}>{data?.kpis?.low_stock_alerts ?? 0}</div>
                             </Card>
                             <Card padding="md" style={{ textAlign: 'center' }}>
                                 <h3 style={{ fontSize: '1rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Live Movements</h3>
-                                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--primary)' }}>{data?.kpis?.live_movements || 0}</div>
+                                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--primary)' }}>{data?.kpis?.live_movements ?? 0}</div>
                             </Card>
                         </div>
 
@@ -386,6 +430,12 @@ const DGDAPortal = () => {
                         </Card>
                     </div>
                 );
+            case 'live-monitoring':
+                // There was no case for this tab, so it fell through to `default:`
+                // and rendered the Command Center - the Monitoring menu item showed
+                // the Command Center page, while DGDAMonitoring (filters, the event
+                // table, its own summary) was never rendered anywhere.
+                return <DGDAMonitoring />;
             case 'investigations':
                 return (
                     <div className="animate-fade-in">
@@ -399,7 +449,10 @@ const DGDAPortal = () => {
                                             Batch: <strong>{inv.batch_number}</strong> • Threat Level: <Badge variant={inv.threat_level === 'High' ? 'danger' : 'warning'}>{inv.threat_level}</Badge>
                                         </p>
                                     </div>
-                                    <Button variant="danger" size="sm">Freeze Batch</Button>
+                                    {/* No freeze endpoint exists; a recall is what actually
+                                        blocks a batch (release_blocked=True), so this opens
+                                        that form rather than pretending to act on its own. */}
+                                    <Button variant="danger" size="sm" onClick={() => openRecallFor(inv.batch_number, 'Investigations')}>Freeze Batch</Button>
                                 </div>
                             </Card>
                         ))}
@@ -533,65 +586,13 @@ const DGDAPortal = () => {
                     </div>
                 );
             }
-            case 'entities': {
-                const manufacturers = asList(data?.manufacturers);
-                const pharmacies = asList(data?.pharmacies);
-                return (
-                    <div className="animate-fade-in">
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
-                            <Card padding="md" style={{ textAlign: 'center' }}>
-                                <h3 style={{ fontSize: '1rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Registered Manufacturers</h3>
-                                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--primary)' }}>{manufacturers.length}</div>
-                            </Card>
-                            <Card padding="md" style={{ textAlign: 'center' }}>
-                                <h3 style={{ fontSize: '1rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Registered Pharmacies</h3>
-                                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--info)' }}>{pharmacies.length}</div>
-                            </Card>
-                            <Card padding="md" style={{ textAlign: 'center' }}>
-                                <h3 style={{ fontSize: '1rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Low-Trust Pharmacies</h3>
-                                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--danger)' }}>{pharmacies.filter(p => trustScoreMeta(p.trust_score).variant === 'danger').length}</div>
-                            </Card>
-                        </div>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem', alignItems: 'start' }}>
-                            <Card padding="lg">
-                                <CardHeader title="Manufacturers" subtitle="Licensed production entities under DGDA oversight." action={<Factory size={22} color="var(--primary)" />} />
-                                <CardContent style={{ display: 'grid', gap: '0.75rem' }}>
-                                    {manufacturers.length === 0 && <p style={{ color: 'var(--text-muted)', margin: 0 }}>No manufacturers registered.</p>}
-                                    {manufacturers.map((m) => (
-                                        <div key={m.user__username} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', padding: '0.75rem 0', borderBottom: '1px solid var(--border)' }}>
-                                            <div>
-                                                <div style={{ fontWeight: 700 }}>{m.company_name}</div>
-                                                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>@{m.user__username}</div>
-                                            </div>
-                                            <Badge variant="info">Reg. {m.registration_number}</Badge>
-                                        </div>
-                                    ))}
-                                </CardContent>
-                            </Card>
-
-                            <Card padding="lg">
-                                <CardHeader title="Pharmacies" subtitle="Colour-coded by trust score: green ≥ 80%, amber ≥ 50%, red below." action={<Storefront size={22} color="var(--primary)" />} />
-                                <CardContent style={{ display: 'grid', gap: '0.75rem' }}>
-                                    {pharmacies.length === 0 && <p style={{ color: 'var(--text-muted)', margin: 0 }}>No pharmacies registered.</p>}
-                                    {pharmacies.map((p) => {
-                                        const trust = trustScoreMeta(p.trust_score);
-                                        return (
-                                            <div key={p.user__username} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', padding: '0.75rem 0', borderBottom: '1px solid var(--border)' }}>
-                                                <div>
-                                                    <div style={{ fontWeight: 700 }}>{p.pharmacy_name}</div>
-                                                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>@{p.user__username}</div>
-                                                </div>
-                                                <Badge variant={trust.variant}>{trust.label}</Badge>
-                                            </div>
-                                        );
-                                    })}
-                                </CardContent>
-                            </Card>
-                        </div>
-                    </div>
-                );
-            }
+            case 'entities':
+                // The inline version here listed manufacturers and pharmacies only,
+                // while DGDAEntities - which shows all seven roles the backend
+                // counts, with their summary cards and a detail view - was imported
+                // and never rendered. total_citizens and total_medicines were
+                // computed on every request and shown nowhere.
+                return <DGDAEntities />;
             case 'heatmaps':
                 return (
                     <div className="animate-fade-in">
@@ -599,7 +600,17 @@ const DGDAPortal = () => {
                             <p style={{ color: 'var(--text-muted)', fontSize: '1.125rem' }}>Interactive visualization of ADRs, shortages, and counterfeiting risks across Bangladesh.</p>
                         </div>
                         <Card padding="none" style={{ height: '500px', overflow: 'hidden' }}>
-                            {data && <MapComponent points={data} />}
+                            {data && (
+                                <MapComponent
+                                    points={data}
+                                    legend={[
+                                        { label: 'Critical', color: '#dc3545' },
+                                        { label: 'High', color: '#fd7e14' },
+                                        { label: 'Medium', color: '#ffc107' },
+                                        { label: 'Low', color: '#0d6efd' },
+                                    ]}
+                                />
+                            )}
                         </Card>
                     </div>
                 );
@@ -643,9 +654,9 @@ const DGDAPortal = () => {
                                             <h4 style={{ margin: 0, fontSize: '1.125rem' }}>{threat.message}</h4>
                                         </div>
                                         <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                            {threat.type === 'adr' && <Button variant="primary" size="sm">Investigate Batch</Button>}
-                                            {threat.type === 'qc' && <Button variant="danger" size="sm">Initiate Recall</Button>}
-                                            {threat.type === 'shortage' && <Button variant="outline" size="sm">Alert Suppliers</Button>}
+                                            {threat.type === 'adr' && <Button variant="primary" size="sm" onClick={() => handleThreatAction(threat)}>Investigate Batch</Button>}
+                                            {threat.type === 'qc' && <Button variant="danger" size="sm" onClick={() => handleThreatAction(threat)}>Initiate Recall</Button>}
+                                            {threat.type === 'shortage' && <Button variant="outline" size="sm" onClick={() => handleThreatAction(threat)}>Alert Suppliers</Button>}
                                         </div>
                                     </div>
                                 </Card>
@@ -666,8 +677,16 @@ const DGDAPortal = () => {
                 const maxVolume = Math.max(1, ...consumption.map(row => Number(row.volume) || 0));
                 const peak = consumption.reduce((best, row) => (!best || Number(row.volume) > Number(best.volume) ? row : best), null);
                 const complianceColor = compliance >= 85 ? 'var(--success)' : compliance >= 60 ? 'var(--warning)' : 'var(--danger)';
+                // The response says which window these figures cover; without it
+                // on screen a reader cannot tell a month from a year.
+                const windowMonths = Number(data?.window_months) || null;
                 return (
                     <div className="animate-fade-in">
+                        {windowMonths && (
+                            <p style={{ margin: '0 0 1rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                                Covering the last {windowMonths} months.
+                            </p>
+                        )}
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
                             <Card padding="md" style={{ textAlign: 'center' }}>
                                 <h3 style={{ fontSize: '1rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>National Compliance</h3>
@@ -812,6 +831,7 @@ const DGDAPortal = () => {
                 );
             }
             default:
+                // Every tab now has a case; this only catches an unknown path.
                 return <DGDACommandCenter onNavigateTab={handleNavigateTab} />;
         }
     };

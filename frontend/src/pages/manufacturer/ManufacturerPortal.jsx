@@ -1026,6 +1026,8 @@ const ManufacturerPortal = () => {
         const metrics = [
             { label: 'Total Registered Medicines', value: summary.products ?? 0, icon: <Package size={18} /> },
             { label: 'Active Batches', value: summary.active_batches ?? 0, icon: <Factory size={18} /> },
+            // The dashboard has always sent this and never shown it.
+            { label: 'Units Produced', value: (summary.production_volume ?? 0).toLocaleString(), icon: <Package size={18} /> },
             { label: 'QC Pass Rate (30d)', value: `${summary.qc_pass_rate ?? 0}%`, icon: <ShieldCheck size={18} /> },
             { label: 'Recalled Batches (this year)', value: summary.recalled_batches ?? 0, icon: <Warning size={18} /> },
             { label: 'Compliance Score', value: `${summary.compliance_grade ?? '—'} (${summary.compliance_score ?? 0}/100)`, icon: <ClipboardText size={18} /> },
