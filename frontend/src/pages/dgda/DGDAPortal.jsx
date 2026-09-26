@@ -3,8 +3,7 @@ import { useLocation, useNavigate, Link } from 'react-router-dom';
 import {
     MapPin, Crosshair, ShieldWarning, WarningCircle, ClipboardText,
     Buildings, MapTrifold, Brain, ChartLineUp, Ambulance, Shield, CheckCircle,
-    ArrowClockwise, Factory, Storefront, MagnifyingGlass
-} from '@phosphor-icons/react';
+    ArrowClockwise, Factory, Storefront, MagnifyingGlass, ShieldCheck } from '@phosphor-icons/react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import MapComponent from '../../components/MapComponent';
@@ -28,6 +27,7 @@ const TAB_ENDPOINTS = {
     inspections: 'core/dgda/inspections/',
     entities: 'core/dgda/entities/',
     heatmaps: 'core/dgda/heatmaps/',
+    supplyCoverage: 'core/dgda/supply-coverage/',
     risk: 'core/dgda/risk-intelligence/',
     policy: 'core/dgda/policy-analytics/',
     emergency: 'core/dgda/emergency-response/',
@@ -108,6 +108,46 @@ const DGDAPortal = () => {
     const [stockSearch, setStockSearch] = useState('');
     const [entityDirectory, setEntityDirectory] = useState(null);
     const [entityDirectoryError, setEntityDirectoryError] = useState('');
+    const [supplyCoverage, setSupplyCoverage] = useState(null);
+
+    // The command-center response carries KPIs only, no geography. The map shows
+    // medicine supply coverage: every tracked division and city corporation is drawn,
+    // blue where manufacturer/distributor supply has reached it and red where it has not.
+    useEffect(() => {
+        if (activeTab !== 'command-center') return;
+        let ignore = false;
+        api.get(TAB_ENDPOINTS.supplyCoverage)
+            .then((res) => {
+                if (!ignore) setSupplyCoverage(res.data);
+            })
+            .catch(() => {
+                // The map is secondary to the KPI cards here; leaving it empty is better
+                // than surfacing an error over the whole Command Center.
+                if (!ignore) setSupplyCoverage(null);
+            });
+        return () => {
+            ignore = true;
+        };
+    }, [activeTab]);
+
+    const SUPPLIED_COLOUR = '#0d6efd';
+    const UNSUPPLIED_COLOUR = '#dc3545';
+
+    const commandCenterPoints = (supplyCoverage?.regions || []).map((region) => ({
+        id: region.id,
+        district: region.region,
+        lat: region.lat,
+        lng: region.lng,
+        color: region.supplied ? SUPPLIED_COLOUR : UNSUPPLIED_COLOUR,
+        details: [
+            ['Supply', region.supplied ? 'Reaching this region' : 'Not reaching this region'],
+            ['Units in stock', region.units_in_stock.toLocaleString()],
+            ['Medicines', region.medicine_count],
+            ['Stock points', region.site_count],
+            ['Deliveries received', region.deliveries],
+            ['Batch hand-overs', region.movements],
+        ],
+    }));
 
     // The inspection form's entity picker uses the same entities endpoint as the Entities tab;
     // that tab's data is replaced on tab switch, so load it separately whenever Inspections opens
@@ -322,8 +362,27 @@ const DGDAPortal = () => {
                             </Card>
                         </div>
 
-                        <Card padding="none" style={{ height: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-page)', overflow: 'hidden' }}>
-                            <MapComponent points={[]} />
+                        <Card padding="md" style={{ background: 'var(--bg-page)', overflow: 'hidden' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                                <h3 style={{ margin: 0, fontSize: '1.05rem' }}>Medicine Supply Coverage</h3>
+                                <div style={{ display: 'flex', gap: '1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                                        <span style={{ width: 10, height: 10, borderRadius: '50%', background: SUPPLIED_COLOUR, display: 'inline-block' }} />
+                                        Supplied{supplyCoverage ? ` (${supplyCoverage.supplied_count})` : ''}
+                                    </span>
+                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                                        <span style={{ width: 10, height: 10, borderRadius: '50%', background: UNSUPPLIED_COLOUR, display: 'inline-block' }} />
+                                        No supply{supplyCoverage ? ` (${supplyCoverage.unsupplied_count})` : ''}
+                                    </span>
+                                </div>
+                            </div>
+                            <MapComponent points={commandCenterPoints} />
+                            {supplyCoverage?.unattributed_units > 0 && (
+                                <p style={{ margin: '0.75rem 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                    {supplyCoverage.unattributed_units.toLocaleString()} units sit at pharmacies whose
+                                    address names no region, so they count towards no division above.
+                                </p>
+                            )}
                         </Card>
                     </div>
                 );
@@ -763,7 +822,7 @@ const DGDAPortal = () => {
             {/* Page Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                    <h1 style={{ fontSize: '2rem', margin: '0 0 0.5rem 0', color: 'var(--text-main)' }}>National Command Center</h1>
+                    <h1 style={{ fontSize: '2rem', margin: '0 0 0.5rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}><ShieldCheck size={32} weight="duotone" color="var(--primary)" /> DGDA Portal</h1>
                     <p style={{ margin: 0, color: 'var(--text-muted)' }}>Directorate General of Drug Administration (DGDA)</p>
                 </div>
             </div>
