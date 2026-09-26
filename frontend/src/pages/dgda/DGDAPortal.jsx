@@ -100,6 +100,7 @@ const DGDAPortal = () => {
     const activeTabRef = useRef('command-center');
 
     const [formNotice, setFormNotice] = useState(null);
+    const carryOverRef = useRef(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [recallForm, setRecallForm] = useState(emptyRecallForm);
     const [recallBatch, setRecallBatch] = useState(null);
@@ -186,9 +187,49 @@ const DGDAPortal = () => {
         const tabId = currentTab ? currentTab.id : 'command-center';
         setActiveTab(tabId);
         activeTabRef.current = tabId;
-        setFormNotice(null);
+        // A tab change normally clears the notice, which also wiped the line
+        // explaining where a carried-over batch number came from. Keep it for
+        // the one navigation that set it deliberately.
+        if (carryOverRef.current) {
+            carryOverRef.current = false;
+        } else {
+            setFormNotice(null);
+        }
         fetchTabData(tabId);
     }, [pathname]);
+
+    // The three buttons on the Risk tab had no onClick at all - a DGDA officer
+    // could press "Initiate Recall" under a critical QC failure and nothing
+    // would happen, which reads as "recall started" when nothing started.
+    // The threat rows already carry batch_number (and medicine, for a
+    // shortage), so each button now opens the page that does the work with
+    // that batch already filled in.
+    const openRecallFor = (batchNumber, from) => {
+        carryOverRef.current = true;
+        setRecallForm({ ...emptyRecallForm(), batchNumber });
+        setRecallBatch(null);
+        setFormNotice({ tone: 'error', text: `Batch ${batchNumber} carried over from ${from}. Look it up, then document the reason.` });
+        handleNavigateTab('recalls');
+    };
+
+    const handleThreatAction = (threat) => {
+        if (threat.type === 'qc' && threat.batch_number) {
+            openRecallFor(threat.batch_number, 'Risk Detection');
+            return;
+        }
+        if (threat.type === 'adr' && threat.batch_number) {
+            carryOverRef.current = true;
+            setFormNotice({ tone: 'error', text: `Reviewing batch ${threat.batch_number} - its reports are in the list below.` });
+            handleNavigateTab('investigations');
+            return;
+        }
+        setFormNotice({
+            tone: 'error',
+            text: threat.medicine
+                ? `${threat.medicine} is running low. Contact its suppliers from the Entities tab - no automated supplier alert exists yet.`
+                : 'No action is wired to this alert yet.',
+        });
+    };
 
     const handleNavigateTab = (tabId) => {
         const target = tabs.find(t => t.id === tabId) || tabs[0];
@@ -399,7 +440,10 @@ const DGDAPortal = () => {
                                             Batch: <strong>{inv.batch_number}</strong> • Threat Level: <Badge variant={inv.threat_level === 'High' ? 'danger' : 'warning'}>{inv.threat_level}</Badge>
                                         </p>
                                     </div>
-                                    <Button variant="danger" size="sm">Freeze Batch</Button>
+                                    {/* No freeze endpoint exists; a recall is what actually
+                                        blocks a batch (release_blocked=True), so this opens
+                                        that form rather than pretending to act on its own. */}
+                                    <Button variant="danger" size="sm" onClick={() => openRecallFor(inv.batch_number, 'Investigations')}>Freeze Batch</Button>
                                 </div>
                             </Card>
                         ))}
@@ -643,9 +687,9 @@ const DGDAPortal = () => {
                                             <h4 style={{ margin: 0, fontSize: '1.125rem' }}>{threat.message}</h4>
                                         </div>
                                         <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                            {threat.type === 'adr' && <Button variant="primary" size="sm">Investigate Batch</Button>}
-                                            {threat.type === 'qc' && <Button variant="danger" size="sm">Initiate Recall</Button>}
-                                            {threat.type === 'shortage' && <Button variant="outline" size="sm">Alert Suppliers</Button>}
+                                            {threat.type === 'adr' && <Button variant="primary" size="sm" onClick={() => handleThreatAction(threat)}>Investigate Batch</Button>}
+                                            {threat.type === 'qc' && <Button variant="danger" size="sm" onClick={() => handleThreatAction(threat)}>Initiate Recall</Button>}
+                                            {threat.type === 'shortage' && <Button variant="outline" size="sm" onClick={() => handleThreatAction(threat)}>Alert Suppliers</Button>}
                                         </div>
                                     </div>
                                 </Card>
