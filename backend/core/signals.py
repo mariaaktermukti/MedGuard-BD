@@ -11,6 +11,7 @@ User = get_user_model()
 from django.db.models import Q
 
 from .models import (
+    Consultation,
     DistributionEvent,
     DosageSchedule,
     Inventory,
@@ -88,7 +89,12 @@ def create_recall_notifications(sender, instance, created, **kwargs):
                 manufacturer=batch.manufacturer,
                 event_type='quality_issue',
                 title=f"MANDATORY BATCH RECALL DIRECTIVE: {med_name} (Batch #{batch.batch_number})",
-                description=f"Manufacturer {instance.issued_by_user.full_name or instance.issued_by_user.username} initiated recall for Batch {batch.batch_number}. Reason: {instance.reason}. Sales halted downstream.",
+                description=(
+                    f"{instance.issued_by_user.get_role_display()} "
+                    f"{instance.issued_by_user.full_name or instance.issued_by_user.username} "
+                    f"initiated recall for Batch {batch.batch_number}. Reason: {instance.reason}. "
+                    f"Sales halted downstream."
+                ),
                 severity='critical',
                 risk_score=95,
                 status='escalated',
@@ -118,3 +124,34 @@ def flag_batch_on_failed_quality_test(sender, instance, created, **kwargs):
         batch.qc_status = 'passed'
         batch.release_blocked = False
         batch.save(update_fields=['qc_status', 'release_blocked', 'updated_at'])
+
+
+@receiver(post_save, sender=Consultation)
+def notify_citizen_of_new_consultation(sender, instance, created, **kwargs):
+    """Tell a patient when a doctor adds them.
+
+    A consultation is what unlocks a patient's full medicine history to a
+    doctor - dosage schedules, every doctor's prescriptions, purchases and ADR
+    reports - and a doctor creates one by typing a username, with nothing asked
+    of the patient. Until consent is built (see the note in the audit), the
+    least we can do is not let it happen silently: a patient who is told can
+    query it, one who is never told cannot.
+    """
+    if not created:
+        return
+
+    doctor = instance.doctor
+    citizen = instance.citizen
+    if not doctor or not citizen:
+        return
+
+    doctor_name = doctor.full_name or doctor.username
+    Notification.objects.create(
+        user=citizen,
+        title='A doctor was added to your care',
+        message=(
+            f'Dr. {doctor_name} recorded a consultation with you and can now see '
+            f'your medicine history, prescriptions and reported reactions. '
+            f'If you do not recognise this doctor, contact support.'
+        ),
+    )

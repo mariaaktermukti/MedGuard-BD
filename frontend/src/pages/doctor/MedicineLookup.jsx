@@ -32,7 +32,7 @@ const MedicineLookup = () => {
     }, [query]);
 
     return (
-        <div style={{ display: 'grid', gap: '1.5rem', maxWidth: '800px' }}>
+        <div style={{ display: 'grid', gap: '1.5rem' }}>
             <Card>
                 <CardHeader title="Medicine Lookup" subtitle="Search by medicine name or generic name." />
                 <CardContent>
@@ -64,6 +64,9 @@ const MedicineLookup = () => {
                                 <div key={medicine.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
                                     <div>
                                         <div style={{ fontWeight: 700 }}>{medicine.name}</div>
+                                        <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                                            {medicine.manufacturer_name || 'No manufacturer on file'}
+                                        </div>
                                         <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                                             {medicine.generic_name || 'No generic name on file'}
                                             {medicine.strength ? ` • ${medicine.strength}` : ''}

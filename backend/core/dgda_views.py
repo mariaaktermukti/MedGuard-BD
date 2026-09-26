@@ -1,7 +1,7 @@
 import logging
 from decimal import InvalidOperation
 
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, Q, Sum, TextField
 from django.utils import timezone
 from datetime import timedelta, datetime
 from rest_framework import viewsets, views, status
@@ -9,12 +9,12 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from users.permissions import IsDGDA
 
-from django.db.models.functions import TruncMonth
+from django.db.models.functions import TruncMonth, Cast
 
 from .models import (
     Medicine, Batch, QualityTest, Recall, Inspection, ADRReport,
     DemandForecast, DistributionEvent, Shipment, Sale, Inventory, MonitoringEvent,
-    Prescription, Consultation, ResearchDataset, Complaint, ComplianceItem
+    Prescription, Consultation, ResearchDataset, Complaint, ComplianceItem, Warehouse
 )
 from users.models import (
     CustomUser, ManufacturerProfile, PharmacyProfile, DistributorProfile, 
@@ -27,6 +27,22 @@ from .serializers import (
 from .services.dgda_services import calculate_risk_score, generate_ai_situation_summary
 
 logger = logging.getLogger(__name__)
+
+
+def _risk_category(name, score):
+    """One risk category, with the level derived from the score.
+
+    Several categories used to carry a level hardcoded next to a score that could
+    be anything, so a score of 0 could still read MEDIUM.
+    """
+    score = int(score or 0)
+    if score >= 70:
+        level = 'HIGH'
+    elif score >= 35:
+        level = 'MEDIUM'
+    else:
+        level = 'LOW'
+    return {'category': name, 'score': score, 'level': level}
 
 
 class DGDACommandCenterView(views.APIView):
@@ -53,7 +69,9 @@ class DGDACommandCenterView(views.APIView):
         # High-Risk Entities
         high_risk_manufacturers = MonitoringEvent.objects.filter(risk_score__gte=65).values('manufacturer').distinct().count()
         high_risk_pharmacies = PharmacyProfile.objects.filter(trust_score__lt=0.5).count()
-        high_risk_entities_count = high_risk_manufacturers + high_risk_pharmacies or 4
+        # A real zero means nothing is currently high risk; it must not be dressed up
+        # as four, because an inspector reads this number and acts on it.
+        high_risk_entities_count = high_risk_manufacturers + high_risk_pharmacies
 
         # Open Cases
         open_cases_count = active_alerts_qs.count()
@@ -259,8 +277,8 @@ class DGDAEntitiesView(views.APIView):
             "total_citizens": total_citizens,
             "total_researchers": total_researchers,
             "total_medicines": total_medicines,
-            "high_risk_entities": high_risk or 3,
-            "recently_updated": recently_updated or 12
+            "high_risk_entities": high_risk,
+            "recently_updated": recently_updated
         }
 
         # Unified Entity List Search
@@ -271,8 +289,17 @@ class DGDAEntitiesView(views.APIView):
             m_qs = ManufacturerProfile.objects.select_related('user').all()
             if search:
                 m_qs = m_qs.filter(Q(company_name__icontains=search) | Q(registration_number__icontains=search) | Q(address__icontains=search))
+            # Counting per manufacturer inside the loop meant one round trip each, and the
+            # database sits behind a network hop. One grouped count covers all of them.
+            serious_events = dict(
+                MonitoringEvent.objects
+                .filter(severity__in=['critical', 'high'])
+                .values('manufacturer')
+                .annotate(total=Count('id'))
+                .values_list('manufacturer', 'total')
+            )
             for m in m_qs:
-                event_cnt = MonitoringEvent.objects.filter(manufacturer=m.user, severity__in=['critical', 'high']).count()
+                event_cnt = serious_events.get(m.user_id, 0)
                 r_score = min(40 + (event_cnt * 20), 95)
                 entities.append({
                     "id": m.user_id,
@@ -295,9 +322,20 @@ class DGDAEntitiesView(views.APIView):
             p_qs = PharmacyProfile.objects.select_related('user').defer('trust_score')
             if search:
                 p_qs = p_qs.filter(Q(pharmacy_name__icontains=search) | Q(registration_number__icontains=search) | Q(address__icontains=search))
+            # Reading the deferred column per row was a round trip each. Reading it as text in
+            # one query keeps the same protection - an out-of-range value cannot raise while the
+            # rows are fetched, and the conversion below still catches it.
+            trust_text = dict(
+                PharmacyProfile.objects
+                .annotate(trust_as_text=Cast('trust_score', TextField()))
+                .values_list('user_id', 'trust_as_text')
+            )
             for p in p_qs:
                 try:
-                    trust = float(p.trust_score or 0.8)
+                    # Convert first, then fall back: a stored 0 has always been treated as
+                    # "no rating" here, and "0.00" as text would otherwise read as a real zero.
+                    stored = trust_text.get(p.user_id)
+                    trust = float(float(stored) if stored not in (None, '') else 0) or 0.8
                 except (InvalidOperation, TypeError, ValueError):
                     logger.warning("Pharmacy %s has an unreadable trust_score; listing it without a risk score", p.user_id)
                     trust = None
@@ -393,12 +431,20 @@ class DGDAEntitiesView(views.APIView):
 
         # 7. Medicines
         if entity_type in ['all', 'medicine']:
-            med_qs = Medicine.objects.select_related('manufacturer').all()
+            # The company profile is read for every row, so join it rather than letting each
+            # row fetch its own; the ADR tally is one grouped count instead of one per medicine.
+            med_qs = Medicine.objects.select_related('manufacturer', 'manufacturer__manufacturer_profile')
             if search:
                 med_qs = med_qs.filter(Q(name__icontains=search) | Q(generic_name__icontains=search) | Q(product_id__icontains=search))
+            adr_by_medicine = dict(
+                ADRReport.objects
+                .values('medicine')
+                .annotate(total=Count('id'))
+                .values_list('medicine', 'total')
+            )
             for med in med_qs:
                 m_profile = getattr(med.manufacturer, 'manufacturer_profile', None)
-                adr_cnt = ADRReport.objects.filter(medicine=med).count()
+                adr_cnt = adr_by_medicine.get(med.id, 0)
                 r_score = min(20 + (adr_cnt * 15), 90)
                 entities.append({
                     "id": med.id,
@@ -415,7 +461,12 @@ class DGDAEntitiesView(views.APIView):
 
         # 8. Batches
         if entity_type in ['all', 'batch']:
-            b_qs = Batch.objects.select_related('medicine').all()
+            # Listing only needs the columns read below; loading whole Batch rows also
+            # loads unit_qr_codes, which holds megabytes of per-unit QR strings.
+            b_qs = Batch.objects.select_related('medicine').only(
+                'id', 'batch_number', 'ddp_id', 'expiry_date',
+                'qc_status', 'status', 'updated_at', 'medicine__name',
+            )
             if search:
                 b_qs = b_qs.filter(Q(batch_number__icontains=search) | Q(ddp_id__icontains=search))
             for b in b_qs[:10]:
@@ -507,7 +558,7 @@ class DGDAEntityDetailView(views.APIView):
                     "active_alerts_count": active_alerts,
                     "adr_signals_count": adr_cnt,
                     "recalls_count": violation_cnt,
-                    "inspections_count": Inspection.objects.filter(entity_id=user.id).count() or 3
+                    "inspections_count": Inspection.objects.filter(entity_id=user.id).count()
                 }
 
                 overall_score = regulatory_info["risk_score"]
@@ -516,7 +567,7 @@ class DGDAEntityDetailView(views.APIView):
                     "level": "CRITICAL" if overall_score >= 80 else "HIGH" if overall_score >= 60 else "MEDIUM",
                     "categories": [
                         {"category": "Compliance Risk", "score": min(overall_score + 5, 100), "level": "HIGH"},
-                        {"category": "ADR Risk", "score": min(adr_cnt * 20, 100) or 45, "level": "MEDIUM"},
+                        _risk_category("ADR Risk", min(adr_cnt * 20, 100)),
                         {"category": "Counterfeit Risk", "score": 25, "level": "LOW"},
                         {"category": "Complaint Risk", "score": 35, "level": "MEDIUM"},
                         {"category": "Supply Chain Risk", "score": 40, "level": "MEDIUM"}
@@ -562,34 +613,49 @@ class DGDAEntityDetailView(views.APIView):
                     t_score = 0.85
                 overall_score = int((1.0 - t_score) * 100)
 
+                held_batch_ids = Inventory.objects.filter(
+                    entity_type='pharmacy', entity_id=user.id, quantity__gt=0
+                ).values_list('batch_id', flat=True)
+                recalled_held = Recall.objects.filter(
+                    status='active', batch_id__in=held_batch_ids
+                ).distinct().count()
+                adr_against_stock = ADRReport.objects.filter(batch_id__in=held_batch_ids).count()
                 regulatory_info = {
                     "risk_score": overall_score,
                     "previous_violations": Complaint.objects.filter(pharmacy=user).count(),
                     "active_alerts_count": MonitoringEvent.objects.filter(pharmacy=user).count(),
-                    "adr_signals_count": 0,
-                    "recalls_count": 0,
-                    "inspections_count": Inspection.objects.filter(entity_id=user.id).count() or 1
+                    "adr_signals_count": adr_against_stock,
+                    "recalls_count": recalled_held,
+                    "inspections_count": Inspection.objects.filter(entity_id=user.id).count()
                 }
 
+                # Every category is now derived from a recorded fact. ADR Risk used to
+                # be a flat 20 and Counterfeit Risk was trust_score + 10 labelled HIGH
+                # regardless of the number it produced.
                 risk_profile = {
                     "score": overall_score,
                     "level": "HIGH" if overall_score >= 60 else "MEDIUM" if overall_score >= 35 else "LOW",
                     "categories": [
-                        {"category": "Compliance Risk", "score": overall_score, "level": "MEDIUM"},
-                        {"category": "ADR Risk", "score": 20, "level": "LOW"},
-                        {"category": "Counterfeit Risk", "score": min(overall_score + 10, 100), "level": "HIGH"},
-                        {"category": "Complaint Risk", "score": min(regulatory_info["previous_violations"] * 25, 100) or 30, "level": "MEDIUM"},
-                        {"category": "Supply Chain Risk", "score": 25, "level": "LOW"}
+                        _risk_category("Trust Score Shortfall", overall_score),
+                        _risk_category("ADR Reports On Stock Held", min(adr_against_stock * 20, 100)),
+                        _risk_category("Complaint Risk", min(regulatory_info["previous_violations"] * 25, 100)),
+                        _risk_category("Recalled Stock Held", min(recalled_held * 30, 100)),
                     ]
                 }
 
-                relationship_preview.append({
-                    "manufacturer": "Square Pharmaceuticals",
-                    "medicine": "Paracetamol 500mg",
-                    "batch": "BATCH-8821",
-                    "distributed_to": prof.pharmacy_name,
-                    "status": "Dispensed to Citizens"
-                })
+                # What this pharmacy actually holds, rather than one invented batch
+                # attributed to a real company.
+                held = Inventory.objects.filter(
+                    entity_type='pharmacy', entity_id=user.id, quantity__gt=0
+                ).select_related('batch', 'batch__medicine', 'batch__manufacturer').order_by('-last_updated')[:5]
+                for row in held:
+                    relationship_preview.append({
+                        "manufacturer": row.batch.manufacturer.full_name or row.batch.manufacturer.username,
+                        "medicine": row.batch.medicine.name,
+                        "batch": row.batch.batch_number,
+                        "distributed_to": prof.pharmacy_name,
+                        "status": f"{row.quantity} units in stock",
+                    })
             except PharmacyProfile.DoesNotExist:
                 return Response({"error": "Pharmacy not found"}, status=404)
 
@@ -759,80 +825,67 @@ class DGDAEntityDetailView(views.APIView):
                 }
 
                 shipment_cnt = Shipment.objects.filter(from_user=user).count()
+                alerts_cnt = MonitoringEvent.objects.filter(distributor=user).count()
+                recalled_batches = Recall.objects.filter(
+                    status='active', batch__shipments__from_user=user
+                ).distinct().count()
+                inspections_cnt = Inspection.objects.filter(entity_id=user.id).count()
+                late_deliveries = Shipment.objects.filter(
+                    from_user=user, status__in=['pending', 'in_transit'],
+                    shipment_date__lt=timezone.now().date() - timedelta(days=7)
+                ).count()
+
+                # Scores derived from what is recorded. The previous block pinned this
+                # entity to 25/LOW with five invented "HIGH" scores between 85 and 95,
+                # which read as a measured cold-chain audit that never happened.
+                delivery_risk = int(min(late_deliveries * 20, 100))
+                recall_risk = int(min(recalled_batches * 25, 100))
+                alert_risk = int(min(alerts_cnt * 20, 100))
+                overall = int(min((delivery_risk + recall_risk + alert_risk) / 3, 100))
 
                 regulatory_info = {
-                    "risk_score": 25,
-                    "previous_violations": 0,
-                    "active_alerts_count": MonitoringEvent.objects.filter(distributor=user).count(),
+                    "risk_score": overall,
+                    "previous_violations": recalled_batches,
+                    "active_alerts_count": alerts_cnt,
                     "adr_signals_count": 0,
-                    "recalls_count": shipment_cnt,
-                    "inspections_count": 2
+                    "recalls_count": recalled_batches,
+                    "inspections_count": inspections_cnt,
+                    "shipments_count": shipment_cnt,
                 }
 
                 risk_profile = {
-                    "score": 25,
-                    "level": "LOW",
+                    "score": overall,
+                    "level": "HIGH" if overall >= 70 else "MEDIUM" if overall >= 35 else "LOW",
                     "categories": [
-                        {"category": "Cold-Chain Integrity", "score": 90, "level": "HIGH"},
-                        {"category": "Fleet Monitoring", "score": 85, "level": "HIGH"},
-                        {"category": "Route Safety", "score": 88, "level": "HIGH"},
-                        {"category": "Compliance Tracking", "score": 92, "level": "HIGH"},
-                        {"category": "Delivery Accuracy", "score": 95, "level": "HIGH"}
-                    ]
+                        _risk_category("Delivery Delays", delivery_risk),
+                        _risk_category("Recalled Stock Handled", recall_risk),
+                        _risk_category("Open Monitoring Alerts", alert_risk),
+                    ],
                 }
 
-                relationship_preview.append({
-                    "manufacturer": "Beximco / Square Pharma",
-                    "medicine": "Cold-Chain & Tablet Lines",
-                    "batch": f"{shipment_cnt} Logged Shipments",
-                    "distributed_to": prof.company_name,
-                    "status": "In Circulation"
-                })
+                # Real trading partners, not two well-known company names as filler.
+                for shipment in Shipment.objects.filter(from_user=user).select_related(
+                    'batch', 'batch__medicine', 'batch__manufacturer', 'to_user'
+                ).order_by('-created_at')[:5]:
+                    relationship_preview.append({
+                        "manufacturer": shipment.batch.manufacturer.full_name or shipment.batch.manufacturer.username,
+                        "medicine": shipment.batch.medicine.name,
+                        "batch": shipment.batch.batch_number,
+                        "distributed_to": shipment.to_user.full_name or shipment.to_user.username,
+                        "status": shipment.get_status_display(),
+                    })
             except DistributorProfile.DoesNotExist:
                 return Response({"error": "Distributor profile not found"}, status=404)
 
         else:
-            # Fallback for medicine / batch
-            basic_info = {
-                "name": f"Entity #{entity_id}",
-                "type": entity_type.title(),
-                "registration_number": f"REG-{entity_id}",
-                "license_status": "Active",
-                "address": "Dhaka, Bangladesh",
-                "contact_person": "Officer In-Charge",
-                "phone": "+880 1700-000000",
-                "website": "https://dgda.gov.bd",
-                "registration_date": timezone.now().strftime("%B %d, %Y")
-            }
-
-            regulatory_info = {
-                "risk_score": 45,
-                "previous_violations": 1,
-                "active_alerts_count": 2,
-                "adr_signals_count": 5,
-                "recalls_count": 0,
-                "inspections_count": 2
-            }
-
-            risk_profile = {
-                "score": 45,
-                "level": "MEDIUM",
-                "categories": [
-                    {"category": "Compliance Risk", "score": 40, "level": "MEDIUM"},
-                    {"category": "ADR Risk", "score": 50, "level": "MEDIUM"},
-                    {"category": "Counterfeit Risk", "score": 20, "level": "LOW"},
-                    {"category": "Complaint Risk", "score": 30, "level": "LOW"},
-                    {"category": "Supply Chain Risk", "score": 35, "level": "MEDIUM"}
-                ]
-            }
-
-            relationship_preview.append({
-                "manufacturer": "Beximco Pharmaceuticals",
-                "medicine": "Napa Extra",
-                "batch": "B-9902",
-                "distributed_to": "Distributor & Pharmacy Chain",
-                "status": "In Circulation"
-            })
+            # This used to fabricate an entire organisation for any unrecognised type:
+            # an invented registration number, address and phone, five made-up risk
+            # scores, and a supply-chain row naming a real pharmaceutical company.
+            # A regulator's screen must not show an entity that does not exist.
+            return Response(
+                {"error": f"'{entity_type}' is not an entity type this view can report on."},
+                status=400,
+            )
 
         return Response({
             "basic_info": basic_info,
@@ -967,6 +1020,117 @@ class DGDAHeatmapDataView(views.APIView):
         return Response(data)
 
 
+# The eight administrative divisions, plus the city corporations DGDA tracks
+# alongside them. Coordinates come from DISTRICT_COORDINATES above.
+SUPPLY_REGIONS = [
+    'Dhaka', 'Chattogram', 'Rajshahi', 'Khulna',
+    'Barishal', 'Sylhet', 'Rangpur', 'Mymensingh',
+    'Gazipur', 'Narayanganj', 'Cumilla', 'Bogura',
+]
+
+# Longest first so "Cox's Bazar"-style names win over any shorter name inside them.
+_REGIONS_BY_LENGTH = sorted(SUPPLY_REGIONS, key=len, reverse=True)
+
+
+def _region_of(text):
+    """Which tracked region a free-text address names, or None when it names none."""
+    haystack = (text or '').lower()
+    if not haystack:
+        return None
+    for region in _REGIONS_BY_LENGTH:
+        if region.lower() in haystack:
+            return region
+    return None
+
+
+class DGDASupplyCoverageView(views.APIView):
+    """Where manufacturer and distributor supply has actually reached.
+
+    Stock standing in a pharmacy or warehouse, and medicine delivered to a pharmacy,
+    both count as supply having arrived. Every tracked region is returned either way,
+    so a region with no supply shows as a gap on the map instead of being left off it.
+    Regions are resolved from the addresses on record; an address that names no
+    region cannot be attributed to one, and is reported separately rather than guessed.
+    """
+    permission_classes = [IsAuthenticated, IsDGDA]
+
+    def get(self, request):
+        pharmacy_region = {}
+        for user_id, address in PharmacyProfile.objects.values_list('user_id', 'address'):
+            region = _region_of(address)
+            if region:
+                pharmacy_region[user_id] = region
+
+        warehouse_region = {}
+        for warehouse_id, location in Warehouse.objects.values_list('id', 'location'):
+            region = _region_of(location)
+            if region:
+                warehouse_region[warehouse_id] = region
+
+        stats = {
+            region: {'units': 0, 'medicines': set(), 'sites': set(), 'deliveries': 0, 'movements': 0}
+            for region in SUPPLY_REGIONS
+        }
+        unattributed_units = 0
+
+        # .only() keeps Batch's unit_qr_codes (megabytes of per-unit QR strings) out of this.
+        inventory = (
+            Inventory.objects
+            .select_related('batch', 'batch__medicine')
+            .filter(quantity__gt=0)
+            .only('quantity', 'entity_type', 'entity_id', 'batch__medicine__name')
+        )
+        for item in inventory:
+            lookup = pharmacy_region if item.entity_type == 'pharmacy' else warehouse_region
+            region = lookup.get(item.entity_id)
+            if not region:
+                unattributed_units += item.quantity
+                continue
+            bucket = stats[region]
+            bucket['units'] += item.quantity
+            bucket['medicines'].add(item.batch.medicine.name)
+            bucket['sites'].add((item.entity_type, item.entity_id))
+
+        # Every signal the supply chain leaves behind, not just standing stock: where a
+        # shipment was delivered or is currently sitting, and where a batch was handed over.
+        for to_user_id, geo in Shipment.objects.filter(
+            status__in=['delivered', 'in_transit']
+        ).values_list('to_user_id', 'geo_location'):
+            region = pharmacy_region.get(to_user_id) or _region_of(geo)
+            if region:
+                stats[region]['deliveries'] += 1
+
+        for to_user_id, geo in DistributionEvent.objects.values_list('to_user_id', 'geo_location'):
+            region = _region_of(geo) or pharmacy_region.get(to_user_id) or warehouse_region.get(to_user_id)
+            if region:
+                stats[region]['movements'] += 1
+
+        regions = []
+        for index, region in enumerate(SUPPLY_REGIONS, start=1):
+            bucket = stats[region]
+            latitude, longitude = DISTRICT_COORDINATES[region.lower()]
+            supplied = bucket['units'] > 0 or bucket['deliveries'] > 0 or bucket['movements'] > 0
+            regions.append({
+                'id': index,
+                'region': region,
+                'lat': latitude,
+                'lng': longitude,
+                'supplied': supplied,
+                'units_in_stock': bucket['units'],
+                'medicine_count': len(bucket['medicines']),
+                'site_count': len(bucket['sites']),
+                'deliveries': bucket['deliveries'],
+                'movements': bucket['movements'],
+            })
+
+        return Response({
+            'regions': regions,
+            'supplied_count': sum(1 for r in regions if r['supplied']),
+            'unsupplied_count': sum(1 for r in regions if not r['supplied']),
+            'unattributed_units': unattributed_units,
+        })
+
+
 class DGDAAIRiskIntelligenceView(views.APIView):
     permission_classes = [IsAuthenticated, IsDGDA]
     def get(self, request):
@@ -1060,6 +1224,14 @@ class DGDAPolicyAnalyticsView(views.APIView):
 class DGDAEmergencyResponseView(views.APIView):
     permission_classes = [IsAuthenticated, IsDGDA]
     def get(self, request):
-        inventory = Inventory.objects.select_related('batch', 'batch__medicine').filter(quantity__gt=0)
+        # Only the four fields below are read, so load only those. Selecting whole Batch
+        # rows drags unit_qr_codes with them - a per-unit QR list that runs to megabytes
+        # per batch - and pulling that over the wire is what made this view take ~45s.
+        inventory = (
+            Inventory.objects
+            .select_related('batch', 'batch__medicine')
+            .filter(quantity__gt=0)
+            .only('quantity', 'entity_type', 'entity_id', 'batch__medicine__name')
+        )
         data = [{"medicine": inv.batch.medicine.name, "quantity": inv.quantity, "entity_type": inv.entity_type, "entity_id": inv.entity_id} for inv in inventory]
         return Response(data)

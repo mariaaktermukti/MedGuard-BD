@@ -50,7 +50,7 @@ const DrugInteractionChecker = () => {
     const severityColor = result?.severity === 'safe' ? 'var(--success)' : result?.severity === 'dangerous' ? 'var(--danger)' : 'var(--warning)';
 
     return (
-        <div style={{ display: 'grid', gap: '1.5rem', maxWidth: '700px' }}>
+        <div style={{ display: 'grid', gap: '1.5rem' }}>
             <Card>
                 <CardHeader title="Drug Interaction Checker" subtitle="Check whether prescribed medicines are safe to take together." />
                 <CardContent>

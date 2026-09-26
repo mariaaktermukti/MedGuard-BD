@@ -1,6 +1,10 @@
+import logging
+
 from django.db.models import Count, Q
 from django.utils import timezone
 from datetime import timedelta
+
+logger = logging.getLogger(__name__)
 
 def calculate_risk_score(event_type, severity, adr_count=0, complaint_count=0, violation_count=0, is_counterfeit=False, supply_anomaly=False):
     """
@@ -97,18 +101,21 @@ def generate_ai_situation_summary():
         ).values_list('location', flat=True))
         
         top_locations = list(set([loc for loc in locations if loc]))[:2]
-        loc_str = " and ".join(top_locations) if top_locations else "Dhaka and Chattogram"
+        loc_str = " and ".join(top_locations) if top_locations else "no single location"
 
         active_recalls = Recall.objects.filter(status='active').count()
     except Exception:
-        high_critical_alerts = 12
-        counterfeit_count = 3
-        loc_str = "Dhaka and Chattogram"
-        active_recalls = 2
+        # Returning invented counts on failure is worse than saying nothing: the
+        # briefing reads as real intelligence either way.
+        logger.exception("Could not build the DGDA situation summary from live data")
+        return "Live monitoring data is unavailable right now, so no national situation summary can be produced."
 
     summary_parts = []
-    summary_parts.append(f"{high_critical_alerts or 12} high-severity alerts were detected in the last 24 hours across national nodes.")
-    summary_parts.append(f"ADR reports and quality signals increased significantly in {loc_str}.")
+    summary_parts.append(
+        f"{high_critical_alerts} high-severity alert(s) were detected in the last 24 hours across national nodes."
+    )
+    if top_locations:
+        summary_parts.append(f"Open monitoring events are concentrated in {loc_str}.")
     if counterfeit_count > 0:
         summary_parts.append(f"{counterfeit_count} suspected counterfeit medicine events are currently under active investigation.")
     if active_recalls > 0:

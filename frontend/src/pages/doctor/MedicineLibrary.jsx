@@ -23,7 +23,7 @@ const MedicineLibrary = () => {
     }, []);
 
     return (
-        <div style={{ display: 'grid', gap: '1.5rem', maxWidth: '700px' }}>
+        <div style={{ display: 'grid', gap: '1.5rem' }}>
             <Card>
                 <CardHeader title="My Medicine Library" subtitle="Medicines you prescribe most often, based on your own prescription history." />
                 <CardContent>
@@ -42,6 +42,9 @@ const MedicineLibrary = () => {
                                         {index < 3 && <Star size={18} weight="fill" color="var(--warning)" />}
                                         <div>
                                             <div style={{ fontWeight: 700 }}>{medicine.name}</div>
+                                            <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                                                {medicine.manufacturer_name || 'No manufacturer on file'}
+                                            </div>
                                             <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                                                 {medicine.generic_name || 'No generic name on file'}
                                                 {medicine.strength ? ` • ${medicine.strength}` : ''}

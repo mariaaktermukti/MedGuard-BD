@@ -28,7 +28,7 @@ const DrugPassportViewer = () => {
     };
 
     return (
-        <div style={{ display: 'grid', gap: '1.5rem', maxWidth: '800px' }}>
+        <div style={{ display: 'grid', gap: '1.5rem' }}>
             <Card>
                 <CardHeader title="Digital Drug Passport" subtitle="Look up a medicine batch's full manufacturing and distribution history by QR code." />
                 <CardContent>

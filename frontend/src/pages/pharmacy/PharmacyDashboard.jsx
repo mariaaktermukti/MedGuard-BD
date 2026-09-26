@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Package, Warning, CalendarBlank, ShieldCheck, ChatCenteredText, Receipt } from '@phosphor-icons/react';
+import { Package, Warning, CalendarBlank, ShieldCheck, ChatCenteredText, Receipt, Storefront } from '@phosphor-icons/react';
 import { Link } from 'react-router-dom';
 
 import api from '../../services/api';
@@ -44,7 +44,7 @@ const PharmacyDashboard = () => {
     return (
         <div style={{ maxWidth: '1120px', margin: '0 auto', display: 'grid', gap: '1.5rem' }}>
             <div>
-                <h1 style={{ fontSize: '1.75rem', margin: 0, color: 'var(--primary)' }}>Pharmacy Trust Dashboard</h1>
+                <h1 style={{ fontSize: '1.75rem', margin: 0, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}><Storefront size={30} weight="duotone" /> Pharmacy Portal</h1>
                 <p style={{ color: 'var(--text-muted)', margin: '0.35rem 0 0' }}>Operational overview across stock, sales, recalls, and complaints.</p>
             </div>
 

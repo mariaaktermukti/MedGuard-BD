@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Truck, Info, MapPin } from '@phosphor-icons/react';
 import api from '../../services/api';
+import MapComponent from '../../components/MapComponent';
+// The check-in is stored as "District, free-text detail" so the district stays
+// readable from the part before the first comma, however the detail reads.
+import { DISTRICT_COORDINATES, DISTRICTS, districtOf } from '../../constants/districts';
 
 const inputStyle = {
     width: '100%',
@@ -47,14 +51,18 @@ const FleetMonitoring = () => {
     }, []);
 
     const handleUpdateLocation = async (shipment) => {
-        const location = (drafts[shipment.id] || '').trim();
-        if (!location) return;
+        const draft = drafts[shipment.id] || {};
+        const district = (draft.district || '').trim();
+        if (!district) return;
+
+        const detail = (draft.detail || '').trim();
+        const location = detail ? `${district}, ${detail}` : district;
 
         setUpdatingId(shipment.id);
         try {
             await api.post(`core/distributor/fleet-monitoring/${shipment.id}/update-location/`, { geo_location: location });
             setMessage(`Location updated for batch ${shipment.batch_details.batch_number}.`);
-            setDrafts((current) => ({ ...current, [shipment.id]: '' }));
+            setDrafts((current) => ({ ...current, [shipment.id]: { district: '', detail: '' } }));
             fetchShipments();
         } catch (error) {
             setMessage(error.response?.data?.detail || 'Could not update location.');
@@ -62,6 +70,38 @@ const FleetMonitoring = () => {
             setUpdatingId(null);
         }
     };
+
+    // Only shipments with a checked-in district can be drawn; the rest are counted
+    // and reported under the map rather than guessed onto a coordinate.
+    // Every check-in that can be placed, not only the latest one, so the route travelled
+    // is visible. The newest is drawn in full colour and the earlier ones faded behind it.
+    const mapPoints = shipments.reduce((points, shipment) => {
+        const history = shipment.location_history || [];
+        const entries = history.length
+            ? history
+            : (shipment.geo_location ? [{ location: shipment.geo_location, reported_at: shipment.geo_timestamp }] : []);
+        entries.forEach((entry, index) => {
+            const district = districtOf(entry.location);
+            if (!district) return;
+            const [lat, lng] = DISTRICT_COORDINATES[district];
+            const isLatest = index === entries.length - 1;
+            points.push({
+                id: `${shipment.id}-${index}`,
+                district: entry.location,
+                lat,
+                lng,
+                color: isLatest ? '#16a34a' : '#94a3b8',
+                details: [
+                    ['Medicine', shipment.batch_details?.medicine || '—'],
+                    ['Stop', `${index + 1} of ${entries.length}`],
+                    ['Reported', entry.reported_at ? new Date(entry.reported_at).toLocaleString() : 'unknown'],
+                    ['Status', isLatest ? 'Where it is now' : 'Passed through'],
+                ],
+            });
+        });
+        return points;
+    }, []);
+    const unplaceableCount = shipments.length - mapPoints.length;
 
     return (
         <div style={{ maxWidth: '900px', margin: '0 auto', display: 'grid', gap: '1.5rem' }}>
@@ -78,6 +118,20 @@ const FleetMonitoring = () => {
             </div>
 
             {message && <div className="glass-panel" style={{ padding: '1rem 1.25rem', borderLeft: '4px solid var(--primary)' }}>{message}</div>}
+
+            {!loading && shipments.length > 0 && (
+                <div className="glass-panel" style={{ padding: '1.5rem' }}>
+                    <h2 style={{ margin: '0 0 0.75rem', fontSize: '1.1rem' }}>Where they were last seen</h2>
+                    <MapComponent points={mapPoints} />
+                    {unplaceableCount > 0 && (
+                        <p style={{ margin: '0.75rem 0 0', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                            {unplaceableCount} of {shipments.length} in-transit shipment{shipments.length === 1 ? '' : 's'}
+                            {unplaceableCount === 1 ? ' is' : ' are'} not on the map yet — no district has been checked in for
+                            {unplaceableCount === 1 ? ' it' : ' them'}.
+                        </p>
+                    )}
+                </div>
+            )}
 
             <div className="glass-panel" style={{ padding: '1.5rem' }}>
                 {loading ? (
@@ -101,18 +155,56 @@ const FleetMonitoring = () => {
                                         <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>&bull; {timeAgo(shipment.geo_timestamp)}</span>
                                     </div>
                                 </div>
-                                <div style={{ display: 'flex', gap: '0.6rem' }}>
+
+                                {/* Each check-in is kept, so the stops this consignment passed
+                                    through can be read back rather than only its last position. */}
+                                {(shipment.location_history || []).length > 0 && (
+                                    <div style={{ margin: '0 0 0.9rem', paddingLeft: '0.2rem' }}>
+                                        <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
+                                            Journey so far
+                                        </div>
+                                        {shipment.location_history.map((entry, index) => {
+                                            const isLatest = index === shipment.location_history.length - 1;
+                                            return (
+                                                <div key={`${entry.location}-${entry.reported_at}`} style={{ display: 'flex', gap: '0.6rem', alignItems: 'baseline', padding: '0.2rem 0' }}>
+                                                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: isLatest ? '#16a34a' : '#94a3b8', flexShrink: 0, marginTop: '0.35rem' }} />
+                                                    <span style={{ fontWeight: isLatest ? 600 : 400, fontSize: '0.9rem' }}>{entry.location}</span>
+                                                    <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                                                        {entry.reported_at ? new Date(entry.reported_at).toLocaleString() : ''}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                                <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+                                    <select
+                                        value={drafts[shipment.id]?.district || ''}
+                                        onChange={(e) => setDrafts((current) => ({
+                                            ...current,
+                                            [shipment.id]: { ...current[shipment.id], district: e.target.value },
+                                        }))}
+                                        style={{ ...inputStyle, flex: '0 1 200px' }}
+                                    >
+                                        <option value="">Select district...</option>
+                                        {DISTRICTS.map((district) => (
+                                            <option key={district} value={district}>{district}</option>
+                                        ))}
+                                    </select>
                                     <input
-                                        value={drafts[shipment.id] || ''}
-                                        onChange={(e) => setDrafts((current) => ({ ...current, [shipment.id]: e.target.value }))}
-                                        placeholder="e.g. Passed Tejgaon checkpoint"
-                                        style={inputStyle}
+                                        value={drafts[shipment.id]?.detail || ''}
+                                        onChange={(e) => setDrafts((current) => ({
+                                            ...current,
+                                            [shipment.id]: { ...current[shipment.id], detail: e.target.value },
+                                        }))}
+                                        placeholder="Landmark (optional) - e.g. Tejgaon checkpoint"
+                                        style={{ ...inputStyle, flex: '1 1 220px' }}
                                     />
                                     <button
                                         type="button"
                                         className="ui-btn ui-btn-primary"
                                         style={{ width: 'auto', padding: '0.6rem 1.1rem' }}
-                                        disabled={updatingId === shipment.id || !(drafts[shipment.id] || '').trim()}
+                                        disabled={updatingId === shipment.id || !(drafts[shipment.id]?.district || '').trim()}
                                         onClick={() => handleUpdateLocation(shipment)}
                                     >
                                         Update

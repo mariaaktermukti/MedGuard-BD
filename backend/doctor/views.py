@@ -8,7 +8,7 @@ from rest_framework import generics, permissions, status, views
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 
-from core.models import ADRReport, Consultation, DosageSchedule, Medicine, Prescription, Recall, ResearchDataset, Sale
+from core.models import ADRReport, Consultation, DosageSchedule, Medicine, Prescription, PrescriptionItem, Recall, ResearchDataset, Sale
 from users.permissions import IsDoctor
 
 from .utils import _chat_completion, check_prescription_warnings
@@ -118,7 +118,11 @@ class DoctorMedicineListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated, IsDoctor]
 
     def get_queryset(self):
-        queryset = Medicine.objects.filter(is_active=True).order_by('name')
+        # manufacturer_name walks manufacturer -> manufacturer_profile, so pull
+        # both in the one query rather than twice per medicine.
+        queryset = Medicine.objects.filter(is_active=True).select_related(
+            'manufacturer', 'manufacturer__manufacturer_profile'
+        ).order_by('name')
 
         query = self.request.query_params.get('q')
         if query:
@@ -168,7 +172,7 @@ class DoctorFrequentMedicinesView(generics.ListAPIView):
         doctor = self.request.user
         return Medicine.objects.filter(
             prescription_items__prescription__doctor=doctor
-        ).annotate(
+        ).select_related('manufacturer', 'manufacturer__manufacturer_profile').annotate(
             times_prescribed=Count('prescription_items', filter=Q(prescription_items__prescription__doctor=doctor))
         ).distinct().order_by('-times_prescribed', 'name')
 
@@ -209,21 +213,45 @@ class DoctorRecallAlertsView(views.APIView):
     def get(self, request):
         patient_ids = _doctor_patient_ids(request.user)
 
+        # A patient counts as being on a medicine two ways: an active dosage
+        # schedule, or an active prescription. Reading only the schedules meant
+        # a patient prescribed a recalled medicine went unflagged whenever
+        # nobody had also entered a dosage schedule for it - which is most of
+        # them, since writing a prescription does not create one.
+        on_medicine = defaultdict(dict)  # medicine_id -> {patient_id: {patient, sources}}
+
+        def note(medicine_id, patient, source):
+            if medicine_id is None:
+                return
+            entry = on_medicine[medicine_id].setdefault(
+                patient.id, {'patient': patient, 'sources': set()}
+            )
+            entry['sources'].add(source)
+
         schedules = DosageSchedule.objects.filter(
             citizen_id__in=patient_ids, is_active=True
-        ).select_related('medicine', 'citizen')
-
-        medicine_to_patients = defaultdict(list)
+        ).select_related('citizen')
         for schedule in schedules:
-            medicine_to_patients[schedule.medicine_id].append(schedule.citizen)
+            note(schedule.medicine_id, schedule.citizen, 'dosage schedule')
+
+        # Every doctor's prescriptions, not just this one's, the way the patient
+        # history page reads them: a recall matters whoever wrote the script.
+        items = PrescriptionItem.objects.filter(
+            prescription__citizen_id__in=patient_ids, prescription__status='active'
+        ).select_related('prescription__citizen')
+        for item in items:
+            note(item.medicine_id, item.prescription.citizen, 'prescription')
 
         active_recalls = Recall.objects.filter(
-            status='active', batch__medicine_id__in=medicine_to_patients.keys()
+            status='active', batch__medicine_id__in=on_medicine.keys()
         ).select_related('batch', 'batch__medicine')
 
         alerts = []
         for recall in active_recalls:
-            for patient in medicine_to_patients.get(recall.batch.medicine_id, []):
+            # Keyed by patient, so someone with both a schedule and a
+            # prescription for the medicine is listed once, not twice.
+            for entry in on_medicine.get(recall.batch.medicine_id, {}).values():
+                patient = entry['patient']
                 alerts.append({
                     'patient_id': patient.id,
                     'patient_name': patient.full_name or patient.username,
@@ -231,6 +259,7 @@ class DoctorRecallAlertsView(views.APIView):
                     'batch_number': recall.batch.batch_number,
                     'reason': recall.reason,
                     'date_issued': recall.date_issued,
+                    'sources': sorted(entry['sources']),
                 })
 
         return Response({'alerts': alerts})

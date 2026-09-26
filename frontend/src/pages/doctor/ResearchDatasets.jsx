@@ -23,7 +23,7 @@ const ResearchDatasets = () => {
     }, []);
 
     return (
-        <div style={{ display: 'grid', gap: '1.5rem', maxWidth: '700px' }}>
+        <div style={{ display: 'grid', gap: '1.5rem' }}>
             <Card>
                 <CardHeader title="Research Datasets" subtitle="Metadata for datasets shared with research. Full data access is reserved for the Researcher Portal." />
                 <CardContent>

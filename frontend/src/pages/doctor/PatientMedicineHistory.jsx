@@ -4,6 +4,20 @@ import api from '../../services/api';
 import Card, { CardHeader, CardContent } from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 
+// A dosage schedule sends a plain 'YYYY-MM-DD' with no timezone, and new Date()
+// reads that as UTC midnight - which prints the day before anywhere west of
+// Greenwich. Build those from the parts; a sale sends a full timestamp that
+// already carries its offset, so let Date parse that one itself.
+const formatDay = (value) => {
+    if (!value) return null;
+    const text = String(value);
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(text)
+        ? new Date(Number(text.slice(0, 4)), Number(text.slice(5, 7)) - 1, Number(text.slice(8, 10)))
+        : new Date(text);
+    if (Number.isNaN(date.getTime())) return null;
+    return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+};
+
 const PatientMedicineHistory = () => {
     const [patients, setPatients] = useState([]);
     const [loadingPatients, setLoadingPatients] = useState(true);
@@ -109,6 +123,11 @@ const PatientMedicineHistory = () => {
                                                     <div>
                                                         <div style={{ fontWeight: 700 }}>{item.medicine_name}</div>
                                                         <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{item.dosage} &bull; {item.frequency}</div>
+                                                        {formatDay(item.start_date) && (
+                                                            <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                                                                From {formatDay(item.start_date)}{formatDay(item.end_date) ? ` to ${formatDay(item.end_date)}` : ''}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                                 <Badge variant={item.is_active ? 'success' : 'neutral'}>{item.is_active ? 'Active' : 'Inactive'}</Badge>
@@ -157,7 +176,12 @@ const PatientMedicineHistory = () => {
                                             <div key={sale.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0', borderBottom: '1px solid var(--border)' }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                                     <Receipt size={16} color="var(--primary)" />
-                                                    <span>{sale.medicine_name} (Batch {sale.batch_number})</span>
+                                                    <div>
+                                                        <div>{sale.medicine_name} (Batch {sale.batch_number})</div>
+                                                        {formatDay(sale.sale_date) && (
+                                                            <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{formatDay(sale.sale_date)}</div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                                 <span style={{ fontWeight: 700 }}>{sale.quantity} units</span>
                                             </div>
