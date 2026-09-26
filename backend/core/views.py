@@ -1721,6 +1721,25 @@ class DistributorRouteRiskView(views.APIView):
 
         alerts = []
         for shipment in shipments:
+            # A batch recalled after it left the depot is the one hazard this
+            # page can be certain about, and it was the one it did not look
+            # for: 120 units of a recalled medicine were in transit to a
+            # pharmacy while the page read "No risk flags right now". New
+            # shipments of such a batch are refused, but goods already on the
+            # road have to be called back by somebody.
+            stopped = _batch_sale_blockers(shipment.batch)
+            if stopped:
+                medicine = shipment.batch.medicine.name if shipment.batch.medicine else 'This medicine'
+                alerts.append({
+                    'type': 'danger',
+                    'title': f'Recall in transit: Batch {shipment.batch.batch_number}',
+                    'message': (
+                        f'{shipment.quantity} units of {medicine} are on the way to '
+                        f'{shipment.to_user.username if shipment.to_user else "a pharmacy"}, but this batch '
+                        f'{_join_reasons(stopped)}. Stop the delivery and recover the stock.'
+                    ),
+                })
+
             if shipment.status == 'in_transit' and shipment.shipment_date:
                 days_elapsed = (date.today() - shipment.shipment_date).days
                 if days_elapsed > OVERDUE_IN_TRANSIT_DAYS:
