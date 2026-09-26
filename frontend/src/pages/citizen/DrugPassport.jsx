@@ -4,6 +4,20 @@ import { motion, AnimatePresence } from 'framer-motion';
 import api from '../../services/api';
 import QRScanner from '../../components/QRScanner';
 
+// A distribution event carries a full timestamp, so let Date parse it and
+// show the day in the reader's own timezone.
+const eventDay = (value) => {
+    if (!value) return null;
+    const d = new Date(value);
+    return Number.isNaN(d.getTime())
+        ? null
+        : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+};
+
+const titleCase = (value) => (value || '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\b\w/g, (ch) => ch.toUpperCase());
+
 const DrugPassport = () => {
     const [scanned, setScanned] = useState(false);
     const [isScanning, setIsScanning] = useState(false);
@@ -24,9 +38,13 @@ const DrugPassport = () => {
         } catch (error) {
             // Never fall back to mock data: an unregistered code must not render as authentic
             setIsScanning(false);
+            // A 404 keeps its own wording: an unregistered code is a counterfeit
+            // warning, not a lookup failure, and that must not be softened into
+            // whatever the server happened to say. Anything else defers to the
+            // server, which can explain more than a status code can.
             setScanError(error.response?.status === 404
                 ? 'This QR code is not registered with MedGuard. Do not use this medicine; it may be counterfeit.'
-                : 'Could not verify this QR code right now. Please try again.');
+                : (error.response?.data?.detail || 'Could not verify this QR code right now. Please try again.'));
         }
     };
 
@@ -183,14 +201,29 @@ const DrugPassport = () => {
                             <div style={{ position: 'absolute', left: '-1.45rem', top: '0.25rem', width: '12px', height: '12px', borderRadius: '50%', background: 'var(--success)' }} />
                             <strong>Scanned by you</strong><br/><span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Just now • Dhaka</span>
                         </div>
-                        <div style={{ position: 'relative' }}>
-                            <div style={{ position: 'absolute', left: '-1.45rem', top: '0.25rem', width: '12px', height: '12px', borderRadius: '50%', background: 'var(--border)' }} />
-                            <strong>Lazz Pharma</strong><br/><span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>2 days ago • Pharmacy</span>
-                        </div>
-                        <div style={{ position: 'relative' }}>
-                            <div style={{ position: 'absolute', left: '-1.45rem', top: '0.25rem', width: '12px', height: '12px', borderRadius: '50%', background: 'var(--border)' }} />
-                            <strong>Beximco Pharma</strong><br/><span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Oct 15, 2023 • Manufacturer</span>
-                        </div>
+                        {/* These were three fixed rows - "Lazz Pharma, 2 days ago" and
+                            "Beximco Pharma, Oct 15, 2023" - shown for every medicine
+                            scanned, whoever actually handled it. The Oct 2023 line
+                            appeared above a batch manufactured in 2026. The passport
+                            already carries this batch's real movements. */}
+                        {[...(batchData.distribution_events || [])]
+                            .sort((a, b) => new Date(b.event_date) - new Date(a.event_date))
+                            .map((event) => (
+                                <div key={event.id} style={{ position: 'relative' }}>
+                                    <div style={{ position: 'absolute', left: '-1.45rem', top: '0.25rem', width: '12px', height: '12px', borderRadius: '50%', background: 'var(--border)' }} />
+                                    <strong>{titleCase(event.stage_from)} → {titleCase(event.stage_to)}</strong><br/>
+                                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                                        {eventDay(event.event_date) || 'Date not recorded'}
+                                        {event.geo_location ? ` • ${event.geo_location}` : ''}
+                                    </span>
+                                </div>
+                            ))}
+                        {(batchData.distribution_events || []).length === 0 && (
+                            <div style={{ position: 'relative' }}>
+                                <div style={{ position: 'absolute', left: '-1.45rem', top: '0.25rem', width: '12px', height: '12px', borderRadius: '50%', background: 'var(--border)' }} />
+                                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>No earlier movements recorded for this batch.</span>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
