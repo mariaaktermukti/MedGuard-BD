@@ -33,15 +33,26 @@ const Suppliers = () => {
         fetchShipments();
     }, []);
 
+    const [messageIsWarning, setMessageIsWarning] = useState(false);
+
     const handleReceive = async (id) => {
         setReceivingId(id);
         setMessage('');
+        setMessageIsWarning(false);
         try {
-            await api.post(`core/pharmacy/shipments/${id}/receive/`);
-            setMessage('Shipment received and added to inventory.');
+            const response = await api.post(`core/pharmacy/shipments/${id}/receive/`);
+            // A recalled or QC-failed batch is delivered but kept off the
+            // sellable shelf, so saying "added to inventory" would be wrong.
+            if (response.data?.warning) {
+                setMessage(response.data.warning);
+                setMessageIsWarning(true);
+            } else {
+                setMessage('Shipment received and added to inventory.');
+            }
             fetchShipments();
         } catch (error) {
             setMessage(error.response?.data?.detail || 'Could not receive this shipment.');
+            setMessageIsWarning(true);
         } finally {
             setReceivingId(null);
         }
@@ -54,7 +65,14 @@ const Suppliers = () => {
                 <p style={{ color: 'var(--text-muted)', margin: '0.35rem 0 0' }}>Track incoming shipments from distributors and manufacturers.</p>
             </div>
 
-            {message && <div className="glass-panel" style={{ padding: '1rem 1.25rem', borderLeft: '4px solid var(--primary)' }}>{message}</div>}
+            {message && (
+                <div className="glass-panel" style={{
+                    padding: '1rem 1.25rem',
+                    borderLeft: `4px solid ${messageIsWarning ? 'var(--danger)' : 'var(--primary)'}`,
+                    color: messageIsWarning ? 'var(--danger)' : undefined,
+                    fontWeight: messageIsWarning ? 600 : undefined,
+                }}>{message}</div>
+            )}
 
             <div className="glass-panel" style={{ padding: '1.5rem' }}>
                 {loading ? (
