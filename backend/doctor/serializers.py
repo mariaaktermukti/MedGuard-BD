@@ -70,18 +70,46 @@ class DoctorPrescriptionWriteSerializer(serializers.ModelSerializer):
         return prescription
 
 
+def _manufacturer_name(medicine):
+    """Who made this medicine.
+
+    Several companies sell the same brand name at the same strength - eight of
+    them make an 'Ace 500mg' - so a name and strength alone do not identify a
+    medicine on screen. Mirrors core.serializers.MedicineSerializer, falling
+    back through the company name, the account's full name, then its username.
+    Callers should select_related('manufacturer__manufacturer_profile'), or this
+    costs two queries per row.
+    """
+    manufacturer = medicine.manufacturer
+    if not manufacturer:
+        return None
+    profile = getattr(manufacturer, 'manufacturer_profile', None)
+    return (getattr(profile, 'company_name', None)
+            or getattr(manufacturer, 'full_name', None)
+            or manufacturer.username)
+
+
 class DoctorMedicineSerializer(serializers.ModelSerializer):
+    manufacturer_name = serializers.SerializerMethodField()
+
     class Meta:
         model = Medicine
-        fields = ['id', 'name', 'generic_name', 'category', 'strength', 'dosage_form']
+        fields = ['id', 'name', 'generic_name', 'category', 'strength', 'dosage_form', 'manufacturer_name']
+
+    def get_manufacturer_name(self, obj):
+        return _manufacturer_name(obj)
 
 
 class DoctorFrequentMedicineSerializer(serializers.ModelSerializer):
     times_prescribed = serializers.IntegerField(read_only=True)
+    manufacturer_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Medicine
-        fields = ['id', 'name', 'generic_name', 'category', 'strength', 'dosage_form', 'times_prescribed']
+        fields = ['id', 'name', 'generic_name', 'category', 'strength', 'dosage_form', 'times_prescribed', 'manufacturer_name']
+
+    def get_manufacturer_name(self, obj):
+        return _manufacturer_name(obj)
 
 
 class DoctorResearchDatasetSerializer(serializers.ModelSerializer):
