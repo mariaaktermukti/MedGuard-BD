@@ -21,7 +21,15 @@ const DrugPassportViewer = () => {
             const response = await api.get(`core/passport/${qrCode.trim()}/`);
             setBatch(response.data);
         } catch (err) {
-            setError(err.response?.status === 404 ? 'No batch found for this QR code.' : 'Could not look up this passport right now.');
+            // The server explains what it could not do - an unknown code, or a
+            // batch number that two batches share - and deciding from the
+            // status alone threw that away for a flat "try again".
+            setError(
+                err.response?.data?.detail
+                || (err.response?.status === 404
+                    ? 'No batch found for this code.'
+                    : 'Could not look up this passport right now.')
+            );
         } finally {
             setLoading(false);
         }
