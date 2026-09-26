@@ -91,12 +91,22 @@ class DGDACommandCenterView(views.APIView):
         }
 
         # Live Regulatory Alerts
-        live_alerts = active_alerts_qs.order_by('-created_at')[:10]
+        # MonitoringEventSerializer resolves nine related names per row, each
+        # through its own profile table, so ten alerts were ninety round trips.
+        live_alerts = active_alerts_qs.select_related(
+            'medicine', 'batch',
+            'manufacturer', 'manufacturer__manufacturer_profile',
+            'pharmacy', 'pharmacy__pharmacy_profile',
+            'distributor', 'distributor__distributor_profile',
+            'doctor', 'doctor__doctor_profile',
+            'citizen', 'researcher', 'reviewed_by',
+        ).order_by('-created_at')[:10]
         live_alerts_serialized = MonitoringEventSerializer(live_alerts, many=True).data
 
         # Recent Activity Timeline
         recent_activities = []
-        recent_events = MonitoringEvent.objects.order_by('-created_at')[:5]
+        # Each row reads ev.medicine.name below.
+        recent_events = MonitoringEvent.objects.select_related('medicine').order_by('-created_at')[:5]
         for ev in recent_events:
             recent_activities.append({
                 "id": f"event_{ev.id}",
@@ -107,7 +117,8 @@ class DGDACommandCenterView(views.APIView):
                 "severity": ev.severity
             })
 
-        recent_adrs = ADRReport.objects.order_by('-date_reported')[:3]
+        # Same again for adr.medicine.name.
+        recent_adrs = ADRReport.objects.select_related('medicine').order_by('-date_reported')[:3]
         for adr in recent_adrs:
             recent_activities.append({
                 "id": f"adr_{adr.id}",
@@ -152,7 +163,18 @@ class DGDACommandCenterView(views.APIView):
 
 class DGDAMonitoringViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsDGDA]
-    queryset = MonitoringEvent.objects.all().order_by('-created_at')
+    # MonitoringEventSerializer resolves nine names per row - medicine, batch
+    # and seven user roles, each of those through its own profile table. With
+    # 49 events that was over 400 separate round trips to a remote database
+    # and a 15s response. Pulled in one query instead.
+    queryset = MonitoringEvent.objects.select_related(
+        'medicine', 'batch',
+        'manufacturer', 'manufacturer__manufacturer_profile',
+        'pharmacy', 'pharmacy__pharmacy_profile',
+        'distributor', 'distributor__distributor_profile',
+        'doctor', 'doctor__doctor_profile',
+        'citizen', 'researcher', 'reviewed_by',
+    ).order_by('-created_at')
     serializer_class = MonitoringEventSerializer
 
     def get_queryset(self):
@@ -492,11 +514,21 @@ class DGDAEntitiesView(views.APIView):
         legacy_distributors = list(
             DistributorProfile.objects.values('user_id', 'user__username', 'company_name', 'registration_number')
         )
-        # Built row by row (not .values()) so an unreadable trust_score cannot raise during the fetch
+        # trust_score is read as text in the same query rather than deferred and
+        # then touched per row: deferring it and reading it inside the loop was
+        # one extra round trip per pharmacy, 22 of them. Casting keeps the
+        # original protection - a value outside the column's max_digits cannot
+        # raise during the fetch - while still costing one query.
+        pharmacy_trust_text = dict(
+            PharmacyProfile.objects
+            .annotate(trust_as_text=Cast('trust_score', TextField()))
+            .values_list('user_id', 'trust_as_text')
+        )
         legacy_pharmacies = []
         for p in PharmacyProfile.objects.select_related('user').defer('trust_score'):
+            stored = pharmacy_trust_text.get(p.user_id)
             try:
-                p_trust = float(p.trust_score) if p.trust_score is not None else None
+                p_trust = float(stored) if stored not in (None, '') else None
             except (InvalidOperation, TypeError, ValueError):
                 logger.warning("Pharmacy %s has an unreadable trust_score; sending it without a trust value", p.user_id)
                 p_trust = None
@@ -930,7 +962,15 @@ class DGDACounterfeitInvestigationView(views.APIView):
 
 class DGDARecallViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsDGDA]
-    queryset = Recall.objects.all()
+    # batch_details reads the batch number, its medicine's name and the batch
+    # status. Fetching those lazily is a round trip each, and fetching the
+    # whole batch row drags unit_qr_codes with it - 15.9 MB of JSON across the
+    # table - so ask for exactly the four columns the serializer uses.
+    queryset = Recall.objects.select_related('batch', 'batch__medicine').only(
+        'batch', 'reason', 'issued_by_user', 'date_issued', 'status',
+        'progress_percent', 'halted_sales', 'notified_downstream_at', 'description',
+        'batch__batch_number', 'batch__status', 'batch__medicine__name',
+    )
     serializer_class = RecallSerializer
 
     def perform_create(self, serializer):
@@ -1137,7 +1177,17 @@ class DGDAAIRiskIntelligenceView(views.APIView):
         threats = []
         health_score = 100
 
-        adr_batches = ADRReport.objects.values('batch__batch_number', 'batch__medicine__name').annotate(count=Count('id')).filter(count__gt=1)
+        # Grouping without excluding batch-less reports put every one of them in
+        # a single None bucket, so 91 unrelated reports read as one critical
+        # signal - "91 ADRs reported for None (Batch: None)" - and took 15 off
+        # the health score for a batch that does not exist.
+        adr_batches = (
+            ADRReport.objects
+            .filter(batch__isnull=False)
+            .values('batch__batch_number', 'batch__medicine__name')
+            .annotate(count=Count('id'))
+            .filter(count__gt=1)
+        )
         for adr in adr_batches:
             threats.append({
                 "id": f"adr_{adr['batch__batch_number']}",
@@ -1147,6 +1197,20 @@ class DGDAAIRiskIntelligenceView(views.APIView):
                 "batch_number": adr['batch__batch_number']
             })
             health_score -= 15
+
+        # Those reports are not noise, they are just not attributable to a
+        # batch - which is its own problem worth naming rather than hiding.
+        unlinked_adrs = ADRReport.objects.filter(batch__isnull=True).count()
+        if unlinked_adrs:
+            threats.append({
+                "id": "adr_unlinked",
+                "message": (
+                    f"{unlinked_adrs} adverse reaction reports name no batch, so they cannot be "
+                    f"traced to a manufacturer or recalled against."
+                ),
+                "severity": "warning",
+                "type": "adr_unlinked",
+            })
 
         qc_failed_batches = Batch.objects.filter(qc_status='failed', status__in=['active', 'in_transit'])
         for batch in qc_failed_batches:
