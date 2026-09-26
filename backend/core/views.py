@@ -935,6 +935,24 @@ class CitizenDashboardView(views.APIView):
 
 # Pharmacy Portal Views
 
+def _batch_sale_blockers(batch):
+    """Why this batch must not reach a sellable shelf, in plain words."""
+    reasons = []
+    if batch.status == 'recalled':
+        reasons.append('has been recalled')
+    if batch.qc_status == 'failed':
+        reasons.append('failed quality control')
+    if batch.release_blocked:
+        reasons.append('is held back from release')
+    return reasons
+
+
+def _join_reasons(reasons):
+    if len(reasons) == 1:
+        return reasons[0]
+    return ', '.join(reasons[:-1]) + ' and ' + reasons[-1]
+
+
 class PharmacyInventoryListCreateView(generics.ListCreateAPIView):
     serializer_class = InventorySerializer
     permission_classes = [permissions.IsAuthenticated, IsPharmacy]
@@ -946,6 +964,19 @@ class PharmacyInventoryListCreateView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         batch = serializer.validated_data['batch']
+
+        # A batch that was recalled, failed QC or is held back from release must
+        # not reach a shelf. The alerts page flagged these once they were already
+        # in stock, which is a net under the tightrope, not a gate: a pharmacist
+        # who never opens that page would sell them.
+        blocked = _batch_sale_blockers(batch)
+        if blocked:
+            medicine = batch.medicine.name if batch.medicine else 'This medicine'
+            raise ValidationError({'detail': (
+                f'{medicine} batch {batch.batch_number} cannot be added to stock: it '
+                f'{_join_reasons(blocked)}. Quarantine it and contact your supplier.'
+            )})
+
         existing = Inventory.objects.filter(
             entity_type='pharmacy', entity_id=self.request.user.id, batch=batch
         ).first()
@@ -985,18 +1016,41 @@ class PharmacyShipmentReceiveView(views.APIView):
         if shipment.status == 'delivered':
             return Response({'detail': 'Shipment already received.'}, status=status.HTTP_400_BAD_REQUEST)
 
+        batch = shipment.batch
+        blocked = _batch_sale_blockers(batch)
+
+        # The boxes did arrive, so the shipment is delivered either way -
+        # leaving it in transit would be its own lie, and the distributor's
+        # fleet view would still be tracking it. What a blocked batch does not
+        # get is a place on the sellable shelf.
         shipment.status = 'delivered'
         shipment.delivery_date = date.today()
         shipment.save(update_fields=['status', 'delivery_date', 'updated_at'])
 
+        if blocked:
+            medicine = batch.medicine.name if batch.medicine else 'This medicine'
+            return Response({
+                'shipment': PharmacyShipmentSerializer(shipment).data,
+                'added_to_inventory': False,
+                'warning': (
+                    f'Delivery recorded, but {medicine} batch {batch.batch_number} was '
+                    f'not added to your sellable stock: it {_join_reasons(blocked)}. '
+                    f'Quarantine it and contact your supplier.'
+                ),
+            })
+
         inventory, _ = Inventory.objects.get_or_create(
-            entity_type='pharmacy', entity_id=request.user.id, batch=shipment.batch,
+            entity_type='pharmacy', entity_id=request.user.id, batch=batch,
             defaults={'quantity': 0},
         )
         inventory.quantity += shipment.quantity
         inventory.save(update_fields=['quantity', 'last_updated'])
 
-        return Response(PharmacyShipmentSerializer(shipment).data)
+        return Response({
+            'shipment': PharmacyShipmentSerializer(shipment).data,
+            'added_to_inventory': True,
+            'warning': None,
+        })
 
 
 class PharmacyBatchVerifyView(views.APIView):
@@ -1120,26 +1174,65 @@ class PharmacyExpiryAlertsView(views.APIView):
 class PharmacyDemandForecastView(views.APIView):
     permission_classes = [permissions.IsAuthenticated, IsPharmacy]
 
+    # How far a 90-day sales history is trusted. Every forecast here is
+    # arithmetic on past sales, not a model, so the ceiling stays low however
+    # many sales there are - and thin history says so rather than rounding up.
+    CONFIDENCE_BY_SALES = ((5, 0.25), (20, 0.45), (50, 0.60))
+    CONFIDENCE_CEILING = 0.75
+
     def get(self, request):
         region = request.query_params.get('region', 'Bangladesh')
         recent_sales = Sale.objects.filter(
             pharmacy=request.user, sale_date__gte=timezone.now() - timedelta(days=90)
         )
+        sales_count = recent_sales.count()
         units_sold_90d = recent_sales.aggregate(total=Sum('quantity'))['total'] or 0
         current_stock = Inventory.objects.filter(
             entity_type='pharmacy', entity_id=request.user.id
         ).aggregate(total=Sum('quantity'))['total'] or 0
-        predicted_demand = max(units_sold_90d // 3, current_stock // 4, 20)
 
-        forecast = DemandForecast.objects.create(
+        if sales_count == 0:
+            # Nothing has been sold, so there is nothing to project from. The
+            # old floor of 20 units answered anyway, which is a guess wearing a
+            # number's clothes.
+            predicted_demand = None
+            confidence = None
+            basis = (
+                'No sales recorded in the last 90 days, so next month cannot be '
+                'projected yet. Log sales and this will fill in.'
+            )
+        else:
+            # A month's share of the 90-day rate. Stock on hand is deliberately
+            # left out: holding a lot of something means it is selling slowly,
+            # so counting it as demand had the sign backwards.
+            predicted_demand = max(round(units_sold_90d * 30 / 90), 1)
+            confidence = self.CONFIDENCE_CEILING
+            for threshold, value in self.CONFIDENCE_BY_SALES:
+                if sales_count < threshold:
+                    confidence = value
+                    break
+            basis = (
+                f'Projected from {units_sold_90d} units across {sales_count} '
+                f'{"sale" if sales_count == 1 else "sales"} in the last 90 days. '
+                + ('Thin history, so treat this as a rough guide.' if sales_count < 20
+                   else 'Arithmetic on past sales, not a trained model.')
+            )
+
+        # Built, not saved: this used to write a DemandForecast row on every
+        # GET, so opening the page twice left two identical rows behind.
+        forecast = DemandForecast(
             region=region,
             forecast_date=date.today() + timedelta(days=30),
             predicted_demand=predicted_demand,
-            confidence_score=0.70,
-            seasonal_signal='Auto-generated from recent pharmacy sales and current stock levels',
-            source_summary=[f'{recent_sales.count()} sales in last 90 days', f'{current_stock} units in current stock'],
+            confidence_score=confidence,
+            seasonal_signal=basis,
+            source_summary=[
+                f'{sales_count} sales in last 90 days',
+                f'{units_sold_90d} units sold in last 90 days',
+                f'{current_stock} units in current stock',
+            ],
             created_by=request.user,
-            notes='Heuristic pharmacy demand forecast based on sales velocity and current stock.',
+            notes='Heuristic pharmacy demand forecast based on recent sales velocity.',
         )
         return Response(DemandForecastSerializer(forecast).data)
 

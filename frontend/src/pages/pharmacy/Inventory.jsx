@@ -27,6 +27,8 @@ const Inventory = () => {
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [message, setMessage] = useState('');
+    // A refused batch must not look like the grey "Stock added" note.
+    const [messageIsError, setMessageIsError] = useState(false);
     const [qrCode, setQrCode] = useState('');
     const [quantity, setQuantity] = useState('');
     const [submitting, setSubmitting] = useState(false);
@@ -49,8 +51,10 @@ const Inventory = () => {
     const handleAddStock = async (event) => {
         event.preventDefault();
         setMessage('');
+        setMessageIsError(false);
         if (!qrCode.trim() || !quantity) {
             setMessage('Enter the batch QR code and a quantity.');
+            setMessageIsError(true);
             return;
         }
 
@@ -62,11 +66,13 @@ const Inventory = () => {
                 quantity: Number(quantity),
             });
             setMessage(`Stock added for batch ${passport.data.batch_number}.`);
+            setMessageIsError(false);
             setQrCode('');
             setQuantity('');
             fetchInventory();
         } catch (error) {
             setMessage(error.response?.data?.detail || 'Could not find that batch QR code.');
+            setMessageIsError(true);
         } finally {
             setSubmitting(false);
         }
@@ -94,7 +100,13 @@ const Inventory = () => {
                         <Plus size={18} weight="bold" /> Add
                     </button>
                 </form>
-                {message && <p style={{ marginTop: '1rem', color: 'var(--text-muted)' }}>{message}</p>}
+                {message && (
+                    <p style={{
+                        marginTop: '1rem',
+                        color: messageIsError ? 'var(--danger)' : 'var(--text-muted)',
+                        fontWeight: messageIsError ? 600 : 400,
+                    }}>{message}</p>
+                )}
             </div>
 
             <div className="glass-panel" style={{ padding: '1.5rem' }}>

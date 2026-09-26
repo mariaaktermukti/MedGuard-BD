@@ -38,7 +38,22 @@ const SaleLogging = () => {
     const [price, setPrice] = useState('');
     const [paymentMethod, setPaymentMethod] = useState('cash');
     const [saleMessage, setSaleMessage] = useState('');
+    const [saleMessageIsError, setSaleMessageIsError] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+
+    // The three things a sale needs. The backend refuses a batch that is
+    // recalled, expired or held back anyway, but only after the pharmacist has
+    // looked up a buyer and typed a quantity - so say no at the button instead.
+    const batchSellable = Boolean(batch?.verified);
+    const saleBlockedReason = !batch?.batch?.id
+        ? 'Verify the batch QR code first.'
+        : !batchSellable
+            ? `This batch cannot be sold (${batch.verdict}).`
+            : !selectedCitizen
+                ? 'Look up and select the citizen buying this medicine.'
+                : !quantity
+                    ? 'Enter a quantity.'
+                    : '';
 
     const handleCheckBatch = async (event) => {
         event.preventDefault();
@@ -79,17 +94,11 @@ const SaleLogging = () => {
     const handleLogSale = async (event) => {
         event.preventDefault();
         setSaleMessage('');
+        setSaleMessageIsError(false);
 
-        if (!batch?.batch?.id) {
-            setSaleMessage('Verify the batch QR code first.');
-            return;
-        }
-        if (!selectedCitizen) {
-            setSaleMessage('Look up and select the citizen buying this medicine.');
-            return;
-        }
-        if (!quantity) {
-            setSaleMessage('Enter a quantity.');
+        if (saleBlockedReason) {
+            setSaleMessage(saleBlockedReason);
+            setSaleMessageIsError(true);
             return;
         }
 
@@ -103,6 +112,7 @@ const SaleLogging = () => {
                 payment_method: paymentMethod,
             });
             setSaleMessage('Sale logged successfully.');
+            setSaleMessageIsError(false);
             setQrCode('');
             setBatch(null);
             setPhone('');
@@ -112,6 +122,7 @@ const SaleLogging = () => {
             setPrice('');
         } catch (error) {
             setSaleMessage(error.response?.data?.[0] || error.response?.data?.detail || 'Could not log this sale.');
+            setSaleMessageIsError(true);
         } finally {
             setSubmitting(false);
         }
@@ -205,12 +216,30 @@ const SaleLogging = () => {
                         </Field>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                        <button type="submit" className="ui-btn ui-btn-primary" disabled={submitting} style={{ width: 'auto', padding: '0.75rem 1.5rem' }}>
+                        <button
+                            type="submit"
+                            className="ui-btn ui-btn-primary"
+                            disabled={submitting || Boolean(saleBlockedReason)}
+                            title={saleBlockedReason || undefined}
+                            style={{
+                                width: 'auto', padding: '0.75rem 1.5rem',
+                                opacity: submitting || saleBlockedReason ? 0.5 : 1,
+                                cursor: submitting || saleBlockedReason ? 'not-allowed' : 'pointer',
+                            }}
+                        >
                             <Receipt size={18} /> Log Sale
                         </button>
                     </div>
                 </form>
-                {saleMessage && <p style={{ marginTop: '0.5rem', color: 'var(--text-muted)' }}>{saleMessage}</p>}
+                {(saleMessage || saleBlockedReason) && (
+                    <p style={{
+                        marginTop: '0.5rem',
+                        color: saleMessageIsError || (!saleMessage && !batchSellable && batch?.batch?.id)
+                            ? 'var(--danger)'
+                            : 'var(--text-muted)',
+                        fontWeight: saleMessageIsError ? 600 : 400,
+                    }}>{saleMessage || saleBlockedReason}</p>
+                )}
             </div>
         </div>
     );
