@@ -128,6 +128,28 @@ class Shipment(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
 
+class ShipmentLocationCheckIn(models.Model):
+    """Every location a shipment was reported at, kept instead of overwritten.
+
+    Shipment.geo_location holds only the latest check-in, so the route a consignment
+    actually travelled was lost as soon as the next one arrived. Each check-in is
+    appended here, which is what lets the journey be drawn and audited later.
+    """
+    shipment = models.ForeignKey(Shipment, on_delete=models.CASCADE, related_name='location_checkins')
+    # Stored as "District, landmark" - the same shape the map reads a district from.
+    location = models.CharField(max_length=255)
+    district = models.CharField(max_length=100, blank=True, null=True)
+    reported_by = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, null=True, related_name='shipment_checkins')
+    reported_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['reported_at']
+        indexes = [models.Index(fields=['shipment', 'reported_at'])]
+
+    def __str__(self):
+        return f"{self.shipment_id} @ {self.location}"
+
+
 class Sale(models.Model):
     pharmacy = models.ForeignKey(User, on_delete=models.RESTRICT, related_name='pharmacy_sales')
     batch = models.ForeignKey(Batch, on_delete=models.RESTRICT, related_name='sales')

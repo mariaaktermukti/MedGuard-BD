@@ -9,7 +9,7 @@ from decimal import Decimal
 
 from django.db import models, transaction
 # pyrefly: ignore [missing-import]
-from django.db.models import Sum, Q
+from django.db.models import Sum, Q, Count
 # pyrefly: ignore [missing-import]
 from django.utils import timezone
 # pyrefly: ignore [missing-import]
@@ -36,6 +36,7 @@ from .models import (
     Recall,
     Sale,
     Shipment,
+    ShipmentLocationCheckIn,
     Warehouse,
 )
 from users.models import DistributorProfile, PharmacyProfile
@@ -287,7 +288,8 @@ class ManufacturerDashboardView(views.APIView):
             compliance_grade = 'C'
 
         recent_sales = Sale.objects.filter(batch__manufacturer=request.user, sale_date__gte=timezone.now() - timedelta(days=90)).count()
-        forecast_value = max(production_volume // max(total_batches or 1, 1), recent_sales * 2 or 50)
+        # No sales history means no demand signal, not a floor of 50 units.
+        forecast_value = max(production_volume // max(total_batches, 1), recent_sales * 2)
 
         monthly_production = defaultdict(int)
         for batch in batches:
@@ -422,7 +424,10 @@ class DemandForecastView(views.APIView):
         region = request.query_params.get('region', 'Bangladesh')
         recent_batches = Batch.objects.filter(manufacturer=request.user).order_by('-created_at')[:5]
         recent_sales = Sale.objects.filter(batch__manufacturer=request.user, sale_date__gte=timezone.now() - timedelta(days=90)).count()
-        predicted_demand = max(sum(batch.quantity_produced for batch in recent_batches) // max(len(recent_batches) or 1, 1), recent_sales * 2 or 50)
+        predicted_demand = max(
+            sum(batch.quantity_produced for batch in recent_batches) // max(len(recent_batches), 1),
+            recent_sales * 2,
+        )
         forecast = DemandForecast.objects.create(
             region=region,
             forecast_date=date.today() + timedelta(days=30),
@@ -548,6 +553,19 @@ class PharmacyFinderView(generics.ListAPIView):
     def get_queryset(self):
         return PharmacyProfile.objects.all().order_by('-trust_score')
 
+    def get_serializer_context(self):
+        # Inventory.entity_id holds a user id rather than a relation, so the stock count
+        # cannot be joined on. One grouped query here keeps it off the per-pharmacy path.
+        context = super().get_serializer_context()
+        context['medicines_by_pharmacy'] = {
+            row['entity_id']: row['medicines']
+            for row in Inventory.objects
+            .filter(entity_type='pharmacy', quantity__gt=0)
+            .values('entity_id')
+            .annotate(medicines=Count('batch__medicine', distinct=True))
+        }
+        return context
+
 
 class MedicineLookupView(generics.ListAPIView):
     """Registered medicines, searchable by name or generic name.
@@ -559,7 +577,14 @@ class MedicineLookupView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        queryset = Medicine.objects.filter(is_active=True).order_by('name')
+        # The company name is serialised for each row; pulling it in here keeps that from
+        # costing one query per medicine.
+        queryset = (
+            Medicine.objects
+            .filter(is_active=True)
+            .select_related('manufacturer', 'manufacturer__manufacturer_profile')
+            .order_by('name')
+        )
         term = (self.request.query_params.get('search') or '').strip()
         if term:
             queryset = queryset.filter(Q(name__icontains=term) | Q(generic_name__icontains=term))
@@ -1417,9 +1442,13 @@ class DistributorFleetMonitoringView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated, IsDistributor]
 
     def get_queryset(self):
+        # The check-in history is serialised per shipment; prefetching it keeps that from
+        # costing one query per row.
         return Shipment.objects.filter(
             from_user=self.request.user, status='in_transit'
-        ).select_related('batch', 'batch__medicine', 'to_user').order_by('-geo_timestamp')
+        ).select_related('batch', 'batch__medicine', 'to_user').prefetch_related(
+            'location_checkins__reported_by'
+        ).order_by('-geo_timestamp')
 
 
 class DistributorShipmentLocationUpdateView(views.APIView):
@@ -1434,6 +1463,15 @@ class DistributorShipmentLocationUpdateView(views.APIView):
         shipment.geo_location = geo_location
         shipment.geo_timestamp = timezone.now()
         shipment.save(update_fields=['geo_location', 'geo_timestamp', 'updated_at'])
+
+        # The shipment row only ever holds the latest check-in, so each one is also kept
+        # here; that is what makes the route travelled readable afterwards.
+        ShipmentLocationCheckIn.objects.create(
+            shipment=shipment,
+            location=geo_location,
+            district=geo_location.split(',')[0].strip() or None,
+            reported_by=request.user,
+        )
         return Response(DistributorShipmentSerializer(shipment).data)
 
 

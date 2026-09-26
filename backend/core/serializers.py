@@ -27,10 +27,24 @@ LOW_STOCK_THRESHOLD = 20
 
 
 class MedicineSerializer(serializers.ModelSerializer):
+    # The register holds the same brand name from several companies, and name, strength,
+    # form and generic are identical across them. Without the company there is no way to
+    # tell which one a person means.
+    manufacturer_name = serializers.SerializerMethodField()
+
     class Meta:
         model = Medicine
         fields = '__all__'
         read_only_fields = ['product_id', 'manufacturer', 'created_at', 'updated_at']
+
+    def get_manufacturer_name(self, obj):
+        manufacturer = obj.manufacturer
+        if not manufacturer:
+            return None
+        profile = getattr(manufacturer, 'manufacturer_profile', None)
+        return (getattr(profile, 'company_name', None)
+                or getattr(manufacturer, 'full_name', None)
+                or manufacturer.username)
 
 
 class ShipmentSerializer(serializers.ModelSerializer):
@@ -44,6 +58,7 @@ class DistributorShipmentSerializer(serializers.ModelSerializer):
     batch_details = serializers.SerializerMethodField(read_only=True)
     from_details = serializers.SerializerMethodField(read_only=True)
     to_details = serializers.SerializerMethodField(read_only=True)
+    location_history = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Shipment
@@ -75,6 +90,18 @@ class DistributorShipmentSerializer(serializers.ModelSerializer):
             'id': obj.to_user_id,
             'username': obj.to_user.username,
         }
+
+    def get_location_history(self, obj):
+        # Oldest first: this is the route as it was reported, not just where it is now.
+        return [
+            {
+                'location': entry.location,
+                'district': entry.district,
+                'reported_at': entry.reported_at,
+                'reported_by': entry.reported_by.username if entry.reported_by else None,
+            }
+            for entry in obj.location_checkins.all()
+        ]
 
 
 class DistributionEventSerializer(serializers.ModelSerializer):
@@ -287,10 +314,23 @@ class WarehouseSerializer(serializers.ModelSerializer):
 class PharmacyProfileSerializer(serializers.ModelSerializer):
     user_id = serializers.ReadOnlyField(source='user.id')
     user_full_name = serializers.ReadOnlyField(source='user.full_name')
+    # How many different medicines this pharmacy currently holds. A registered pharmacy
+    # with none is a real case (its shelves are empty), and the finder says so instead of
+    # sending a citizen to a shop that cannot serve them.
+    medicines_available = serializers.SerializerMethodField()
+    # Registration stores the phone on the account, never on the pharmacy profile, so the
+    # profile column is empty for every pharmacy on record. Fall back to the account's.
+    contact_phone = serializers.SerializerMethodField()
 
     class Meta:
         model = PharmacyProfile
-        fields = ['user_id', 'user_full_name', 'pharmacy_name', 'registration_number', 'address', 'contact_person', 'contact_phone', 'license_number', 'trust_score']
+        fields = ['user_id', 'user_full_name', 'pharmacy_name', 'registration_number', 'address', 'contact_person', 'contact_phone', 'license_number', 'trust_score', 'medicines_available']
+
+    def get_medicines_available(self, obj):
+        return self.context.get('medicines_by_pharmacy', {}).get(obj.user_id, 0)
+
+    def get_contact_phone(self, obj):
+        return obj.contact_phone or getattr(obj.user, 'phone', None) or None
 
 
 class DistributorProfileSerializer(serializers.ModelSerializer):
