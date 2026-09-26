@@ -91,7 +91,7 @@ const DoctorADRReport = () => {
     const severityVariant = (s) => (s === 'severe' ? 'danger' : s === 'moderate' ? 'warning' : 'neutral');
 
     return (
-        <div style={{ display: 'grid', gap: '1.5rem', maxWidth: '700px' }}>
+        <div style={{ display: 'grid', gap: '1.5rem' }}>
             <Card>
                 <CardHeader title="Report a Side Effect" subtitle="File an adverse drug reaction report on behalf of a patient." />
                 <CardContent>
@@ -119,7 +119,10 @@ const DoctorADRReport = () => {
                             >
                                 <option value="">Select a medicine...</option>
                                 {medicines.map((med) => (
-                                    <option key={med.id} value={med.id}>{med.name}{med.strength ? ` (${med.strength})` : ''}</option>
+                                    <option key={med.id} value={med.id}>
+                                        {med.name}{med.strength ? ` (${med.strength})` : ''}
+                                        {med.manufacturer_name ? ` — ${med.manufacturer_name}` : ''}
+                                    </option>
                                 ))}
                             </select>
                         </div>

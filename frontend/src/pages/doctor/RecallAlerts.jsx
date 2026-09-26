@@ -23,7 +23,7 @@ const RecallAlerts = () => {
     }, []);
 
     return (
-        <div style={{ display: 'grid', gap: '1.5rem', maxWidth: '700px' }}>
+        <div style={{ display: 'grid', gap: '1.5rem' }}>
             <Card>
                 <CardHeader title="Recall Notifications" subtitle="Active recalls affecting medicines your patients are currently on." />
                 <CardContent>
@@ -48,6 +48,11 @@ const RecallAlerts = () => {
                                             Batch {alert.batch_number} &bull; Recalled {alert.date_issued}
                                         </div>
                                         <p style={{ margin: 0, fontSize: '0.9rem' }}>{alert.reason}</p>
+                                        {alert.sources?.length > 0 && (
+                                            <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '0.35rem' }}>
+                                                Patient is on this medicine per their {alert.sources.join(' and ')}.
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             ))}

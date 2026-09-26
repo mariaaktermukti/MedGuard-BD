@@ -81,7 +81,7 @@ const DoctorConsultations = () => {
     };
 
     return (
-        <div style={{ display: 'grid', gap: '1.5rem', maxWidth: '700px' }}>
+        <div style={{ display: 'grid', gap: '1.5rem' }}>
             <Card>
                 <CardHeader title="Schedule a Consultation" subtitle="Enter the patient's exact username — no open patient search is available." />
                 <CardContent>

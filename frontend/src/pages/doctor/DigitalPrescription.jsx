@@ -160,7 +160,10 @@ const DigitalPrescription = () => {
                                     >
                                         <option value="">Medicine...</option>
                                         {medicines.map((medicine) => (
-                                            <option key={medicine.id} value={medicine.id}>{medicine.name}{medicine.strength ? ` (${medicine.strength})` : ''}</option>
+                                            <option key={medicine.id} value={medicine.id}>
+                                                {medicine.name}{medicine.strength ? ` (${medicine.strength})` : ''}
+                                                {medicine.manufacturer_name ? ` — ${medicine.manufacturer_name}` : ''}
+                                            </option>
                                         ))}
                                     </select>
                                     <input
