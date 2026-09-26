@@ -600,7 +600,17 @@ const DGDAPortal = () => {
                             <p style={{ color: 'var(--text-muted)', fontSize: '1.125rem' }}>Interactive visualization of ADRs, shortages, and counterfeiting risks across Bangladesh.</p>
                         </div>
                         <Card padding="none" style={{ height: '500px', overflow: 'hidden' }}>
-                            {data && <MapComponent points={data} />}
+                            {data && (
+                                <MapComponent
+                                    points={data}
+                                    legend={[
+                                        { label: 'Critical', color: '#dc3545' },
+                                        { label: 'High', color: '#fd7e14' },
+                                        { label: 'Medium', color: '#ffc107' },
+                                        { label: 'Low', color: '#0d6efd' },
+                                    ]}
+                                />
+                            )}
                         </Card>
                     </div>
                 );
