@@ -3,7 +3,7 @@ import { useLocation, useNavigate, Link } from 'react-router-dom';
 import {
     MapPin, Crosshair, ShieldWarning, WarningCircle, ClipboardText,
     Buildings, MapTrifold, Brain, ChartLineUp, Ambulance, Shield, CheckCircle,
-    ArrowClockwise, Factory, Storefront, MagnifyingGlass, ShieldCheck } from '@phosphor-icons/react';
+    ArrowClockwise, MagnifyingGlass, ShieldCheck } from '@phosphor-icons/react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import MapComponent from '../../components/MapComponent';
@@ -50,15 +50,6 @@ const getErrorMessage = (error, fallback) => {
     if (Array.isArray(payload)) return payload.join(' ');
     const fieldErrors = Object.entries(payload).map(([field, messages]) => `${labelize(field)}: ${Array.isArray(messages) ? messages.join(' ') : messages}`);
     return fieldErrors.length ? fieldErrors.join(' | ') : fallback;
-};
-
-// trust_score is stored as a 0–9.99 decimal but some code paths write 0–100; normalise to a percentage
-const trustScoreMeta = (raw) => {
-    const score = parseFloat(raw);
-    if (Number.isNaN(score) || score === 0) return { label: 'Unrated', variant: 'neutral' };
-    const percent = score <= 10 ? score * 10 : score;
-    const variant = percent >= 80 ? 'success' : percent >= 50 ? 'warning' : 'danger';
-    return { label: `Trust ${raw}`, variant };
 };
 
 const stockLevel = (quantity) => {
@@ -382,24 +373,36 @@ const DGDAPortal = () => {
 
         switch (activeTab) {
             case 'command-center':
+                // This case used to render four KPI cards of its own, which meant
+                // DGDACommandCenter - the 428-line screen built for this endpoint -
+                // only ever appeared under `default:`, where the switch never
+                // reaches it. Six KPIs, the severity breakdown, ten live alerts
+                // and eight recent activities were computed on every request and
+                // shown to nobody. It renders here now, with the supply map kept
+                // below it, and is handed the response already fetched.
                 return (
                     <div className="animate-fade-in">
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+                        <DGDACommandCenter onNavigateTab={handleNavigateTab} initialData={data} />
+
+                        {/* These four are not in DGDACommandCenter, which covers the
+                            alert-side KPIs. Dropping them when it was wired in would
+                            have hidden four real figures to reveal six others. */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', margin: '2rem 0' }}>
                             <Card padding="md" style={{ textAlign: 'center' }}>
                                 <h3 style={{ fontSize: '1rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Active Recalls</h3>
-                                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--danger)' }}>{data?.kpis?.active_recalls || 0}</div>
+                                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--danger)' }}>{data?.kpis?.active_recalls ?? 0}</div>
                             </Card>
                             <Card padding="md" style={{ textAlign: 'center' }}>
                                 <h3 style={{ fontSize: '1rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>ADR Reports</h3>
-                                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--warning)' }}>{data?.kpis?.total_adr || 0}</div>
+                                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--warning)' }}>{data?.kpis?.total_adr ?? 0}</div>
                             </Card>
                             <Card padding="md" style={{ textAlign: 'center' }}>
                                 <h3 style={{ fontSize: '1rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Low Stock Alerts</h3>
-                                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--info)' }}>{data?.kpis?.low_stock_alerts || 0}</div>
+                                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--info)' }}>{data?.kpis?.low_stock_alerts ?? 0}</div>
                             </Card>
                             <Card padding="md" style={{ textAlign: 'center' }}>
                                 <h3 style={{ fontSize: '1rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Live Movements</h3>
-                                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--primary)' }}>{data?.kpis?.live_movements || 0}</div>
+                                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--primary)' }}>{data?.kpis?.live_movements ?? 0}</div>
                             </Card>
                         </div>
 
@@ -427,6 +430,12 @@ const DGDAPortal = () => {
                         </Card>
                     </div>
                 );
+            case 'live-monitoring':
+                // There was no case for this tab, so it fell through to `default:`
+                // and rendered the Command Center - the Monitoring menu item showed
+                // the Command Center page, while DGDAMonitoring (filters, the event
+                // table, its own summary) was never rendered anywhere.
+                return <DGDAMonitoring />;
             case 'investigations':
                 return (
                     <div className="animate-fade-in">
@@ -577,65 +586,13 @@ const DGDAPortal = () => {
                     </div>
                 );
             }
-            case 'entities': {
-                const manufacturers = asList(data?.manufacturers);
-                const pharmacies = asList(data?.pharmacies);
-                return (
-                    <div className="animate-fade-in">
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
-                            <Card padding="md" style={{ textAlign: 'center' }}>
-                                <h3 style={{ fontSize: '1rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Registered Manufacturers</h3>
-                                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--primary)' }}>{manufacturers.length}</div>
-                            </Card>
-                            <Card padding="md" style={{ textAlign: 'center' }}>
-                                <h3 style={{ fontSize: '1rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Registered Pharmacies</h3>
-                                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--info)' }}>{pharmacies.length}</div>
-                            </Card>
-                            <Card padding="md" style={{ textAlign: 'center' }}>
-                                <h3 style={{ fontSize: '1rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Low-Trust Pharmacies</h3>
-                                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--danger)' }}>{pharmacies.filter(p => trustScoreMeta(p.trust_score).variant === 'danger').length}</div>
-                            </Card>
-                        </div>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem', alignItems: 'start' }}>
-                            <Card padding="lg">
-                                <CardHeader title="Manufacturers" subtitle="Licensed production entities under DGDA oversight." action={<Factory size={22} color="var(--primary)" />} />
-                                <CardContent style={{ display: 'grid', gap: '0.75rem' }}>
-                                    {manufacturers.length === 0 && <p style={{ color: 'var(--text-muted)', margin: 0 }}>No manufacturers registered.</p>}
-                                    {manufacturers.map((m) => (
-                                        <div key={m.user__username} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', padding: '0.75rem 0', borderBottom: '1px solid var(--border)' }}>
-                                            <div>
-                                                <div style={{ fontWeight: 700 }}>{m.company_name}</div>
-                                                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>@{m.user__username}</div>
-                                            </div>
-                                            <Badge variant="info">Reg. {m.registration_number}</Badge>
-                                        </div>
-                                    ))}
-                                </CardContent>
-                            </Card>
-
-                            <Card padding="lg">
-                                <CardHeader title="Pharmacies" subtitle="Colour-coded by trust score: green ≥ 80%, amber ≥ 50%, red below." action={<Storefront size={22} color="var(--primary)" />} />
-                                <CardContent style={{ display: 'grid', gap: '0.75rem' }}>
-                                    {pharmacies.length === 0 && <p style={{ color: 'var(--text-muted)', margin: 0 }}>No pharmacies registered.</p>}
-                                    {pharmacies.map((p) => {
-                                        const trust = trustScoreMeta(p.trust_score);
-                                        return (
-                                            <div key={p.user__username} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', padding: '0.75rem 0', borderBottom: '1px solid var(--border)' }}>
-                                                <div>
-                                                    <div style={{ fontWeight: 700 }}>{p.pharmacy_name}</div>
-                                                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>@{p.user__username}</div>
-                                                </div>
-                                                <Badge variant={trust.variant}>{trust.label}</Badge>
-                                            </div>
-                                        );
-                                    })}
-                                </CardContent>
-                            </Card>
-                        </div>
-                    </div>
-                );
-            }
+            case 'entities':
+                // The inline version here listed manufacturers and pharmacies only,
+                // while DGDAEntities - which shows all seven roles the backend
+                // counts, with their summary cards and a detail view - was imported
+                // and never rendered. total_citizens and total_medicines were
+                // computed on every request and shown nowhere.
+                return <DGDAEntities />;
             case 'heatmaps':
                 return (
                     <div className="animate-fade-in">
@@ -710,8 +667,16 @@ const DGDAPortal = () => {
                 const maxVolume = Math.max(1, ...consumption.map(row => Number(row.volume) || 0));
                 const peak = consumption.reduce((best, row) => (!best || Number(row.volume) > Number(best.volume) ? row : best), null);
                 const complianceColor = compliance >= 85 ? 'var(--success)' : compliance >= 60 ? 'var(--warning)' : 'var(--danger)';
+                // The response says which window these figures cover; without it
+                // on screen a reader cannot tell a month from a year.
+                const windowMonths = Number(data?.window_months) || null;
                 return (
                     <div className="animate-fade-in">
+                        {windowMonths && (
+                            <p style={{ margin: '0 0 1rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                                Covering the last {windowMonths} months.
+                            </p>
+                        )}
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
                             <Card padding="md" style={{ textAlign: 'center' }}>
                                 <h3 style={{ fontSize: '1rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>National Compliance</h3>
@@ -856,6 +821,7 @@ const DGDAPortal = () => {
                 );
             }
             default:
+                // Every tab now has a case; this only catches an unknown path.
                 return <DGDACommandCenter onNavigateTab={handleNavigateTab} />;
         }
     };
