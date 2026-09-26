@@ -20,9 +20,16 @@ export const NotificationProvider = ({ children }) => {
             return;
         }
         try {
+            // Dose reminders are built from a citizen's own schedules, so for
+            // every other role that request is a guaranteed-empty round trip
+            // to a remote database on each page load. The 15s reminder poll
+            // below already skips non-citizens; this now matches it.
+            const isCitizen = !user.role || user.role === 'citizen';
             const [notifRes, medRes] = await Promise.all([
                 api.get('core/notifications/'),
-                api.get('core/medicines/personal/').catch(() => ({ data: [] }))
+                isCitizen
+                    ? api.get('core/medicines/personal/').catch(() => ({ data: [] }))
+                    : Promise.resolve({ data: [] }),
             ]);
 
             const dbNotifs = notifRes.data || [];
