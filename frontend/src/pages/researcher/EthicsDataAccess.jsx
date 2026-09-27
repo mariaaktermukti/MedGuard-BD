@@ -48,6 +48,7 @@ const EthicsDataAccess = () => {
                 const params = {};
                 if (filters.medicine) params.medicine = filters.medicine;
                 if (filters.severity) params.severity = filters.severity;
+                if (filters.q) params.q = filters.q;
                 const response = await api.get('researcher/ethics/adr-data/', { params });
                 setFeed(response.data);
             } catch (error) {
@@ -111,6 +112,13 @@ const EthicsDataAccess = () => {
                     subtitle={`Showing ${feed.count} of ${feed.total_matched} matching records.${feed.truncated ? ' Result truncated by the server cap.' : ''}`}
                     action={
                         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            <input
+                                type="text"
+                                placeholder="Search medicine name..."
+                                value={filters.q || ''}
+                                onChange={(e) => setFilters({ ...filters, q: e.target.value })}
+                                style={{ padding: '0.5rem 0.7rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-main)', fontSize: '0.88rem', minWidth: '160px' }}
+                            />
                             <select
                                 value={filters.medicine}
                                 onChange={(e) => setFilters({ ...filters, medicine: e.target.value })}

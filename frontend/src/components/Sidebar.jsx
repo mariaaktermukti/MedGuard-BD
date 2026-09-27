@@ -94,8 +94,7 @@ const Sidebar = ({ isTablet }) => {
     const navItems = user?.role === 'pharmacy' ? pharmacyNavItems : user?.role === 'distributor' ? distributorNavItems : user?.role === 'dgda' ? dgdaNavItems : user?.role === 'manufacturer' ? manufacturerNavItems : user?.role === 'researcher' ? researcherNavItems : user?.role === 'doctor' ? doctorNavItems : citizenNavItems;
 
     const bottomNavItems = [
-        { path: '/dashboard/notifications', icon: <Bell size={20} weight="duotone" />, label: t('notifications') },
-        ...(!['dgda', 'manufacturer'].includes(user?.role) ? [{ path: '/dashboard/settings', icon: <Gear size={20} weight="duotone" />, label: t('settings') }] : [])
+        { path: '/dashboard/settings', icon: <Gear size={20} weight="duotone" />, label: t('settings') }
     ];
 
     return (

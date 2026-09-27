@@ -1,4 +1,6 @@
 import os
+
+# pyrefly: ignore [missing-import]
 import django
 import sys
 import json
@@ -7,6 +9,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "medguard.settings")
 django.setup()
 
+# pyrefly: ignore [missing-import]
 from rest_framework.test import APIRequestFactory, force_authenticate
 from users.models import CustomUser
 from core.dgda_views import (

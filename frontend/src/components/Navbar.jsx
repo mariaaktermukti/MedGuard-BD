@@ -237,16 +237,14 @@ const Navbar = ({ isMobile }) => {
                             </div>
                             
                             <div style={{ padding: '0.5rem' }}>
-                                {!['dgda', 'manufacturer'].includes(user?.role) && (
-                                    <button 
-                                        onClick={() => navigate('/dashboard/settings')}
-                                        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', background: 'transparent', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer', textAlign: 'left', color: 'var(--text-main)' }}
-                                        onMouseOver={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-page)'; e.currentTarget.style.color = 'var(--primary)'; }}
-                                        onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--text-main)'; }}
-                                    >
-                                        <Gear size={18} /> {t('settings')}
-                                    </button>
-                                )}
+                                <button 
+                                    onClick={() => navigate('/dashboard/settings')}
+                                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', background: 'transparent', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer', textAlign: 'left', color: 'var(--text-main)' }}
+                                    onMouseOver={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-page)'; e.currentTarget.style.color = 'var(--primary)'; }}
+                                    onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--text-main)'; }}
+                                >
+                                    <Gear size={18} /> {t('settings')}
+                                </button>
                                 
                                 <button 
                                     onClick={handleLogout}

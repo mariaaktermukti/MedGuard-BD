@@ -1,8 +1,14 @@
+# pyrefly: ignore [missing-import]
 from rest_framework.views import APIView
+# pyrefly: ignore [missing-import]
 from rest_framework.response import Response
+# pyrefly: ignore [missing-import]
 from rest_framework import status
+# pyrefly: ignore [missing-import]
 from rest_framework.permissions import AllowAny, IsAuthenticated
+# pyrefly: ignore [missing-import]
 from rest_framework_simplejwt.views import TokenObtainPairView
+# pyrefly: ignore [missing-import]
 from django.contrib.auth import get_user_model
 from .serializers import RegisterSerializer, CustomTokenObtainPairSerializer
 from .permissions import (
