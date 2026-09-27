@@ -10,24 +10,22 @@ import LiteratureMining from './LiteratureMining';
 import HypothesisGeneration from './HypothesisGeneration';
 import CollaborationWorkspace from './CollaborationWorkspace';
 
-// These eight destinations now live in the sidebar (components/Sidebar.jsx,
-// researcherNavItems), where its links are already absolute - which matters here,
-// because this portal is mounted on a splat route (`researcher/*`) and a relative
-// link would append rather than replace (/researcher/signals + "dashboards"
-// -> /researcher/signals/dashboards). Keep the two lists in step.
 const ResearcherPortal = () => {
     return (
-        // Same cap and centring the doctor portal and the per-page containers elsewhere
-        // use, so the heading and whichever page is showing line up on a wide screen.
-        <div style={{ display: 'grid', gap: '1.5rem', maxWidth: '1100px', margin: '0 auto' }}>
-            <div>
-                <h1 style={{ margin: 0, fontSize: '1.75rem', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}><Flask size={30} weight="duotone" /> Researcher Portal</h1>
-                <p style={{ margin: '0.35rem 0 0', color: 'var(--text-muted)' }}>
-                    Governed access to anonymised pharmacovigilance data, signal detection and research tooling.
-                </p>
+        <div style={{ display: 'grid', gap: '1.25rem', maxWidth: '1150px', margin: '0 auto' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                <div>
+                    <h1 style={{ margin: 0, fontSize: '1.75rem', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                        <Flask size={32} weight="duotone" /> Researcher Portal
+                    </h1>
+                    <p style={{ margin: '0.35rem 0 0', color: 'var(--text-muted)', fontSize: '0.95rem' }}>
+                        Pharmacovigilance analytics, real-time ADR signal detection & AI-driven insights.
+                    </p>
+                </div>
             </div>
 
-            {/* The sidebar already lists these eight, as it does for every other portal. */}
+            {/* Main Sub-route Content */}
             <Routes>
                 <Route index element={<EthicsDataAccess />} />
                 <Route path="ethics-access" element={<EthicsDataAccess />} />
@@ -44,3 +42,4 @@ const ResearcherPortal = () => {
 };
 
 export default ResearcherPortal;
+

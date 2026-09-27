@@ -596,18 +596,21 @@ const DGDAPortal = () => {
             case 'heatmaps':
                 return (
                     <div className="animate-fade-in">
-                        <div style={{ marginBottom: '1.5rem' }}>
-                            <p style={{ color: 'var(--text-muted)', fontSize: '1.125rem' }}>Interactive visualization of ADRs, shortages, and counterfeiting risks across Bangladesh.</p>
+                        <div style={{ marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                            <div>
+                                <h2 style={{ margin: 0, fontSize: '1.5rem', color: 'var(--primary)' }}>Real-Time Bangladesh 8-Division Heatmap</h2>
+                                <p style={{ color: 'var(--text-muted)', margin: '0.35rem 0 0', fontSize: '0.95rem' }}>
+                                    Live tracking across Bangladesh's 8 Divisions: Blue = Active Medicine Supply & Deliveries, Red = Recalled Batch / Hazard Alert.
+                                </p>
+                            </div>
                         </div>
-                        <Card padding="none" style={{ height: '500px', overflow: 'hidden' }}>
+                        <Card padding="none" style={{ height: '540px', overflow: 'hidden', border: '1px solid var(--border)' }}>
                             {data && (
                                 <MapComponent
                                     points={data}
                                     legend={[
-                                        { label: 'Critical', color: '#dc3545' },
-                                        { label: 'High', color: '#fd7e14' },
-                                        { label: 'Medium', color: '#ffc107' },
-                                        { label: 'Low', color: '#0d6efd' },
+                                        { label: 'Active Medicine Supply (BLUE)', color: '#0d6efd' },
+                                        { label: 'Hazard / Recalled Batch (RED)', color: '#dc3545' },
                                     ]}
                                 />
                             )}

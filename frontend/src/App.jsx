@@ -44,6 +44,8 @@ const CounterfeitIntel = lazy(() => import('./pages/dgda/CounterfeitIntel'));
 const DoctorPortal = lazy(() => import('./pages/doctor/DoctorPortal'));
 const ResearcherPortal = lazy(() => import('./pages/researcher/ResearcherPortal'));
 
+import { ConfirmationProvider } from './context/ConfirmationContext';
+
 function App() {
   return (
     <Router>
@@ -51,7 +53,8 @@ function App() {
         <LanguageProvider>
           <AuthProvider>
             <NotificationProvider>
-              <Suspense fallback={<DashboardSkeleton />}>
+              <ConfirmationProvider>
+                <Suspense fallback={<DashboardSkeleton />}>
                 <Routes>
                   <Route path="/" element={<Landing />} />
                   <Route path="/login" element={<Login />} />
@@ -105,6 +108,7 @@ function App() {
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </Suspense>
+              </ConfirmationProvider>
             </NotificationProvider>
           </AuthProvider>
         </LanguageProvider>

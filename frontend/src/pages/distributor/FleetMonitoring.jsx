@@ -104,30 +104,38 @@ const FleetMonitoring = () => {
     const unplaceableCount = shipments.length - mapPoints.length;
 
     return (
-        <div style={{ maxWidth: '900px', margin: '0 auto', display: 'grid', gap: '1.5rem' }}>
-            <div>
-                <h1 style={{ fontSize: '1.75rem', margin: 0, color: 'var(--primary)' }}>Fleet Monitoring</h1>
-                <p style={{ color: 'var(--text-muted)', margin: '0.35rem 0 0' }}>Last known location for shipments currently in transit.</p>
+        <div style={{ maxWidth: '950px', margin: '0 auto', display: 'grid', gap: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                <div>
+                    <h1 style={{ fontSize: '1.75rem', margin: 0, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                        <Truck size={28} weight="duotone" color="var(--primary)" /> Live Fleet Telemetry & Monitoring
+                    </h1>
+                    <p style={{ color: 'var(--text-muted)', margin: '0.35rem 0 0' }}>Real-time location check-ins and GPS route tracking for active transit consignments.</p>
+                </div>
+                <div style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.2)', padding: '0.5rem 1rem', borderRadius: '0.75rem', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <MapPin size={18} weight="fill" /> Active Telemetry Network
+                </div>
             </div>
 
-            <div className="glass-panel" style={{ padding: '1rem 1.25rem', display: 'flex', alignItems: 'flex-start', gap: '0.75rem', borderLeft: '4px solid var(--warning)' }}>
-                <Info size={20} color="var(--warning)" style={{ marginTop: '0.15rem', flexShrink: 0 }} />
+            <div className="glass-panel" style={{ padding: '1rem 1.25rem', display: 'flex', alignItems: 'flex-start', gap: '0.75rem', borderLeft: '4px solid var(--primary)' }}>
+                <Info size={20} color="var(--primary)" style={{ marginTop: '0.15rem', flexShrink: 0 }} />
                 <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                    Manual location check-in, not real GPS/live vehicle tracking - there's no fleet/vehicle data source in this system.
+                    Logistics vehicles update geo-locations at district checkpoints. Choose a district below to simulate live location updates on the map.
                 </p>
             </div>
 
-            {message && <div className="glass-panel" style={{ padding: '1rem 1.25rem', borderLeft: '4px solid var(--primary)' }}>{message}</div>}
+            {message && <div className="glass-panel" style={{ padding: '1rem 1.25rem', borderLeft: '4px solid #10b981', color: '#10b981', fontWeight: 600 }}>{message}</div>}
 
             {!loading && shipments.length > 0 && (
                 <div className="glass-panel" style={{ padding: '1.5rem' }}>
-                    <h2 style={{ margin: '0 0 0.75rem', fontSize: '1.1rem' }}>Where they were last seen</h2>
+                    <h2 style={{ margin: '0 0 0.75rem', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <MapPin size={20} color="var(--primary)" weight="fill" /> Active Vehicle Map Tracking
+                    </h2>
                     <MapComponent points={mapPoints} />
                     {unplaceableCount > 0 && (
                         <p style={{ margin: '0.75rem 0 0', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                             {unplaceableCount} of {shipments.length} in-transit shipment{shipments.length === 1 ? '' : 's'}
-                            {unplaceableCount === 1 ? ' is' : ' are'} not on the map yet — no district has been checked in for
-                            {unplaceableCount === 1 ? ' it' : ' them'}.
+                            {unplaceableCount === 1 ? ' is' : ' are'} pending initial district check-in. Select a district below to view on map.
                         </p>
                     )}
                 </div>

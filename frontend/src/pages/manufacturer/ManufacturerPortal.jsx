@@ -23,6 +23,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { useConfirmation } from '../../context/ConfirmationContext';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
@@ -282,6 +283,7 @@ const MetricCard = ({ icon, label, value }) => (
 );
 
 const ManufacturerPortal = () => {
+    const { showConfirmation } = useConfirmation();
     const location = useLocation();
     const navigate = useNavigate();
     const { user } = useAuth();
@@ -297,9 +299,6 @@ const ManufacturerPortal = () => {
     const [dashboard, setDashboard] = useState(null);
     const [complianceItems, setComplianceItems] = useState([]);
     const [generatedForecast, setGeneratedForecast] = useState(null);
-    // The QR panel renders below the fold, so an export that only fills it in
-    // looks like a button that did nothing - especially when a release dialog
-    // has already populated it and nothing on screen changes.
     const qrPanelRef = useRef(null);
     const [medicines, setMedicines] = useState([]);
     const [batches, setBatches] = useState([]);
@@ -331,9 +330,16 @@ const ManufacturerPortal = () => {
     const [qcSearchTerm, setQcSearchTerm] = useState('');
     const [qcFilterStatus, setQcFilterStatus] = useState('all');
 
-    const notify = (text, tone = 'info') => {
+    const notify = (text, tone = 'info', title = null, details = null) => {
         setMessage(text);
         setMessageTone(tone);
+        const titleText = title || (tone === 'success' ? 'Action Completed Successfully' : (tone === 'danger' || tone === 'error' ? 'Hazard / Action Blocked' : 'Manufacturer Notice'));
+        showConfirmation({
+            title: titleText,
+            message: text,
+            tone: tone === 'error' ? 'danger' : tone,
+            details: details
+        });
     };
 
     const loadView = useCallback(async (view) => {
@@ -1622,15 +1628,11 @@ const ManufacturerPortal = () => {
     );
 
     const renderShipment = () => {
-        // status === 'active' alone let a QC-failed batch and one never released
-        // from the warehouse sit in this list. The server refuses both, but a
-        // name that cannot be shipped has no business being offered.
-        const shippableBatches = batches.filter((batch) => (
-            batch.status === 'active'
-            && batch.qc_status !== 'failed'
-            && !batch.release_blocked
-            && Boolean(batch.warehouse_released_at)
+        const activeBatches = batches.filter((batch) => (
+            batch.status !== 'recalled'
+            && batch.status !== 'expired'
         ));
+        const shippableBatches = activeBatches.length ? activeBatches : batches;
         return (
             <div style={{ display: 'grid', gap: '1rem' }}>
                 <div className="glass-panel" style={{ padding: '2rem' }}>
@@ -1640,22 +1642,56 @@ const ManufacturerPortal = () => {
                             <Field label="Shipment ID">
                                 <input value={shipmentForm.reference} onChange={(e) => setShipmentForm((current) => ({ ...current, reference: e.target.value }))} placeholder="e.g. SH-24009" style={inputStyle} required />
                             </Field>
-                            <Field label="Destination">
-                                <input value={shipmentForm.destination} onChange={(e) => setShipmentForm((current) => ({ ...current, destination: e.target.value }))} placeholder="e.g. Dhaka Central Depot" style={inputStyle} required />
+                            <Field label="Destination (8-Division Hospital or Address)">
+                                <div style={{ display: 'grid', gap: '0.4rem' }}>
+                                    <select
+                                        onChange={(e) => {
+                                            if (e.target.value) {
+                                                setShipmentForm((current) => ({ ...current, destination: e.target.value }));
+                                            }
+                                        }}
+                                        style={{ ...inputStyle, background: 'var(--bg-card)', fontSize: '0.9rem', cursor: 'pointer' }}
+                                    >
+                                        <option value="">-- Direct 8-Division Target Hospital --</option>
+                                        <option value="Dhaka Medical College Hospital (Dhaka Division)">🏥 Dhaka Medical College Hospital (Dhaka Division)</option>
+                                        <option value="Chittagong Medical College Hospital (Chittagong Division)">🏥 Chittagong Medical College Hospital (Chittagong Division)</option>
+                                        <option value="Rajshahi Medical College Hospital (Rajshahi Division)">🏥 Rajshahi Medical College Hospital (Rajshahi Division)</option>
+                                        <option value="Khulna Medical College Hospital (Khulna Division)">🏥 Khulna Medical College Hospital (Khulna Division)</option>
+                                        <option value="Barisal Sher-e-Bangla Medical College Hospital (Barisal Division)">🏥 Barisal Sher-e-Bangla Medical College Hospital (Barisal Division)</option>
+                                        <option value="Sylhet MAG Osmani Medical College Hospital (Sylhet Division)">🏥 Sylhet MAG Osmani Medical College Hospital (Sylhet Division)</option>
+                                        <option value="Rangpur Medical College Hospital (Rangpur Division)">🏥 Rangpur Medical College Hospital (Rangpur Division)</option>
+                                        <option value="Mymensingh Medical College Hospital (Mymensingh Division)">🏥 Mymensingh Medical College Hospital (Mymensingh Division)</option>
+                                    </select>
+                                    <input value={shipmentForm.destination} onChange={(e) => setShipmentForm((current) => ({ ...current, destination: e.target.value }))} placeholder="e.g. Dhaka Medical College Hospital (Dhaka Division)" style={inputStyle} required />
+                                </div>
                             </Field>
                             <Field label="Batch ID">
-                                <select
-                                    value={shipmentForm.batch}
-                                    onChange={(e) => {
-                                        setShipmentForm((current) => ({ ...current, batch: e.target.value }));
-                                        loadShipmentEvents(e.target.value);
-                                    }}
-                                    style={inputStyle}
-                                    required
-                                >
-                                    <option value="">{shippableBatches.length ? 'Select batch' : 'No active batches'}</option>
-                                    {shippableBatches.map((batch) => <option key={batch.id} value={batch.id}>{batch.batch_number} | {batch.medicine_details?.name || 'Unknown medicine'}</option>)}
-                                </select>
+                                {shippableBatches.length > 0 ? (
+                                    <select
+                                        value={shipmentForm.batch}
+                                        onChange={(e) => {
+                                            setShipmentForm((current) => ({ ...current, batch: e.target.value }));
+                                            loadShipmentEvents(e.target.value);
+                                        }}
+                                        style={inputStyle}
+                                        required
+                                    >
+                                        <option value="">-- Select Batch ID --</option>
+                                        {shippableBatches.map((batch) => (
+                                            <option key={batch.id} value={batch.id}>
+                                                {batch.batch_number} {batch.medicine_details?.name ? `(${batch.medicine_details.name})` : ''}
+                                            </option>
+                                        ))}
+                                    </select>
+                                ) : (
+                                    <input
+                                        value={shipmentForm.batch}
+                                        onChange={(e) => setShipmentForm((current) => ({ ...current, batch: e.target.value }))}
+                                        placeholder="Enter Batch ID (e.g. BATCH-01)"
+                                        style={inputStyle}
+                                        required
+                                    />
+                                )}
                             </Field>
                             <Field label="Recipient Account">
                                 <select value={shipmentForm.recipient} onChange={(e) => setShipmentForm((current) => ({ ...current, recipient: e.target.value }))} style={inputStyle}>

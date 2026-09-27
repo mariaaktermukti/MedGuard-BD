@@ -1027,36 +1027,168 @@ def _district_key(location):
     return (location or '').split(',')[0].strip().lower()
 
 
+DIVISION_MAP_COORDINATES = {
+    'Dhaka': (23.8103, 90.4125),
+    'Chittagong': (22.3569, 91.7832),
+    'Rajshahi': (24.3745, 88.6042),
+    'Khulna': (22.8456, 89.5403),
+    'Barisal': (22.7010, 90.3535),
+    'Sylhet': (24.8949, 91.8687),
+    'Rangpur': (25.7439, 89.2752),
+    'Mymensingh': (24.7471, 90.4203),
+}
+
+DIVISION_MAP_KEYWORDS = {
+    'Dhaka': ['dhaka', 'gazipur', 'narayanganj', 'tangail', 'faridpur', 'manikganj', 'munshiganj', 'narsingdi', 'central', 'tejgaon', 'mirpur', 'dhanmondi', 'uttara', 'gulshan', 'savar'],
+    'Chittagong': ['chittagong', 'chattogram', 'cox', 'comilla', 'cumilla', 'feni', 'noakhali', 'brahmanbaria', 'rangamati', 'bandarban', 'khagrachari', 'agrabad', 'halishahar'],
+    'Rajshahi': ['rajshahi', 'bogra', 'bogura', 'pabna', 'naogaon', 'natore', 'chapainawabganj', 'joypurhat', 'sirajganj'],
+    'Khulna': ['khulna', 'jessore', 'jashore', 'kushtia', 'satkhira', 'bagerhat', 'chuadanga', 'jhenaidah', 'magura', 'meherpur'],
+    'Barisal': ['barisal', 'barishal', 'bhola', 'patuakhali', 'barguna', 'jhalokati', 'pirojpur'],
+    'Sylhet': ['sylhet', 'sunamganj', 'moulvibazar', 'habiganj', 'zindabazar'],
+    'Rangpur': ['rangpur', 'dinajpur', 'kurigram', 'gaibandha', 'lalmonirhat', 'nilphamari', 'panchagarh', 'thakurgaon'],
+    'Mymensingh': ['mymensingh', 'jamalpur', 'netrokona', 'sherpur'],
+}
+
+def _resolve_division(location_text):
+    if not location_text:
+        return None
+    text = str(location_text).lower()
+    for div, keywords in DIVISION_MAP_KEYWORDS.items():
+        if any(kw in text for kw in keywords):
+            return div
+    return None
+
+
 class DGDAHeatmapDataView(views.APIView):
     permission_classes = [IsAuthenticated, IsDGDA]
 
     def get(self, request):
-        # Real per-district counts from MonitoringEvent; coordinates from the lookup above.
-        buckets = {}
-        for event in MonitoringEvent.objects.exclude(location__isnull=True).exclude(location=''):
-            key = _district_key(event.location)
-            if key not in DISTRICT_COORDINATES:
+        divisions = ['Dhaka', 'Chittagong', 'Rajshahi', 'Khulna', 'Barisal', 'Sylhet', 'Rangpur', 'Mymensingh']
+        stats = {
+            div: {
+                'shipment_count': 0,
+                'total_units': 0,
+                'hazard_count': 0,
+                'recalled_batches': 0,
+                'adr_count': 0,
+                'medicines': set()
+            }
+            for div in divisions
+        }
+
+        # 1. Map Pharmacy & Distributor Profiles to Divisions
+        pharmacy_divs = {}
+        for user_id, address in PharmacyProfile.objects.values_list('user_id', 'address'):
+            div = _resolve_division(address)
+            if div:
+                pharmacy_divs[user_id] = div
+
+        distributor_divs = {}
+        for user_id, address in DistributorProfile.objects.values_list('user_id', 'address'):
+            div = _resolve_division(address)
+            if div:
+                distributor_divs[user_id] = div
+
+        # 2. Process Real-Time Shipments (Manufacturer -> Distributor -> Pharmacy)
+        shipments = Shipment.objects.select_related('to_user', 'from_user', 'batch', 'batch__medicine').only(
+            'quantity', 'geo_location', 'status', 'to_user_id', 'from_user_id', 'batch__medicine__name'
+        )
+        for ship in shipments:
+            div = (
+                _resolve_division(ship.geo_location) or 
+                pharmacy_divs.get(ship.to_user_id) or 
+                distributor_divs.get(ship.to_user_id)
+            )
+            if not div:
                 continue
-            bucket = buckets.setdefault(key, {'count': 0, 'types': {}, 'severity': 'low'})
-            bucket['count'] += 1
-            bucket['types'][event.event_type] = bucket['types'].get(event.event_type, 0) + 1
-            if SEVERITY_RANK.get(event.severity, 0) > SEVERITY_RANK.get(bucket['severity'], 0):
-                bucket['severity'] = event.severity
+            bucket = stats[div]
+            bucket['shipment_count'] += 1
+            bucket['total_units'] += ship.quantity
+            if ship.batch and ship.batch.medicine:
+                bucket['medicines'].add(ship.batch.medicine.name)
+
+        # 3. Process Real-Time Distribution Events
+        for event in DistributionEvent.objects.select_related('batch', 'batch__medicine').only('quantity', 'geo_location', 'to_user_id', 'batch__medicine__name'):
+            div = (
+                _resolve_division(event.geo_location) or 
+                distributor_divs.get(event.to_user_id) or 
+                pharmacy_divs.get(event.to_user_id)
+            )
+            if not div:
+                continue
+            bucket = stats[div]
+            bucket['shipment_count'] += 1
+            bucket['total_units'] += event.quantity
+            if event.batch and event.batch.medicine:
+                bucket['medicines'].add(event.batch.medicine.name)
+
+        # 4. Process Real-Time Recalls & Hazards (RED Flags)
+        active_recalls = Recall.objects.filter(status='active').select_related('batch')
+        for recall in active_recalls:
+            recalled_divs = set()
+            for ship in Shipment.objects.filter(batch=recall.batch):
+                div = pharmacy_divs.get(ship.to_user_id) or distributor_divs.get(ship.to_user_id) or _resolve_division(ship.geo_location)
+                if div:
+                    recalled_divs.add(div)
+            for div in recalled_divs:
+                stats[div]['hazard_count'] += 1
+                stats[div]['recalled_batches'] += 1
+
+        # 5. Process ADR Reports
+        for adr in ADRReport.objects.select_related('batch').only('batch_id'):
+            if adr.batch_id:
+                for ship in Shipment.objects.filter(batch_id=adr.batch_id)[:3]:
+                    div = pharmacy_divs.get(ship.to_user_id) or distributor_divs.get(ship.to_user_id) or _resolve_division(ship.geo_location)
+                    if div:
+                        stats[div]['adr_count'] += 1
 
         data = []
-        ordered = sorted(buckets.items(), key=lambda item: item[1]['count'], reverse=True)
-        for index, (key, bucket) in enumerate(ordered, start=1):
-            latitude, longitude = DISTRICT_COORDINATES[key]
-            dominant_type = max(bucket['types'].items(), key=lambda item: item[1])[0]
+        idx = 1
+        for div_name in divisions:
+            lat, lng = DIVISION_MAP_COORDINATES[div_name]
+            bucket = stats[div_name]
+            
+            is_hazard = bucket['hazard_count'] > 0 or bucket['recalled_batches'] > 0
+            has_supply = bucket['shipment_count'] > 0 or bucket['total_units'] > 0
+
+            # ONLY include divisions that have active supply or hazard entries!
+            if not (has_supply or is_hazard):
+                continue
+
+            if is_hazard:
+                color = '#dc3545'  # RED
+                status_label = 'Critical Hazard / Recalled Batch (RED)'
+                marker_type = 'red'
+            else:
+                color = '#0d6efd'  # BLUE
+                status_label = 'Active Medicine Supply (BLUE)'
+                marker_type = 'blue'
+
+            med_list = list(bucket['medicines'])[:3]
+            med_summary = ', '.join(med_list) if med_list else 'Pharmaceutical Products'
+
             data.append({
-                "id": index,
-                "district": key.title(),
-                "lat": latitude,
-                "lng": longitude,
-                "type": dominant_type,
-                "count": bucket['count'],
-                "severity": bucket['severity'],
+                "id": idx,
+                "district": f"{div_name} Division",
+                "division": div_name,
+                "lat": lat,
+                "lng": lng,
+                "color": color,
+                "marker_type": marker_type,
+                "type": status_label,
+                "count": bucket['shipment_count'],
+                "severity": 'critical' if is_hazard else 'low',
+                "details": [
+                    ["Division", f"{div_name} Division"],
+                    ["Supply Status", status_label],
+                    ["Live Shipments", f"{bucket['shipment_count']} shipments"],
+                    ["Total Units Supplied", f"{bucket['total_units']:,} units"],
+                    ["Hazard / Recall Flags", f"{bucket['hazard_count']} flags" if is_hazard else "Clear (0)"],
+                    ["Active Medicines", med_summary],
+                ]
             })
+            idx += 1
+
         return Response(data)
 
 

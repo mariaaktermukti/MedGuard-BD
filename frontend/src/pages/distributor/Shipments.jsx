@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Truck, PaperPlaneTilt, ArrowDown, ArrowUp, CheckCircle } from '@phosphor-icons/react';
 import api from '../../services/api';
+import { useConfirmation } from '../../context/ConfirmationContext';
 
 const inputStyle = {
     width: '100%',
@@ -38,6 +39,7 @@ const statusTone = (status) => {
 };
 
 const Shipments = () => {
+    const { showConfirmation } = useConfirmation();
     const [incoming, setIncoming] = useState([]);
     const [outgoing, setOutgoing] = useState([]);
     const [pharmacies, setPharmacies] = useState([]);
@@ -87,14 +89,49 @@ const Shipments = () => {
         setSubmitting(true);
         try {
             const passport = await api.get(`core/passport/${qrCode.trim()}/`);
+            let targetUserId;
+            let targetGeoLocation = null;
+            let recipientName = 'Pharmacy Outlet';
+
+            if (toUser.startsWith('div:')) {
+                const parts = toUser.split(':');
+                const divName = parts[1];
+                const geoLabel = parts[2];
+                targetGeoLocation = geoLabel;
+                recipientName = `${divName} Division Target Depot`;
+                targetUserId = pharmacies.length > 0 ? pharmacies[0].user_id : 1;
+            } else {
+                targetUserId = Number(toUser);
+                const selectedPharm = pharmacies.find(p => String(p.user_id) === String(toUser));
+                if (selectedPharm) {
+                    recipientName = selectedPharm.pharmacy_name;
+                    targetGeoLocation = selectedPharm.address || `${selectedPharm.pharmacy_name}, Bangladesh`;
+                }
+            }
+
             await api.post('core/distributor/shipments/outgoing/', {
                 batch: passport.data.id,
-                to_user: Number(toUser),
+                to_user: targetUserId,
                 quantity: Number(quantity),
                 shipment_date: shipmentDate,
                 tracking_number: trackingNumber.trim() || null,
+                geo_location: targetGeoLocation,
             });
-            setMessage(`Shipment created for batch ${passport.data.batch_number}.`);
+            const text = `Shipment created for batch ${passport.data.batch_number}.`;
+            setMessage(text);
+            showConfirmation({
+                title: 'Shipment Dispatched Successfully',
+                message: text,
+                tone: 'success',
+                details: {
+                    'Batch Number': passport.data.batch_number,
+                    'Medicine': passport.data.medicine_name || 'Pharmaceutical Goods',
+                    'Quantity': `${quantity} units`,
+                    'Recipient': recipientName,
+                    'Destination / Location': targetGeoLocation || 'Standard Depot',
+                    'Shipment Date': shipmentDate
+                }
+            });
             setQrCode('');
             setToUser('');
             setQuantity('');
@@ -102,7 +139,13 @@ const Shipments = () => {
             setTrackingNumber('');
             fetchAll();
         } catch (error) {
-            setMessage(error.response?.data?.detail || 'Could not create this shipment. Check the batch QR code.');
+            const errText = error.response?.data?.detail || 'Could not create this shipment. Check the batch QR code.';
+            setMessage(errText);
+            showConfirmation({
+                title: 'Shipment Creation Failed',
+                message: errText,
+                tone: 'danger'
+            });
         } finally {
             setSubmitting(false);
         }
@@ -112,6 +155,15 @@ const Shipments = () => {
         setUpdatingId(shipment.id);
         try {
             await api.patch(`core/distributor/shipments/outgoing/${shipment.id}/`, { status: newStatus });
+            showConfirmation({
+                title: 'Shipment Status Updated',
+                message: `Status updated to ${newStatus.toUpperCase()} for Batch ${shipment.batch_details?.batch_number}.`,
+                tone: 'info',
+                details: {
+                    'Batch Number': shipment.batch_details?.batch_number,
+                    'New Status': newStatus.toUpperCase()
+                }
+            });
             fetchAll();
         } catch (error) {
             setMessage(error.response?.data?.detail || 'Could not update shipment status.');
@@ -125,11 +177,27 @@ const Shipments = () => {
         setMessage('');
         try {
             const res = await api.post(`core/distributor/shipments/incoming/${shipment.id}/receive/`);
-            setMessage(res.data?.warning
-                || `Shipment ${shipment.batch_details.batch_number} marked as received.`);
+            const statusMsg = res.data?.warning || `Shipment ${shipment.batch_details?.batch_number} marked as received.`;
+            setMessage(statusMsg);
+            showConfirmation({
+                title: res.data?.warning ? 'Shipment Received (Notice)' : 'Shipment Received Successfully',
+                message: statusMsg,
+                tone: res.data?.warning ? 'warning' : 'success',
+                details: {
+                    'Batch Number': shipment.batch_details?.batch_number,
+                    'Sender': shipment.from_details?.username || 'Manufacturer',
+                    'Quantity Received': `${shipment.quantity} units`
+                }
+            });
             fetchAll();
         } catch (error) {
-            setMessage(error.response?.data?.detail || 'Could not mark this shipment as received.');
+            const errText = error.response?.data?.detail || 'Could not mark this shipment as received.';
+            setMessage(errText);
+            showConfirmation({
+                title: 'Receive Failed',
+                message: errText,
+                tone: 'danger'
+            });
         } finally {
             setReceivingId(null);
         }
@@ -153,12 +221,24 @@ const Shipments = () => {
                         <Field label="Batch QR Code">
                             <input value={qrCode} onChange={(e) => setQrCode(e.target.value)} placeholder="Scan or paste batch QR code, DDP ID or batch number" style={inputStyle} />
                         </Field>
-                        <Field label="Ship To (Pharmacy)">
-                            <select value={toUser} onChange={(e) => setToUser(e.target.value)} style={inputStyle}>
-                                <option value="">Select pharmacy</option>
-                                {pharmacies.map((pharmacy) => (
-                                    <option key={pharmacy.user_id} value={pharmacy.user_id}>{pharmacy.pharmacy_name}</option>
-                                ))}
+                        <Field label="Ship To (Pharmacy or 8-Division Target)">
+                            <select value={toUser} onChange={(e) => setToUser(e.target.value)} style={inputStyle} required>
+                                <option value="">-- Select Destination Pharmacy or Division --</option>
+                                <optgroup label="🇧🇩 8 Administrative Division Hospitals / Depots">
+                                    <option value="div:Dhaka:Dhaka Medical College Hospital (Dhaka Division)">🏥 Dhaka Division (Dhaka Medical College Hospital)</option>
+                                    <option value="div:Chittagong:Chittagong Medical College Hospital (Chittagong Division)">🏥 Chittagong Division (Chittagong Medical College Hospital)</option>
+                                    <option value="div:Rajshahi:Rajshahi Medical College Hospital (Rajshahi Division)">🏥 Rajshahi Division (Rajshahi Medical College Hospital)</option>
+                                    <option value="div:Khulna:Khulna Medical College Hospital (Khulna Division)">🏥 Khulna Division (Khulna Medical College Hospital)</option>
+                                    <option value="div:Barisal:Barisal Sher-e-Bangla Medical College Hospital (Barisal Division)">🏥 Barisal Division (Barisal Sher-e-Bangla Medical College Hospital)</option>
+                                    <option value="div:Sylhet:Sylhet MAG Osmani Medical College Hospital (Sylhet Division)">🏥 Sylhet Division (Sylhet MAG Osmani Medical College Hospital)</option>
+                                    <option value="div:Rangpur:Rangpur Medical College Hospital (Rangpur Division)">🏥 Rangpur Division (Rangpur Medical College Hospital)</option>
+                                    <option value="div:Mymensingh:Mymensingh Medical College Hospital (Mymensingh Division)">🏥 Mymensingh Division (Mymensingh Medical College Hospital)</option>
+                                </optgroup>
+                                <optgroup label="🏬 Registered Pharmacies">
+                                    {pharmacies.map((pharmacy) => (
+                                        <option key={pharmacy.user_id} value={pharmacy.user_id}>{pharmacy.pharmacy_name} ({pharmacy.address || 'Local'})</option>
+                                    ))}
+                                </optgroup>
                             </select>
                         </Field>
                         <Field label="Quantity">

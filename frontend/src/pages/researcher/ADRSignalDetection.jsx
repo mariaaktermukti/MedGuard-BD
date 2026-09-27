@@ -17,6 +17,7 @@ const Stat = ({ label, value, accent }) => (
 
 const ADRSignalDetection = () => {
     const [severity, setSeverity] = useState('severe');
+    const [searchQuery, setSearchQuery] = useState('');
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -36,6 +37,10 @@ const ADRSignalDetection = () => {
     }, [severity]);
 
     const criteria = data?.criteria;
+    const filteredSignals = (data?.signals || []).filter((s) =>
+        s.medicine_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (s.generic_name && s.generic_name.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
 
     return (
         <div style={{ display: 'grid', gap: '1.5rem' }}>
@@ -43,40 +48,49 @@ const ADRSignalDetection = () => {
 
             <Card>
                 <CardHeader
-                    title="Disproportionality analysis"
+                    title="ADR Disproportionality Signal Detection"
                     subtitle={
                         criteria
-                            ? `A medicine is flagged when it has at least ${criteria.min_case_count} cases, PRR ≥ ${criteria.min_prr} and chi-square ≥ ${criteria.min_chi_square}. ${criteria.reference}`
+                            ? `Flagged when cases ≥ ${criteria.min_case_count}, PRR ≥ ${criteria.min_prr} & chi² ≥ ${criteria.min_chi_square}.`
                             : 'Computing signal statistics...'
                     }
                     action={
-                        <select
-                            value={severity}
-                            onChange={(e) => setSeverity(e.target.value)}
-                            style={{ padding: '0.5rem 0.7rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-main)' }}
-                        >
-                            <option value="severe">Event = severe</option>
-                            <option value="moderate">Event = moderate</option>
-                            <option value="mild">Event = mild</option>
-                        </select>
+                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            <input
+                                type="text"
+                                placeholder="Search medicine..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                style={{ padding: '0.5rem 0.7rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-main)', fontSize: '0.88rem', minWidth: '150px' }}
+                            />
+                            <select
+                                value={severity}
+                                onChange={(e) => setSeverity(e.target.value)}
+                                style={{ padding: '0.5rem 0.7rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-main)' }}
+                            >
+                                <option value="severe">Severity = Severe</option>
+                                <option value="moderate">Severity = Moderate</option>
+                                <option value="mild">Severity = Mild</option>
+                            </select>
+                        </div>
                     }
                 />
                 <CardContent style={{ display: 'grid', gap: '1.25rem' }}>
                     {data && (
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.75rem' }}>
-                            <Stat label="Reports analysed" value={data.total_reports_analysed} />
+                            <Stat label="Total Reports Analysed" value={data.total_reports_analysed} />
                             <Stat label={`Reports at "${data.event_severity}"`} value={data.total_event_reports} />
-                            <Stat label="Medicines compared" value={data.signals.length} />
-                            <Stat label="Signals flagged" value={data.signals_flagged} accent={data.signals_flagged > 0 ? 'var(--danger)' : undefined} />
+                            <Stat label="Medicines Monitored" value={data.signals.length} />
+                            <Stat label="Signals Flagged" value={data.signals_flagged} accent={data.signals_flagged > 0 ? 'var(--danger)' : undefined} />
                         </div>
                     )}
 
                     {loading ? (
                         <p style={{ color: 'var(--text-muted)' }}>Computing signal statistics...</p>
-                    ) : !data || data.signals.length === 0 ? (
+                    ) : filteredSignals.length === 0 ? (
                         <div style={{ textAlign: 'center', padding: '2rem 0', color: 'var(--text-muted)' }}>
                             <Pulse size={44} weight="duotone" style={{ marginBottom: '0.6rem' }} />
-                            <p>No ADR reports are recorded yet, so no signal can be computed.</p>
+                            <p>No matching ADR signals found for your search.</p>
                         </div>
                     ) : (
                         <div style={{ overflowX: 'auto' }}>
@@ -88,12 +102,12 @@ const ADRSignalDetection = () => {
                                         <th style={{ ...headCell, textAlign: 'right' }}>Other (b)</th>
                                         <th style={{ ...headCell, textAlign: 'right' }}>PRR</th>
                                         <th style={{ ...headCell, textAlign: 'right' }}>ROR</th>
-                                        <th style={{ ...headCell, textAlign: 'right' }}>Chi-square</th>
-                                        <th style={{ ...headCell, textAlign: 'left' }}>Verdict</th>
+                                        <th style={{ ...headCell, textAlign: 'right' }}>Chi-Square</th>
+                                        <th style={{ ...headCell, textAlign: 'left' }}>Signal Status</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {data.signals.map((signal) => (
+                                    {filteredSignals.map((signal) => (
                                         <tr key={signal.medicine_id} style={{ background: signal.is_signal ? 'var(--primary-light)' : 'transparent' }}>
                                             <td style={{ ...cell, textAlign: 'left' }}>
                                                 <div style={{ fontWeight: 700 }}>{signal.medicine_name}</div>
@@ -108,20 +122,16 @@ const ADRSignalDetection = () => {
                                                 {signal.is_signal ? (
                                                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
                                                         <Warning size={16} color="var(--danger)" weight="fill" />
-                                                        <Badge variant="danger">signal</Badge>
+                                                        <Badge variant="danger">High Risk Signal</Badge>
                                                     </span>
                                                 ) : (
-                                                    <Badge variant="neutral">no signal</Badge>
+                                                    <Badge variant="neutral">Normal Pattern</Badge>
                                                 )}
                                             </td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
-                            <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: '0.85rem 0 0' }}>
-                                a = cases for this medicine at the selected severity; b = its reports at any other severity.
-                                c and d are the same counts across all other medicines and are used in the PRR/ROR denominators.
-                            </p>
                         </div>
                     )}
                 </CardContent>

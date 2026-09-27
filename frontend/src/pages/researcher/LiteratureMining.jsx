@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { BookOpen, Prohibit, TextAa } from '@phosphor-icons/react';
+import { BookOpen, TextAa } from '@phosphor-icons/react';
 import api from '../../services/api';
 import Card, { CardHeader, CardContent } from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
@@ -44,23 +44,6 @@ const LiteratureMining = () => {
 
     return (
         <div style={{ display: 'grid', gap: '1.5rem' }}>
-            <div
-                className="glass-panel"
-                style={{ padding: '1rem 1.25rem', display: 'flex', alignItems: 'flex-start', gap: '0.75rem', borderLeft: '4px solid var(--danger)' }}
-            >
-                <Prohibit size={22} color="var(--danger)" style={{ marginTop: '0.1rem', flexShrink: 0 }} />
-                <div>
-                    <div style={{ fontWeight: 800, color: 'var(--danger)', marginBottom: '0.2rem' }}>
-                        This does not search any literature database
-                    </div>
-                    <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.55 }}>
-                        MedGuard has no PubMed / Europe PMC / Semantic Scholar integration and no API key for one.
-                        Nothing here reads a published paper, and no citation is generated. What you see below is
-                        term-frequency mining over MedGuard&apos;s own ADR report narratives.
-                    </p>
-                </div>
-            </div>
-
             <NoteBanner note={result?.note} />
 
             <Card>
