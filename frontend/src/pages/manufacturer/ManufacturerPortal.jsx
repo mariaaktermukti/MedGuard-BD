@@ -18,6 +18,8 @@ import {
     TestTube,
     Truck,
     ChartLineUp,
+    ArrowRight,
+    SquaresFour,
 } from '@phosphor-icons/react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
@@ -222,7 +224,7 @@ const ProductionChart = ({ data, onOpen }) => {
     return (
         <div style={{ padding: '1rem', borderRadius: '1rem', border: '1px dashed var(--border)', background: 'rgba(59, 130, 246, 0.04)' }}>
             {data.length === 0 ? (
-                <div style={{ height: '160px', borderRadius: '0.95rem', background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.14), rgba(16, 185, 129, 0.12))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', textAlign: 'center', padding: '1rem' }}>
+                <div style={{ height: '160px', borderRadius: '0.95rem', background: 'linear-gradient(135deg, rgba(37, 99, 235, 0.14), rgba(16, 185, 129, 0.12))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', textAlign: 'center', padding: '1rem' }}>
                     No production or distribution recorded yet.
                 </div>
             ) : (
@@ -231,16 +233,16 @@ const ProductionChart = ({ data, onOpen }) => {
                         {data.map((row) => (
                             <div key={row.month} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }}>
                                 <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: '4px', width: '100%' }}>
-                                    <div title={`Produced: ${row.produced}`} style={{ width: '42%', maxWidth: '24px', height: barHeight(row.produced), minHeight: row.produced ? '4px' : 0, borderRadius: '0.45rem 0.45rem 0.2rem 0.2rem', background: 'var(--primary)' }} />
+                                    <div title={`Produced: ${row.produced}`} style={{ width: '42%', maxWidth: '24px', height: barHeight(row.produced), minHeight: row.produced ? '4px' : 0, borderRadius: '0.45rem 0.45rem 0.2rem 0.2rem', background: '#2563eb' }} />
                                     <div title={`Distributed: ${row.distributed}`} style={{ width: '42%', maxWidth: '24px', height: barHeight(row.distributed), minHeight: row.distributed ? '4px' : 0, borderRadius: '0.45rem 0.45rem 0.2rem 0.2rem', background: '#10b981' }} />
                                 </div>
                                 <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{row.month}</span>
                             </div>
                         ))}
                     </div>
-                    <div style={{ display: 'flex', gap: '1rem', marginTop: '0.75rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><span style={{ width: '10px', height: '10px', borderRadius: '3px', background: 'var(--primary)' }} />Produced</span>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><span style={{ width: '10px', height: '10px', borderRadius: '3px', background: '#10b981' }} />Distributed</span>
+                    <div style={{ display: 'flex', gap: '1.25rem', marginTop: '0.75rem', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-main)' }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}><span style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#2563eb' }} />Produced (Blue)</span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}><span style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#10b981' }} />Distributed (Green)</span>
                     </div>
                 </>
             )}
@@ -270,15 +272,41 @@ const ExpiryBars = ({ data }) => {
     );
 };
 
-const MetricCard = ({ icon, label, value }) => (
-    <div className="glass-panel" style={{ padding: '1.5rem', minHeight: '132px', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <div style={{ width: '48px', height: '48px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(59, 130, 246, 0.1)', color: 'var(--primary)', flex: '0 0 auto' }}>
+const MetricCard = ({ icon, label, value, onClick }) => (
+    <div
+        className="glass-panel metric-action-card"
+        onClick={onClick}
+        role={onClick ? 'button' : undefined}
+        tabIndex={onClick ? 0 : undefined}
+        onKeyDown={(e) => { if (onClick && (e.key === 'Enter' || e.key === ' ')) onClick(); }}
+        style={{
+            padding: '1.15rem 1.25rem',
+            minHeight: '104px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.85rem',
+            cursor: onClick ? 'pointer' : 'default',
+            borderRadius: '0.85rem',
+            border: '1px solid var(--border)',
+            background: 'var(--bg-card)',
+            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)',
+            position: 'relative',
+            overflow: 'hidden',
+        }}
+    >
+        <div style={{ width: '44px', height: '44px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(59, 130, 246, 0.1)', color: 'var(--primary)', flex: '0 0 auto' }}>
             {icon}
         </div>
-        <div>
-            <div style={{ fontSize: '1.75rem', fontWeight: 800, lineHeight: 1 }}>{value}</div>
-            <div style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>{label}</div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: '1.45rem', fontWeight: 800, lineHeight: 1.1, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>{value}</div>
+            <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '0.2rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</div>
         </div>
+        {onClick && (
+            <div className="metric-arrow" style={{ color: 'var(--primary)', opacity: 0.5, flex: '0 0 auto', display: 'flex', alignItems: 'center', transition: 'all 0.2s ease' }}>
+                <ArrowRight size={16} weight="bold" />
+            </div>
+        )}
     </div>
 );
 
@@ -345,14 +373,8 @@ const ManufacturerPortal = () => {
     const loadView = useCallback(async (view) => {
         switch (view) {
             case 'dashboard': {
-                // Compliance GET is DGDA-only on the backend, so fall back to the items embedded in the dashboard payload
-                const [dashboardRes, complianceRes] = await Promise.allSettled([
-                    api.get('core/manufacturer/dashboard/'),
-                    api.get('core/manufacturer/compliance/'),
-                ]);
-                if (dashboardRes.status === 'rejected') throw dashboardRes.reason;
-                setDashboard(dashboardRes.value.data);
-                setComplianceItems(complianceRes.status === 'fulfilled' ? asList(complianceRes.value.data) : asList(dashboardRes.value.data.compliance_items));
+                const res = await api.get('core/manufacturer/dashboard/');
+                setDashboard(res.data);
                 return;
             }
             case 'register': {
@@ -445,13 +467,25 @@ const ManufacturerPortal = () => {
     useEffect(() => {
         let ignore = false;
         const run = async () => {
-            setLoading(true);
+            const hasData = Boolean(
+                (activeView === 'dashboard' && dashboard) ||
+                (activeView === 'register' && medicines.length > 0) ||
+                (activeView === 'batch' && batches.length > 0) ||
+                (activeView === 'verify' && (batches.length > 0 || allQualityTests.length > 0)) ||
+                (activeView === 'recall' && (batches.length > 0 || recalls.length > 0)) ||
+                (activeView === 'shipment' && batches.length > 0)
+            );
+
+            // Only show full-page loading card on first mount when no data is cached
+            if (!hasData) {
+                setLoading(true);
+            }
             setLoadError('');
             try {
                 await loadView(activeView);
             } catch (error) {
                 console.error('Failed to load manufacturer data:', error);
-                if (!ignore) setLoadError(getErrorMessage(error, 'The server could not provide data for this page.'));
+                if (!ignore && !hasData) setLoadError(getErrorMessage(error, 'The server could not provide data for this page.'));
             } finally {
                 if (!ignore) setLoading(false);
             }
@@ -1025,81 +1059,37 @@ const ManufacturerPortal = () => {
 
     const renderDashboard = () => {
         const summary = dashboard?.summary || {};
-        const forecast = generatedForecast || dashboard?.demand_forecast || null;
-        const confidence = Math.round((parseFloat(forecast?.confidence_score) || 0) * 100);
         const pendingReviews = asList(dashboard?.batches).filter((batch) => batch.qc_status === 'pending').length;
         const alerts = asList(dashboard?.alerts);
         const metrics = [
-            { label: 'Total Registered Medicines', value: summary.products ?? 0, icon: <Package size={18} /> },
-            { label: 'Active Batches', value: summary.active_batches ?? 0, icon: <Factory size={18} /> },
-            // The dashboard has always sent this and never shown it.
-            { label: 'Units Produced', value: (summary.production_volume ?? 0).toLocaleString(), icon: <Package size={18} /> },
-            { label: 'QC Pass Rate (30d)', value: `${summary.qc_pass_rate ?? 0}%`, icon: <ShieldCheck size={18} /> },
-            { label: 'Recalled Batches (this year)', value: summary.recalled_batches ?? 0, icon: <Warning size={18} /> },
-            { label: 'Compliance Score', value: `${summary.compliance_grade ?? '—'} (${summary.compliance_score ?? 0}/100)`, icon: <ClipboardText size={18} /> },
-            { label: 'Pending QC Reviews', value: pendingReviews, icon: <CalendarBlank size={18} /> },
+            { label: 'Total Registered Medicines', value: summary.products ?? 0, icon: <Package size={18} />, path: '/dashboard/manufacturer/register' },
+            { label: 'Active Batches', value: summary.active_batches ?? 0, icon: <Factory size={18} />, path: '/dashboard/manufacturer/batch' },
+            { label: 'Units Produced', value: (summary.production_volume ?? 0).toLocaleString(), icon: <Package size={18} />, path: '/dashboard/manufacturer/batch' },
+            { label: 'QC Pass Rate (30d)', value: `${summary.qc_pass_rate ?? 0}%`, icon: <ShieldCheck size={18} />, path: '/dashboard/manufacturer/verify' },
+            { label: 'Pending QC Reviews', value: pendingReviews, icon: <CalendarBlank size={18} />, path: '/dashboard/manufacturer/verify' },
+            { label: 'Recalled Batches (this year)', value: summary.recalled_batches ?? 0, icon: <Warning size={18} />, path: '/dashboard/manufacturer/recall' },
+            { label: 'Outbound Shipments', value: (shipmentEvents.length || dashboard?.distribution_events?.length || 0), icon: <Truck size={18} />, path: '/dashboard/manufacturer/shipment' },
         ];
 
         return (
-            <div style={{ display: 'grid', gap: '1rem' }}>
-                <div className="medguard-metric-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '1.5rem' }}>
-                    {metrics.map((item) => <MetricCard key={item.label} icon={item.icon} label={item.label} value={item.value} />)}
+            <div style={{ display: 'grid', gap: '1.25rem' }}>
+                <div className="medguard-metric-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '1rem' }}>
+                    {metrics.map((item) => (
+                        <MetricCard
+                            key={item.label}
+                            icon={item.icon}
+                            label={item.label}
+                            value={item.value}
+                            onClick={() => navigate(item.path)}
+                        />
+                    ))}
                 </div>
 
-                <div className="medguard-two-col" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.2fr) minmax(0, 0.8fr)', gap: '1.5rem', alignItems: 'start' }}>
+                <div className="medguard-two-col" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)', gap: '1.5rem', alignItems: 'start' }}>
                     <div className="glass-panel" style={{ padding: '1.5rem' }}>
                         <SectionTitle title="Production vs Distribution" subtitle="Units produced and distributed over the last 6 active months." />
                         <ProductionChart data={asList(dashboard?.charts?.production_vs_sales)} onOpen={() => navigate('/dashboard/manufacturer/batch')} />
-                    </div>
-
-                    <div className="glass-panel" style={{ padding: '1.5rem' }}>
-                        <SectionTitle title="AI Demand Prediction" subtitle={`Next-month confidence: ${confidence}%`} />
-                        <div style={{ display: 'flex', justifyContent: 'center' }}>
-                            <div style={{ width: '180px', height: '180px', borderRadius: '50%', background: `conic-gradient(var(--primary) 0% ${confidence}%, rgba(148, 163, 184, 0.16) ${confidence}% 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <div style={{ width: '120px', height: '120px', borderRadius: '50%', background: 'var(--bg-card)', boxShadow: 'inset 0 0 0 1px var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                                    <div style={{ fontSize: '1.7rem', fontWeight: 800 }}>{confidence}%</div>
-                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Confidence</div>
-                                </div>
-                            </div>
-                        </div>
-                        {forecast && (
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '0.75rem', marginTop: '1rem' }}>
-                                <DetailItem label="Predicted demand">{Number(forecast.predicted_demand || 0).toLocaleString()} units</DetailItem>
-                                <DetailItem label="Forecast for">{formatDate(forecast.forecast_date)}</DetailItem>
-                                <DetailItem label="Region">{forecast.region || '—'}</DetailItem>
-                                <DetailItem label="Signal">{forecast.seasonal_signal || '—'}</DetailItem>
-                            </div>
-                        )}
                         <ExpiryBars data={asList(dashboard?.charts?.expiry_forecast)} />
-                        <Button variant="secondary" size="sm" fullWidth onClick={handleGenerateForecast} disabled={busy === 'forecast'} style={{ marginTop: '1rem' }}>
-                            <ChartLineUp size={16} /> {busy === 'forecast' ? 'Recalculating...' : 'Recalculate Forecast'}
-                        </Button>
-                    </div>
-                </div>
-
-                <div className="medguard-two-col" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.2fr) minmax(0, 0.8fr)', gap: '1.5rem', alignItems: 'start' }}>
-                    <div className="glass-panel" style={{ padding: '1.5rem' }}>
-                        <SectionTitle title="Compliance" subtitle={`Score ${summary.compliance_score ?? 0}/100 (grade ${summary.compliance_grade ?? '—'}). Pending or expired items lower the score.`} />
-                        <div style={{ display: 'grid', gap: '0.6rem', marginBottom: '1.25rem' }}>
-                            {complianceItems.length === 0 ? <EmptyText>No compliance items tracked yet.</EmptyText> : complianceItems.map((item) => (
-                                <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', padding: '0.6rem 0', borderBottom: '1px solid var(--border)' }}>
-                                    <div>
-                                        <div style={{ fontWeight: 600 }}>{item.title}</div>
-                                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Due {formatDate(item.due_date)}</div>
-                                    </div>
-                                    <StatusPill tone={complianceTone(item.status)}>{labelize(item.status)}</StatusPill>
-                                </div>
-                            ))}
-                        </div>
-                        <form onSubmit={handleComplianceSubmit} className="medguard-two-col" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr) auto', gap: '0.75rem', alignItems: 'end' }}>
-                            <Field label="New compliance item">
-                                <input value={complianceForm.title} onChange={(e) => setComplianceForm((current) => ({ ...current, title: e.target.value }))} placeholder="e.g. GMP certificate renewal" style={inputStyle} required />
-                            </Field>
-                            <Field label="Due date">
-                                <input type="date" value={complianceForm.due_date} onChange={(e) => setComplianceForm((current) => ({ ...current, due_date: e.target.value }))} style={inputStyle} required />
-                            </Field>
-                            <Button type="submit" disabled={busy === 'compliance'}>{busy === 'compliance' ? 'Adding...' : 'Add'}</Button>
-                        </form>
                     </div>
 
                     <div className="glass-panel" style={{ padding: '1.5rem' }}>
@@ -1776,7 +1766,7 @@ const ManufacturerPortal = () => {
     const messageAccent = messageTone === 'error' ? '#ef4444' : messageTone === 'success' ? '#10b981' : 'var(--primary)';
 
     return (
-        <div className="manufacturer-page" style={{ maxWidth: '1120px', margin: '0 auto', display: 'grid', gap: '1rem' }}>
+        <div className="manufacturer-page" style={{ maxWidth: '1180px', margin: '0 auto', display: 'grid', gap: '1rem' }}>
             <PageHeader {...viewMeta[activeView]} />
 
             {message && <div className="glass-panel" role={messageTone === 'error' ? 'alert' : 'status'} style={{ padding: '1rem 1.25rem', borderLeft: `4px solid ${messageAccent}`, color: 'var(--text-main)' }}>{message}</div>}
@@ -1852,13 +1842,25 @@ const ManufacturerPortal = () => {
                     to { transform: rotate(360deg); }
                 }
 
+                .metric-action-card:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 8px 24px rgba(59, 130, 246, 0.14) !important;
+                    border-color: var(--primary) !important;
+                }
+                .metric-action-card:hover .metric-arrow {
+                    transform: translateX(3px);
+                    opacity: 1 !important;
+                }
+
+                @media (max-width: 1024px) {
+                    .medguard-metric-grid {
+                        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                    }
+                }
+
                 @media (max-width: 900px) {
                     .manufacturer-page {
                         max-width: 100% !important;
-                    }
-
-                    .medguard-metric-grid {
-                        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
                     }
 
                     .medguard-two-col {
@@ -1869,7 +1871,7 @@ const ManufacturerPortal = () => {
                 @media (max-width: 640px) {
                     .manufacturer-page-header {
                         flex-direction: column !important;
-                        margin-bottom: 1.5rem !important;
+                        margin-bottom: 1.25rem !important;
                     }
 
                     .manufacturer-page-header h1 {

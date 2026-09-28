@@ -5,13 +5,53 @@ import { useAuth } from './AuthContext';
 
 const NotificationContext = createContext();
 
+const DEFAULT_DGDA_BROADCASTS = [
+    {
+        id: 101,
+        title: 'URGENT RECALL: Contaminated Batch - Paracetamol 500mg (Batch #8839)',
+        message: 'All healthcare facilities, pharmacies, and distributors must immediately quarantine Batch #8839. Do not dispense to patients under any circumstances.',
+        targets: ['all'],
+        priority: 'critical',
+        created_at: new Date(Date.now() - 3600000).toISOString(),
+        timestamp: 'Today, 10:45 AM',
+        sender: 'DGDA Central Vigilance Operations'
+    },
+    {
+        id: 102,
+        title: 'National Shortage Notice: Human Insulin (Regular 100IU)',
+        message: 'Emergency allocation active for Chittagong & Sylhet divisions. Priority dispatch authorized for registered hospital pharmacies.',
+        targets: ['doctor', 'pharmacy', 'distributor', 'manufacturer'],
+        priority: 'high',
+        created_at: new Date(Date.now() - 86400000).toISOString(),
+        timestamp: 'Yesterday, 04:15 PM',
+        sender: 'DGDA Emergency Supply Desk'
+    }
+];
+
+export const getDGDABroadcastAlerts = () => {
+    try {
+        const stored = localStorage.getItem('dgda_broadcast_alerts');
+        if (stored) return JSON.parse(stored);
+    } catch (e) {
+        console.error("LocalStorage read error for DGDA alerts", e);
+    }
+    localStorage.setItem('dgda_broadcast_alerts', JSON.stringify(DEFAULT_DGDA_BROADCASTS));
+    return DEFAULT_DGDA_BROADCASTS;
+};
+
 export const NotificationProvider = ({ children }) => {
     const { user } = useAuth();
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [broadcastAlerts, setBroadcastAlerts] = useState(getDGDABroadcastAlerts());
     const triggeredAlarmsRef = useRef(new Set());
 
-    // 1. Fetch User Notifications & Active Dose Schedules from Backend Database
+    const refreshDGDABroadcasts = () => {
+        const alerts = getDGDABroadcastAlerts();
+        setBroadcastAlerts(alerts);
+    };
+
+    // 1. Fetch User Notifications & Active Dose Schedules & DGDA Broadcast Alerts
     const fetchNotifications = async () => {
         if (!user) {
             setNotifications([]);
@@ -20,13 +60,11 @@ export const NotificationProvider = ({ children }) => {
             return;
         }
         try {
-            // Dose reminders are built from a citizen's own schedules, so for
-            // every other role that request is a guaranteed-empty round trip
-            // to a remote database on each page load. The 15s reminder poll
-            // below already skips non-citizens; this now matches it.
             const isCitizen = !user.role || user.role === 'citizen';
+            const userRole = user.role || 'citizen';
+
             const [notifRes, medRes] = await Promise.all([
-                api.get('core/notifications/'),
+                api.get('core/notifications/').catch(() => ({ data: [] })),
                 isCitizen
                     ? api.get('core/medicines/personal/').catch(() => ({ data: [] }))
                     : Promise.resolve({ data: [] }),
@@ -52,8 +90,24 @@ export const NotificationProvider = ({ children }) => {
                 });
             });
 
-            // Combine active scheduled alarms + DB notifications
-            const combined = [...scheduledNotifs, ...dbNotifs];
+            // Synthesize DGDA Emergency Broadcast Notifications targeting current user role
+            const allDGDA = getDGDABroadcastAlerts();
+            const relevantDGDA = allDGDA.filter(alert => {
+                const targets = alert.targets || ['all'];
+                if (targets.includes('all')) return true;
+                return targets.includes(userRole) || userRole === 'dgda';
+            }).map(alert => ({
+                id: `dgda-${alert.id}`,
+                title: `🚨 DGDA ALERT: ${alert.title}`,
+                message: alert.message,
+                notification_type: 'dgda_emergency',
+                priority: alert.priority || 'critical',
+                is_read: false,
+                created_at: alert.created_at || (alert.timestamp && !isNaN(new Date(alert.timestamp).getTime()) ? new Date(alert.timestamp).toISOString() : new Date().toISOString())
+            }));
+
+            // Combine DGDA Alerts + Dose Reminders + DB Notifications
+            const combined = [...relevantDGDA, ...scheduledNotifs, ...dbNotifs];
             setNotifications(combined);
             setUnreadCount(combined.filter(n => !n.is_read).length);
         } catch (error) {
@@ -64,7 +118,20 @@ export const NotificationProvider = ({ children }) => {
     useEffect(() => {
         triggeredAlarmsRef.current.clear();
         fetchNotifications();
-    }, [user?.id]);
+
+        const handleAlertUpdate = () => {
+            refreshDGDABroadcasts();
+            fetchNotifications();
+        };
+
+        window.addEventListener('dgda_alerts_updated', handleAlertUpdate);
+        window.addEventListener('storage', handleAlertUpdate);
+
+        return () => {
+            window.removeEventListener('dgda_alerts_updated', handleAlertUpdate);
+            window.removeEventListener('storage', handleAlertUpdate);
+        };
+    }, [user?.id, user?.role]);
 
     // 2. Web Audio Sound Synthesizer for Dose Alarm
     const playAlarmSound = () => {
@@ -211,9 +278,34 @@ export const NotificationProvider = ({ children }) => {
         });
     };
 
+    const sendDGDABroadcast = (newAlert) => {
+        const isoNow = new Date().toISOString();
+        const fullAlert = {
+            ...newAlert,
+            created_at: newAlert.created_at || isoNow,
+            timestamp: newAlert.timestamp || 'Just Now'
+        };
+        const existing = getDGDABroadcastAlerts();
+        const updated = [fullAlert, ...existing];
+        localStorage.setItem('dgda_broadcast_alerts', JSON.stringify(updated));
+        setBroadcastAlerts(updated);
+
+        window.dispatchEvent(new Event('dgda_alerts_updated'));
+        
+        // Instantly refresh notifications list in context memory
+        fetchNotifications();
+
+        if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification(`🚨 DGDA EMERGENCY ALERT`, {
+                body: `${fullAlert.title}\n${fullAlert.message}`,
+                icon: '/favicon.ico'
+            });
+        }
+    };
+
     const markAsRead = async (id) => {
         try {
-            if (typeof id === 'number' || (typeof id === 'string' && !id.startsWith('sched-'))) {
+            if (typeof id === 'number' || (typeof id === 'string' && !id.startsWith('sched-') && !id.startsWith('dgda-'))) {
                 await api.post(`core/notifications/${id}/read/`);
             }
             setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
@@ -227,6 +319,8 @@ export const NotificationProvider = ({ children }) => {
         <NotificationContext.Provider value={{
             notifications,
             unreadCount,
+            broadcastAlerts,
+            sendDGDABroadcast,
             fetchNotifications,
             markAsRead,
             playAlarmSound

@@ -231,19 +231,18 @@ const DGDAMonitoring = () => {
                         <tr style={{ background: 'var(--bg-page)', borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>
                             <th style={{ ...cellStyle, width: '13%', fontWeight: 600 }}>Event ID</th>
                             <th style={{ ...cellStyle, width: '14%', fontWeight: 600 }}>Type</th>
-                            <th style={{ ...cellStyle, width: '14%', fontWeight: 600 }}>Medicine</th>
-                            <th style={{ ...cellStyle, width: '18%', fontWeight: 600 }}>Entity</th>
-                            <th style={{ ...cellStyle, width: '9%', fontWeight: 600 }}>Location</th>
-                            <th style={{ ...cellStyle, width: '8%', fontWeight: 600 }}>Severity</th>
-                            <th style={{ ...cellStyle, width: '8%', fontWeight: 600 }}>Risk</th>
-                            <th style={{ ...cellStyle, width: '9%', fontWeight: 600 }}>Status</th>
-                            <th style={{ ...cellStyle, width: '7%', textAlign: 'right', fontWeight: 600 }}>Action</th>
+                            <th style={{ ...cellStyle, width: '15%', fontWeight: 600 }}>Medicine</th>
+                            <th style={{ ...cellStyle, width: '20%', fontWeight: 600 }}>Entity</th>
+                            <th style={{ ...cellStyle, width: '10%', fontWeight: 600 }}>Location</th>
+                            <th style={{ ...cellStyle, width: '9%', fontWeight: 600 }}>Severity</th>
+                            <th style={{ ...cellStyle, width: '9%', fontWeight: 600 }}>Risk</th>
+                            <th style={{ ...cellStyle, width: '10%', fontWeight: 600 }}>Status</th>
                         </tr>
                     </thead>
                     <tbody>
                         {isLoading ? (
                             <tr>
-                                <td colSpan="9" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                                <td colSpan="8" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                                     Loading signals...
                                 </td>
                             </tr>
@@ -306,25 +305,12 @@ const DGDAMonitoring = () => {
                                                 {ev.status_display || ev.status}
                                             </Badge>
                                         </td>
-
-                                        {/* Action */}
-                                        <td style={{ ...cellStyle, textAlign: 'right' }}>
-                                            <Button 
-                                                variant="primary" 
-                                                size="sm" 
-                                                style={{ padding: '0.25rem 0.45rem', fontSize: '0.75rem', borderRadius: '6px' }} 
-                                                onClick={() => openEventDetail(ev.id)}
-                                                title="View Event Details"
-                                            >
-                                                <Eye size={12} /> View
-                                            </Button>
-                                        </td>
                                     </tr>
                                 );
                             })
                         ) : (
                             <tr>
-                                <td colSpan="9" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                                <td colSpan="8" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                                     No monitoring events matched your search filters.
                                 </td>
                             </tr>

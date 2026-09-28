@@ -28,13 +28,22 @@ const Notifications = () => {
         else if (lowerTitle.includes('warning') || lowerTitle.includes('expire')) type = 'warning';
         else if (lowerTitle.includes('alarm') || lowerTitle.includes('dose') || lowerTitle.includes('reminder') || lowerTitle.includes('medicine') || notif.title.includes('⏰')) type = 'alarm';
 
+        const formatNotifDate = (val) => {
+            if (!val) return 'Just Now';
+            const parsed = new Date(val);
+            if (!isNaN(parsed.getTime())) {
+                return parsed.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+            }
+            return String(val);
+        };
+
         return {
             id: notif.id,
             type,
             title: notif.title,
             message: notif.message,
             instruction: type === 'recall' ? 'ফার্মেসিতে ফেরত দিন' : type === 'alarm' ? 'সময়মতো ওষুধ সেবন করুন' : '',
-            date: notif.created_at ? new Date(notif.created_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'Today',
+            date: formatNotifDate(notif.created_at),
             isRead: notif.is_read
         };
     });

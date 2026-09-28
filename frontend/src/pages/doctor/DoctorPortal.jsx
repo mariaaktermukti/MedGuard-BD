@@ -1,6 +1,7 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { Stethoscope, ShieldCheck, Heartbeat } from '@phosphor-icons/react';
+import DoctorDashboard from './DoctorDashboard';
 import PatientMedicineHistory from './PatientMedicineHistory';
 import DigitalPrescription from './DigitalPrescription';
 import DrugInteractionChecker from './DrugInteractionChecker';
@@ -32,7 +33,8 @@ const DoctorPortal = () => {
 
             {/* Portal Routes */}
             <Routes>
-                <Route index element={<PatientMedicineHistory />} />
+                <Route index element={<DoctorDashboard />} />
+                <Route path="dashboard" element={<DoctorDashboard />} />
                 <Route path="patient-history" element={<PatientMedicineHistory />} />
                 <Route path="prescriptions" element={<DigitalPrescription />} />
                 <Route path="interaction-checker" element={<DrugInteractionChecker />} />

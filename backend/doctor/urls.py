@@ -4,6 +4,7 @@ from .views import (
     DoctorADRReportListCreateView,
     DoctorConsultationDetailView,
     DoctorConsultationListCreateView,
+    DoctorDashboardView,
     DoctorFrequentMedicinesView,
     DoctorInteractionCheckerView,
     DoctorMedicineListView,
@@ -18,6 +19,7 @@ from .views import (
 )
 
 urlpatterns = [
+    path('dashboard/', DoctorDashboardView.as_view(), name='doctor-dashboard'),
     path('patients/', DoctorPatientListView.as_view(), name='doctor-patients'),
     path('patients/<int:patient_id>/medicine-history/', DoctorPatientMedicineHistoryView.as_view(), name='doctor-patient-medicine-history'),
     path('prescriptions/', DoctorPrescriptionListCreateView.as_view(), name='doctor-prescriptions'),

@@ -149,14 +149,6 @@ const CounterfeitIntel = () => {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '1.5rem' }}>
-            {/* Page Header (same as the other DGDA portal tabs) */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                    <h1 style={{ fontSize: '2rem', margin: '0 0 0.5rem 0', color: 'var(--text-main)' }}>National Command Center</h1>
-                    <p style={{ margin: 0, color: 'var(--text-muted)' }}>Directorate General of Drug Administration (DGDA)</p>
-                </div>
-            </div>
-
             <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
                 {/* Module header */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>

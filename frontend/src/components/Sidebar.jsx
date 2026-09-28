@@ -9,18 +9,17 @@ const Sidebar = ({ isTablet }) => {
     const { t } = useContext(LanguageContext);
 
     const citizenNavItems = [
-        { path: '/dashboard', icon: <House size={20} weight="duotone" />, label: t('home') },
+        { path: '/dashboard', icon: <House size={20} weight="duotone" />, label: 'Dashboard' },
         { path: '/dashboard/drug-passport', icon: <QrCode size={20} weight="duotone" />, label: t('qr_scan') },
         { path: '/dashboard/my-medicines', icon: <Pill size={20} weight="duotone" />, label: t('my_medicines') },
         { path: '/dashboard/report-adr', icon: <WarningCircle size={20} weight="duotone" />, label: t('adr_report') },
         { path: '/dashboard/report-counterfeit', icon: <ShieldWarning size={20} weight="duotone" />, label: 'Report Counterfeit' },
-        { path: '/dashboard/find-pharmacy', icon: <MapPin size={20} weight="duotone" />, label: t('pharmacy') },
         { path: '/dashboard/ai-assistant', icon: <ChatText size={20} weight="duotone" />, label: t('ai_assistant') },
         { path: '/dashboard/doctor-consultation', icon: <Stethoscope size={20} weight="duotone" />, label: 'Doctor Consultation' },
     ];
 
     const pharmacyNavItems = [
-        { path: '/dashboard/pharmacy', icon: <House size={20} weight="duotone" />, label: t('home') },
+        { path: '/dashboard/pharmacy', icon: <House size={20} weight="duotone" />, label: 'Dashboard' },
         { path: '/dashboard/pharmacy/inventory', icon: <Package size={20} weight="duotone" />, label: 'Inventory' },
         { path: '/dashboard/pharmacy/verify', icon: <QrCode size={20} weight="duotone" />, label: 'Verify Batch' },
         { path: '/dashboard/pharmacy/sales', icon: <Receipt size={20} weight="duotone" />, label: 'Log Sale' },
@@ -32,7 +31,7 @@ const Sidebar = ({ isTablet }) => {
     ];
 
     const distributorNavItems = [
-        { path: '/dashboard/distributor', icon: <House size={20} weight="duotone" />, label: t('home') },
+        { path: '/dashboard/distributor', icon: <House size={20} weight="duotone" />, label: 'Dashboard' },
         { path: '/dashboard/distributor/warehouses', icon: <Warehouse size={20} weight="duotone" />, label: 'Warehouses' },
         { path: '/dashboard/distributor/shipments', icon: <Truck size={20} weight="duotone" />, label: 'Shipments' },
         { path: '/dashboard/distributor/analytics', icon: <ChartBar size={20} weight="duotone" />, label: 'Analytics' },
@@ -41,21 +40,19 @@ const Sidebar = ({ isTablet }) => {
     ];
 
     const dgdaNavItems = [
-        { path: '/dashboard/dgda/command-center', icon: <MapPin size={20} weight="duotone" />, label: t('command_center') },
+        { path: '/dashboard/dgda', icon: <House size={20} weight="duotone" />, label: 'Dashboard' },
         { path: '/dashboard/dgda/live-monitoring', icon: <Crosshair size={20} weight="duotone" />, label: t('monitoring') },
-        { path: '/dashboard/dgda/investigations', icon: <ShieldWarning size={20} weight="duotone" />, label: t('investigations') },
         { path: '/dashboard/dgda/counterfeit-intel', icon: <SealWarning size={20} weight="duotone" />, label: 'Counterfeit Intel' },
         { path: '/dashboard/dgda/recalls', icon: <WarningCircle size={20} weight="duotone" />, label: t('recalls') },
         { path: '/dashboard/dgda/inspections', icon: <ClipboardText size={20} weight="duotone" />, label: t('inspections') },
         { path: '/dashboard/dgda/entities', icon: <Buildings size={20} weight="duotone" />, label: t('entities') },
         { path: '/dashboard/dgda/heatmaps', icon: <MapTrifold size={20} weight="duotone" />, label: t('heatmaps') },
-        { path: '/dashboard/dgda/risk', icon: <Brain size={20} weight="duotone" />, label: t('risk_intel') },
         { path: '/dashboard/dgda/policy', icon: <ChartLineUp size={20} weight="duotone" />, label: 'Policy Analytics' },
         { path: '/dashboard/dgda/emergency', icon: <Package size={20} weight="duotone" />, label: 'Emergency Response' },
     ];
 
     const manufacturerNavItems = [
-        { path: '/dashboard/manufacturer', icon: <Factory size={20} weight="duotone" />, label: t('mfg_dashboard') },
+        { path: '/dashboard/manufacturer', icon: <Factory size={20} weight="duotone" />, label: 'Dashboard' },
         { path: '/dashboard/manufacturer/register', icon: <ClipboardText size={20} weight="duotone" />, label: t('mfg_register_medicine') },
         { path: '/dashboard/manufacturer/batch', icon: <Package size={20} weight="duotone" />, label: t('mfg_create_batch') },
         { path: '/dashboard/manufacturer/verify', icon: <QrCode size={20} weight="duotone" />, label: t('mfg_verify_batch') },
@@ -65,6 +62,7 @@ const Sidebar = ({ isTablet }) => {
 
     // Paths, labels and icons mirror the tabs array in pages/researcher/ResearcherPortal.jsx
     const researcherNavItems = [
+        { path: '/dashboard/researcher', icon: <House size={20} weight="duotone" />, label: 'Dashboard' },
         { path: '/dashboard/researcher/ethics-access', icon: <ShieldCheck size={20} weight="duotone" />, label: 'Ethics-Governed Access' },
         { path: '/dashboard/researcher/signals', icon: <Pulse size={20} weight="duotone" />, label: 'ADR Signal Detection' },
         { path: '/dashboard/researcher/dashboards', icon: <SquaresFour size={20} weight="duotone" />, label: 'Custom Dashboards' },
@@ -79,15 +77,13 @@ const Sidebar = ({ isTablet }) => {
     // Without this a doctor fell through to the citizen menu below and was offered
     // patient pages - QR Scan, My Medicines, Report Counterfeit - instead of their own.
     const doctorNavItems = [
-        { path: '/dashboard/doctor/patient-history', icon: <Users size={20} weight="duotone" />, label: 'Patient Medicine History' },
+        { path: '/dashboard/doctor', icon: <Stethoscope size={20} weight="duotone" />, label: 'Dashboard' },
+        { path: '/dashboard/doctor/patient-history', icon: <Users size={20} weight="duotone" />, label: 'Patient History' },
         { path: '/dashboard/doctor/prescriptions', icon: <ClipboardText size={20} weight="duotone" />, label: 'Digital Prescription' },
-        { path: '/dashboard/doctor/interaction-checker', icon: <ShieldWarning size={20} weight="duotone" />, label: 'Drug Interaction Checker' },
-        { path: '/dashboard/doctor/medicine-lookup', icon: <MagnifyingGlass size={20} weight="duotone" />, label: 'Medicine Lookup' },
         { path: '/dashboard/doctor/drug-passport', icon: <QrCode size={20} weight="duotone" />, label: 'Digital Drug Passport' },
         { path: '/dashboard/doctor/adr-report', icon: <WarningCircle size={20} weight="duotone" />, label: 'Report ADR' },
-        { path: '/dashboard/doctor/recall-alerts', icon: <Bell size={20} weight="duotone" />, label: 'Recall Notifications' },
-        { path: '/dashboard/doctor/medicine-library', icon: <Star size={20} weight="duotone" />, label: 'My Medicine Library' },
-        { path: '/dashboard/doctor/research-datasets', icon: <Database size={20} weight="duotone" />, label: 'Research Datasets' },
+        { path: '/dashboard/doctor/recall-alerts', icon: <Bell size={20} weight="duotone" />, label: 'Recall' },
+        { path: '/dashboard/doctor/research-datasets', icon: <Database size={20} weight="duotone" />, label: 'Research Database' },
         { path: '/dashboard/doctor/consultations', icon: <VideoCamera size={20} weight="duotone" />, label: 'Consultations' },
     ];
 
@@ -117,7 +113,7 @@ const Sidebar = ({ isTablet }) => {
                     <NavLink
                         key={index}
                         to={item.path}
-                        end={item.path === '/dashboard' || item.path === '/dashboard/pharmacy' || item.path === '/dashboard/dgda' || item.path === '/dashboard/manufacturer' || item.path === '/dashboard/distributor'}
+                        end={item.path === '/dashboard' || item.path === '/dashboard/pharmacy' || item.path === '/dashboard/dgda' || item.path === '/dashboard/manufacturer' || item.path === '/dashboard/distributor' || item.path === '/dashboard/doctor'}
                         style={({ isActive }) => ({
                             display: 'flex',
                             alignItems: 'center',

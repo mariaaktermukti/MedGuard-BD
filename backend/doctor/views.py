@@ -10,7 +10,7 @@ from django.shortcuts import get_object_or_404
  # pyrefly: ignore [missing-import]
 from rest_framework import generics, permissions, status, views
  # pyrefly: ignore [missing-import]
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, ValidationError
  # pyrefly: ignore [missing-import]
 from rest_framework.response import Response
 
@@ -358,4 +358,57 @@ class DoctorPrescriptionSendChatView(views.APIView):
         except Exception as err:
             print("DoctorPrescriptionSendChatView error:", err)
             return Response({'detail': f'Error sending prescription to chat: {str(err)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class DoctorDashboardView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, IsDoctor]
+
+    def get(self, request):
+        doctor = request.user
+        patient_ids = _doctor_patient_ids(doctor)
+        total_patients = len(patient_ids)
+
+        prescriptions = Prescription.objects.filter(doctor=doctor)
+        active_prescriptions = prescriptions.filter(status='active').count()
+        total_prescriptions = prescriptions.count()
+
+        consultations = Consultation.objects.filter(doctor=doctor)
+        total_consultations = consultations.count()
+        pending_consultations = consultations.filter(status='requested').count()
+        ongoing_consultations = consultations.filter(status='accepted').count()
+
+        adr_reports_count = ADRReport.objects.filter(reported_by_user=doctor).count()
+
+        recall_view = DoctorRecallAlertsView()
+        try:
+            recall_response = recall_view.get(request)
+            recall_alerts_count = len(recall_response.data.get('alerts', []))
+        except Exception:
+            recall_alerts_count = 0
+
+        recent_prescriptions = DoctorPrescriptionSerializer(
+            prescriptions.select_related('citizen').order_by('-prescription_date')[:5],
+            many=True
+        ).data
+
+        recent_consultations = DoctorConsultationSerializer(
+            consultations.select_related('citizen').order_by('-consultation_date')[:5],
+            many=True
+        ).data
+
+        return Response({
+            'summary': {
+                'total_patients': total_patients,
+                'active_prescriptions': active_prescriptions,
+                'total_prescriptions': total_prescriptions,
+                'total_consultations': total_consultations,
+                'pending_consultations': pending_consultations,
+                'ongoing_consultations': ongoing_consultations,
+                'adr_reports_submitted': adr_reports_count,
+                'recall_alerts_flagged': recall_alerts_count,
+            },
+            'recent_prescriptions': recent_prescriptions,
+            'recent_consultations': recent_consultations,
+        })
+
 

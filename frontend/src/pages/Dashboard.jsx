@@ -199,7 +199,7 @@ const Dashboard = () => {
                         <UserCircle size={32} weight="duotone" color="var(--primary)" /> Citizen Portal
                     </h1>
                     <p style={{ margin: '0 0 0.75rem', color: 'var(--text-muted)' }}>
-                        Welcome, {userName} 👋 — your medicines, reactions and pharmacy visits in one place.
+                        Welcome, {userName} 👋 — your medicines and reactions in one place.
                     </p>
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: 'var(--primary-light)', color: 'var(--primary)', padding: '0.5rem 1rem', borderRadius: '2rem', fontSize: '0.85rem', fontWeight: 700 }}>
                         <CalendarBlank size={16} /> {today}
@@ -207,7 +207,7 @@ const Dashboard = () => {
                 </div>
             </div>
 
-            {/* 4 Interactive Responsive Stat Cards */}
+            {/* 3 Interactive Responsive Stat Cards */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem', marginBottom: '2.25rem' }}>
                 <StatCard 
                     icon={<Warning size={26} weight="fill" />} 
@@ -230,13 +230,6 @@ const Dashboard = () => {
                     color="warning" 
                     onClick={() => navigate('/dashboard/report-adr')}
                 />
-                <StatCard 
-                    icon={<Storefront size={26} weight="fill" />} 
-                    label="Pharmacy Visits" 
-                    value={stats.pharmacy_visits ?? 0} 
-                    color="info" 
-                    onClick={() => navigate('/dashboard/find-pharmacy')}
-                />
             </div>
 
             {/* Two-Column Layout */}
@@ -245,16 +238,6 @@ const Dashboard = () => {
                 {/* Left Column */}
                 <div style={{ gridColumn: 'span 2' }}>
                     
-                    {/* Quick Actions Grid */}
-                    <h3 style={{ marginBottom: '1rem', color: 'var(--text-main)', fontSize: '1.25rem', fontWeight: 700 }}>Quick Actions</h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '1rem', marginBottom: '2.5rem' }}>
-                        <ActionCard icon={<QrCode size={32} weight="duotone" />} label="QR Scan" onClick={() => navigate('/dashboard/drug-passport')} />
-                        <ActionCard icon={<PillIcon size={32} weight="duotone" />} label="My Medicines" onClick={() => navigate('/dashboard/my-medicines')} />
-                        <ActionCard icon={<Clipboard size={32} weight="duotone" />} label="ADR Report" onClick={() => navigate('/dashboard/report-adr')} />
-                        <ActionCard icon={<MapPin size={32} weight="duotone" />} label="Find Pharmacy" onClick={() => navigate('/dashboard/find-pharmacy')} />
-                        <ActionCard icon={<Intersect size={32} weight="duotone" />} label="Interactions" onClick={() => navigate('/dashboard/interaction-checker')} />
-                        <ActionCard icon={<Alarm size={32} weight="duotone" />} label="Dose Alarm" onClick={() => navigate('/dashboard/my-medicines')} />
-                    </div>
 
                     {/* Recent Activity */}
                     <h3 style={{ marginBottom: '1rem', color: 'var(--text-main)', fontSize: '1.25rem', fontWeight: 700 }}>Recent Activity</h3>
@@ -371,48 +354,6 @@ const Dashboard = () => {
                             </CardContent>
                         </Card>
                     )}
-
-                    {/* Registered pharmacies. The app has no location permission, so
-                        these are the highest-trust registered pharmacies, not the closest
-                        ones; the old card invented two names and their distances. */}
-                    <Card padding="md">
-                        <CardHeader 
-                            title="Registered Pharmacies" 
-                            action={<a href="/dashboard/find-pharmacy" style={{ fontSize: '0.85rem', color: 'var(--primary)', textDecoration: 'none', fontWeight: 600 }}>View All</a>}
-                        />
-                        <CardContent>
-                            {pharmacies.length === 0 ? (
-                                <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                                    No pharmacies are registered yet.
-                                </p>
-                            ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                    {pharmacies.map((pharm, index) => (
-                                        <div
-                                            key={pharm.user_id}
-                                            style={{
-                                                display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem',
-                                                paddingBottom: index < pharmacies.length - 1 ? '1rem' : 0,
-                                                borderBottom: index < pharmacies.length - 1 ? '1px solid var(--border)' : 'none',
-                                            }}
-                                        >
-                                            <div style={{ minWidth: 0 }}>
-                                                <div style={{ fontWeight: 600, color: 'var(--text-main)' }}>{pharm.pharmacy_name}</div>
-                                                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                    {pharm.address || 'Address not listed'}
-                                                </div>
-                                            </div>
-                                            {trustPercent(pharm.trust_score) === null
-                                                ? <Badge variant="default">Unrated</Badge>
-                                                : <Badge variant={trustPercent(pharm.trust_score) >= 70 ? 'success' : 'warning'}>
-                                                    Trust {trustPercent(pharm.trust_score)}%
-                                                  </Badge>}
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
 
                     {/* AI Health Tip */}
                     <Card padding="md" style={{ background: 'var(--primary-light)', border: '1px solid var(--primary)', borderRadius: '12px' }}>

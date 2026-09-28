@@ -1,6 +1,7 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { Flask } from '@phosphor-icons/react';
+import ResearcherDashboard from './ResearcherDashboard';
 import EthicsDataAccess from './EthicsDataAccess';
 import ADRSignalDetection from './ADRSignalDetection';
 import CustomDashboards from './CustomDashboards';
@@ -27,7 +28,8 @@ const ResearcherPortal = () => {
 
             {/* Main Sub-route Content */}
             <Routes>
-                <Route index element={<EthicsDataAccess />} />
+                <Route index element={<ResearcherDashboard />} />
+                <Route path="dashboard" element={<ResearcherDashboard />} />
                 <Route path="ethics-access" element={<EthicsDataAccess />} />
                 <Route path="signals" element={<ADRSignalDetection />} />
                 <Route path="dashboards" element={<CustomDashboards />} />
