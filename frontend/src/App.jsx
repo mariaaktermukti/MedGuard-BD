@@ -21,6 +21,7 @@ const PharmacyFinder = lazy(() => import('./pages/citizen/PharmacyFinder'));
 const InteractionChecker = lazy(() => import('./pages/citizen/InteractionChecker'));
 const Notifications = lazy(() => import('./pages/citizen/Notifications'));
 const CitizenReportCounterfeit = lazy(() => import('./pages/citizen/ReportCounterfeit'));
+const DoctorConsultation = lazy(() => import('./pages/citizen/DoctorConsultation'));
 const ManufacturerPortal = lazy(() => import('./pages/manufacturer/ManufacturerPortal'));
 const Inventory = lazy(() => import('./pages/pharmacy/Inventory'));
 const Suppliers = lazy(() => import('./pages/pharmacy/Suppliers'));
@@ -35,7 +36,6 @@ const Warehouses = lazy(() => import('./pages/distributor/Warehouses'));
 const Shipments = lazy(() => import('./pages/distributor/Shipments'));
 const Analytics = lazy(() => import('./pages/distributor/Analytics'));
 const RouteOptimization = lazy(() => import('./pages/distributor/RouteOptimization'));
-const FleetMonitoring = lazy(() => import('./pages/distributor/FleetMonitoring'));
 const RouteRisk = lazy(() => import('./pages/distributor/RouteRisk'));
 const DistributorDashboard = lazy(() => import('./pages/distributor/DistributorDashboard'));
 const Settings = lazy(() => import('./pages/Settings'));
@@ -55,59 +55,59 @@ function App() {
             <NotificationProvider>
               <ConfirmationProvider>
                 <Suspense fallback={<DashboardSkeleton />}>
-                <Routes>
-                  <Route path="/" element={<Landing />} />
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/register" element={<Register />} />
-                  
-                  <Route element={<ProtectedRoute />}>
-                    <Route path="/dashboard" element={<DashboardLayout />}>
-                      <Route index element={<Dashboard />} />
-                      <Route path="drug-passport" element={<DrugPassport />} />
-                      <Route path="my-medicines" element={<MyMedicines />} />
-                      <Route path="report-adr" element={<ReportADR />} />
-                      <Route path="report-counterfeit" element={<CitizenReportCounterfeit />} />
-                      <Route path="ai-assistant" element={<AIAssistant />} />
-                      <Route path="find-pharmacy" element={<PharmacyFinder />} />
-                      <Route path="interaction-checker" element={<InteractionChecker />} />
-                      <Route path="notifications" element={<Notifications />} />
-                      <Route path="manufacturer" element={<ManufacturerPortal />} />
-                      <Route path="manufacturer/register" element={<ManufacturerPortal />} />
-                      <Route path="manufacturer/batch" element={<ManufacturerPortal />} />
-                      <Route path="manufacturer/verify" element={<ManufacturerPortal />} />
-                      <Route path="manufacturer/recall" element={<ManufacturerPortal />} />
-                      <Route path="manufacturer/shipment" element={<ManufacturerPortal />} />
-                      <Route path="pharmacy" element={<PharmacyDashboard />} />
-                      <Route path="pharmacy/inventory" element={<Inventory />} />
-                      <Route element={<ProtectedRoute allowedRoles={['dgda']} />}>
-                      <Route path="dgda/counterfeit-intel" element={<CounterfeitIntel />} />
-                        <Route path="dgda/*" element={<DGDAPortal />} />
+                  <Routes>
+                    <Route path="/" element={<Landing />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/register" element={<Register />} />
+
+                    <Route element={<ProtectedRoute />}>
+                      <Route path="/dashboard" element={<DashboardLayout />}>
+                        <Route index element={<Dashboard />} />
+                        <Route path="drug-passport" element={<DrugPassport />} />
+                        <Route path="my-medicines" element={<MyMedicines />} />
+                        <Route path="report-adr" element={<ReportADR />} />
+                        <Route path="report-counterfeit" element={<CitizenReportCounterfeit />} />
+                        <Route path="ai-assistant" element={<AIAssistant />} />
+                        <Route path="doctor-consultation" element={<DoctorConsultation />} />
+                        <Route path="find-pharmacy" element={<PharmacyFinder />} />
+                        <Route path="interaction-checker" element={<InteractionChecker />} />
+                        <Route path="notifications" element={<Notifications />} />
+                        <Route path="manufacturer" element={<ManufacturerPortal />} />
+                        <Route path="manufacturer/register" element={<ManufacturerPortal />} />
+                        <Route path="manufacturer/batch" element={<ManufacturerPortal />} />
+                        <Route path="manufacturer/verify" element={<ManufacturerPortal />} />
+                        <Route path="manufacturer/recall" element={<ManufacturerPortal />} />
+                        <Route path="manufacturer/shipment" element={<ManufacturerPortal />} />
+                        <Route path="pharmacy" element={<PharmacyDashboard />} />
+                        <Route path="pharmacy/inventory" element={<Inventory />} />
+                        <Route element={<ProtectedRoute allowedRoles={['dgda']} />}>
+                          <Route path="dgda/counterfeit-intel" element={<CounterfeitIntel />} />
+                          <Route path="dgda/*" element={<DGDAPortal />} />
+                        </Route>
+                        <Route path="doctor/*" element={<DoctorPortal />} />
+                        <Route element={<ProtectedRoute allowedRoles={['researcher']} />}>
+                          <Route path="researcher/*" element={<ResearcherPortal />} />
+                        </Route>
+                        <Route path="pharmacy/suppliers" element={<Suppliers />} />
+                        <Route path="pharmacy/verify" element={<BatchVerify />} />
+                        <Route path="pharmacy/sales" element={<SaleLogging />} />
+                        <Route path="pharmacy/alerts" element={<Alerts />} />
+                        <Route path="pharmacy/forecast" element={<StockForecast />} />
+                        <Route path="pharmacy/complaints" element={<Complaints />} />
+                        <Route path="pharmacy/report-counterfeit" element={<PharmacyReportCounterfeit />} />
+                        <Route path="distributor" element={<DistributorDashboard />} />
+                        <Route path="distributor/warehouses" element={<Warehouses />} />
+                        <Route path="distributor/shipments" element={<Shipments />} />
+                        <Route path="distributor/analytics" element={<Analytics />} />
+                        <Route path="distributor/route-optimization" element={<RouteOptimization />} />
+                        <Route path="distributor/route-risk" element={<RouteRisk />} />
+                        <Route path="settings" element={<Settings />} />
+                        <Route path="*" element={<Navigate to="/dashboard" replace />} />
                       </Route>
-                      <Route path="doctor/*" element={<DoctorPortal />} />
-                      <Route element={<ProtectedRoute allowedRoles={['researcher']} />}>
-                        <Route path="researcher/*" element={<ResearcherPortal />} />
-                      </Route>
-                      <Route path="pharmacy/suppliers" element={<Suppliers />} />
-                      <Route path="pharmacy/verify" element={<BatchVerify />} />
-                      <Route path="pharmacy/sales" element={<SaleLogging />} />
-                      <Route path="pharmacy/alerts" element={<Alerts />} />
-                      <Route path="pharmacy/forecast" element={<StockForecast />} />
-                      <Route path="pharmacy/complaints" element={<Complaints />} />
-                      <Route path="pharmacy/report-counterfeit" element={<PharmacyReportCounterfeit />} />
-                      <Route path="distributor" element={<DistributorDashboard />} />
-                      <Route path="distributor/warehouses" element={<Warehouses />} />
-                      <Route path="distributor/shipments" element={<Shipments />} />
-                      <Route path="distributor/analytics" element={<Analytics />} />
-                      <Route path="distributor/route-optimization" element={<RouteOptimization />} />
-                      <Route path="distributor/fleet-monitoring" element={<FleetMonitoring />} />
-                      <Route path="distributor/route-risk" element={<RouteRisk />} />
-                      <Route path="settings" element={<Settings />} />
-                      <Route path="*" element={<Navigate to="/dashboard" replace />} />
                     </Route>
-                  </Route>
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
-              </Suspense>
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </Routes>
+                </Suspense>
               </ConfirmationProvider>
             </NotificationProvider>
           </AuthProvider>

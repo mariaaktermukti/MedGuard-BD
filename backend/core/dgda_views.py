@@ -1,14 +1,19 @@
 import logging
 from decimal import InvalidOperation
 
+# pyrefly: ignore [missing-import]
 from django.db.models import Count, Q, Sum, TextField
+# pyrefly: ignore [missing-import]
 from django.utils import timezone
 from datetime import timedelta, datetime
+# pyrefly: ignore [missing-import]
 from rest_framework import viewsets, views, status
+# pyrefly: ignore [missing-import]
 from rest_framework.response import Response
+# pyrefly: ignore [missing-import]
 from rest_framework.permissions import IsAuthenticated
 from users.permissions import IsDGDA
-
+# pyrefly: ignore [missing-import]
 from django.db.models.functions import TruncMonth, Cast
 
 from .models import (
@@ -1039,10 +1044,10 @@ DIVISION_MAP_COORDINATES = {
 }
 
 DIVISION_MAP_KEYWORDS = {
-    'Dhaka': ['dhaka', 'gazipur', 'narayanganj', 'tangail', 'faridpur', 'manikganj', 'munshiganj', 'narsingdi', 'central', 'tejgaon', 'mirpur', 'dhanmondi', 'uttara', 'gulshan', 'savar'],
-    'Chittagong': ['chittagong', 'chattogram', 'cox', 'comilla', 'cumilla', 'feni', 'noakhali', 'brahmanbaria', 'rangamati', 'bandarban', 'khagrachari', 'agrabad', 'halishahar'],
+    'Dhaka': ['dhaka', 'gazipur', 'narayanganj', 'tangail', 'faridpur', 'manikganj', 'munshiganj', 'narsingdi', 'madaripur', 'gopalganj', 'shariatpur', 'kishoreganj', 'rajbari', 'central', 'tejgaon', 'mirpur', 'dhanmondi', 'uttara', 'gulshan', 'savar', 'banani', 'mohakhali', 'motijheel'],
+    'Chittagong': ['chittagong', 'chattogram', 'cox', 'comilla', 'cumilla', 'feni', 'noakhali', 'brahmanbaria', 'rangamati', 'bandarban', 'khagrachari', 'lakshmipur', 'chandpur', 'agrabad', 'halishahar'],
     'Rajshahi': ['rajshahi', 'bogra', 'bogura', 'pabna', 'naogaon', 'natore', 'chapainawabganj', 'joypurhat', 'sirajganj'],
-    'Khulna': ['khulna', 'jessore', 'jashore', 'kushtia', 'satkhira', 'bagerhat', 'chuadanga', 'jhenaidah', 'magura', 'meherpur'],
+    'Khulna': ['khulna', 'jessore', 'jashore', 'kushtia', 'satkhira', 'bagerhat', 'chuadanga', 'jhenaidah', 'magura', 'meherpur', 'narail'],
     'Barisal': ['barisal', 'barishal', 'bhola', 'patuakhali', 'barguna', 'jhalokati', 'pirojpur'],
     'Sylhet': ['sylhet', 'sunamganj', 'moulvibazar', 'habiganj', 'zindabazar'],
     'Rangpur': ['rangpur', 'dinajpur', 'kurigram', 'gaibandha', 'lalmonirhat', 'nilphamari', 'panchagarh', 'thakurgaon'],
@@ -1068,6 +1073,7 @@ class DGDAHeatmapDataView(views.APIView):
             div: {
                 'shipment_count': 0,
                 'total_units': 0,
+                'valid_units': 0,
                 'hazard_count': 0,
                 'recalled_batches': 0,
                 'adr_count': 0,
@@ -1089,9 +1095,11 @@ class DGDAHeatmapDataView(views.APIView):
             if div:
                 distributor_divs[user_id] = div
 
+        recalled_batch_ids = set(Recall.objects.filter(status='active').values_list('batch_id', flat=True))
+
         # 2. Process Real-Time Shipments (Manufacturer -> Distributor -> Pharmacy)
         shipments = Shipment.objects.select_related('to_user', 'from_user', 'batch', 'batch__medicine').only(
-            'quantity', 'geo_location', 'status', 'to_user_id', 'from_user_id', 'batch__medicine__name'
+            'quantity', 'geo_location', 'status', 'to_user_id', 'from_user_id', 'batch_id', 'batch__status', 'batch__medicine__name'
         )
         for ship in shipments:
             div = (
@@ -1104,11 +1112,13 @@ class DGDAHeatmapDataView(views.APIView):
             bucket = stats[div]
             bucket['shipment_count'] += 1
             bucket['total_units'] += ship.quantity
+            if ship.batch_id not in recalled_batch_ids and (not ship.batch or ship.batch.status != 'recalled'):
+                bucket['valid_units'] += ship.quantity
             if ship.batch and ship.batch.medicine:
                 bucket['medicines'].add(ship.batch.medicine.name)
 
         # 3. Process Real-Time Distribution Events
-        for event in DistributionEvent.objects.select_related('batch', 'batch__medicine').only('quantity', 'geo_location', 'to_user_id', 'batch__medicine__name'):
+        for event in DistributionEvent.objects.select_related('batch', 'batch__medicine').only('quantity', 'geo_location', 'to_user_id', 'batch_id', 'batch__status', 'batch__medicine__name'):
             div = (
                 _resolve_division(event.geo_location) or 
                 distributor_divs.get(event.to_user_id) or 
@@ -1119,6 +1129,8 @@ class DGDAHeatmapDataView(views.APIView):
             bucket = stats[div]
             bucket['shipment_count'] += 1
             bucket['total_units'] += event.quantity
+            if event.batch_id not in recalled_batch_ids and (not event.batch or event.batch.status != 'recalled'):
+                bucket['valid_units'] += event.quantity
             if event.batch and event.batch.medicine:
                 bucket['medicines'].add(event.batch.medicine.name)
 
@@ -1128,6 +1140,10 @@ class DGDAHeatmapDataView(views.APIView):
             recalled_divs = set()
             for ship in Shipment.objects.filter(batch=recall.batch):
                 div = pharmacy_divs.get(ship.to_user_id) or distributor_divs.get(ship.to_user_id) or _resolve_division(ship.geo_location)
+                if div:
+                    recalled_divs.add(div)
+            for event in DistributionEvent.objects.filter(batch=recall.batch):
+                div = _resolve_division(event.geo_location) or distributor_divs.get(event.to_user_id) or pharmacy_divs.get(event.to_user_id)
                 if div:
                     recalled_divs.add(div)
             for div in recalled_divs:
@@ -1148,21 +1164,27 @@ class DGDAHeatmapDataView(views.APIView):
             lat, lng = DIVISION_MAP_COORDINATES[div_name]
             bucket = stats[div_name]
             
-            is_hazard = bucket['hazard_count'] > 0 or bucket['recalled_batches'] > 0
+            has_valid_supply = bucket['valid_units'] > 0 or (bucket['shipment_count'] > 0 and bucket['recalled_batches'] == 0)
             has_supply = bucket['shipment_count'] > 0 or bucket['total_units'] > 0
 
+            # A division with active valid manufacturer supply or delivered shipments is marked BLUE.
+            # It is only marked RED if it has no active valid medicine supply AND has active recalls/hazards.
+            is_hazard = (bucket['hazard_count'] > 0 or bucket['recalled_batches'] > 0) and not has_valid_supply
+
             # ONLY include divisions that have active supply or hazard entries!
-            if not (has_supply or is_hazard):
+            if not (has_supply or is_hazard or bucket['hazard_count'] > 0):
                 continue
 
             if is_hazard:
                 color = '#dc3545'  # RED
                 status_label = 'Critical Hazard / Recalled Batch (RED)'
                 marker_type = 'red'
+                severity = 'critical'
             else:
                 color = '#0d6efd'  # BLUE
                 status_label = 'Active Medicine Supply (BLUE)'
                 marker_type = 'blue'
+                severity = 'low'
 
             med_list = list(bucket['medicines'])[:3]
             med_summary = ', '.join(med_list) if med_list else 'Pharmaceutical Products'
@@ -1177,7 +1199,7 @@ class DGDAHeatmapDataView(views.APIView):
                 "marker_type": marker_type,
                 "type": status_label,
                 "count": bucket['shipment_count'],
-                "severity": 'critical' if is_hazard else 'low',
+                "severity": severity,
                 "details": [
                     ["Division", f"{div_name} Division"],
                     ["Supply Status", status_label],

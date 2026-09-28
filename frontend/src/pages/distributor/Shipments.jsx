@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Truck, PaperPlaneTilt, ArrowDown, ArrowUp, CheckCircle } from '@phosphor-icons/react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Truck, PaperPlaneTilt, ArrowDown, ArrowUp, CheckCircle, ArrowLeft, Funnel } from '@phosphor-icons/react';
 import api from '../../services/api';
 import { useConfirmation } from '../../context/ConfirmationContext';
 
@@ -39,7 +40,13 @@ const statusTone = (status) => {
 };
 
 const Shipments = () => {
+    const navigate = useNavigate();
+    const location = useLocation();
     const { showConfirmation } = useConfirmation();
+
+    const [activeTab, setActiveTab] = useState(location.state?.tab || 'all');
+    const [statusFilter, setStatusFilter] = useState(location.state?.filterStatus || 'all');
+
     const [incoming, setIncoming] = useState([]);
     const [outgoing, setOutgoing] = useState([]);
     const [pharmacies, setPharmacies] = useState([]);
@@ -55,6 +62,11 @@ const Shipments = () => {
 
     const [updatingId, setUpdatingId] = useState(null);
     const [receivingId, setReceivingId] = useState(null);
+
+    useEffect(() => {
+        if (location.state?.tab) setActiveTab(location.state.tab);
+        if (location.state?.filterStatus) setStatusFilter(location.state.filterStatus);
+    }, [location.state]);
 
     const fetchAll = async () => {
         try {
@@ -203,11 +215,105 @@ const Shipments = () => {
         }
     };
 
+    const filteredIncoming = incoming.filter((item) => statusFilter === 'all' || item.status === statusFilter);
+    const filteredOutgoing = outgoing.filter((item) => statusFilter === 'all' || item.status === statusFilter);
+
     return (
         <div style={{ maxWidth: '1000px', margin: '0 auto', display: 'grid', gap: '1.5rem' }}>
-            <div>
-                <h1 style={{ fontSize: '1.75rem', margin: 0, color: 'var(--primary)' }}>Shipment Management</h1>
-                <p style={{ color: 'var(--text-muted)', margin: '0.35rem 0 0' }}>Track shipments coming in from manufacturers and manage shipments going out to pharmacies.</p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+                <div>
+                    <button
+                        type="button"
+                        onClick={() => navigate('/dashboard/distributor')}
+                        style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.4rem',
+                            padding: '0.45rem 0.9rem',
+                            borderRadius: '0.5rem',
+                            border: '1px solid var(--border)',
+                            background: 'var(--bg-card)',
+                            color: 'var(--primary)',
+                            fontSize: '0.875rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            marginBottom: '0.75rem',
+                            boxShadow: 'var(--shadow-sm)'
+                        }}
+                    >
+                        <ArrowLeft size={18} /> Back to Distributor Dashboard
+                    </button>
+                    <h1 style={{ fontSize: '1.75rem', margin: 0, color: 'var(--primary)' }}>Shipment Management</h1>
+                    <p style={{ color: 'var(--text-muted)', margin: '0.35rem 0 0' }}>Track shipments coming in from manufacturers and manage shipments going out to pharmacies.</p>
+                </div>
+            </div>
+
+            {/* Tab Navigation & Status Filters */}
+            <div className="glass-panel" style={{ padding: '0.85rem 1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab('all')}
+                        style={{
+                            padding: '0.5rem 1rem',
+                            borderRadius: '0.5rem',
+                            border: activeTab === 'all' ? '1px solid var(--primary)' : '1px solid var(--border)',
+                            background: activeTab === 'all' ? 'var(--primary)' : 'transparent',
+                            color: activeTab === 'all' ? '#fff' : 'var(--text-main)',
+                            fontWeight: 600,
+                            fontSize: '0.875rem',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        All Shipments ({incoming.length + outgoing.length})
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab('incoming')}
+                        style={{
+                            padding: '0.5rem 1rem',
+                            borderRadius: '0.5rem',
+                            border: activeTab === 'incoming' ? '1px solid var(--primary)' : '1px solid var(--border)',
+                            background: activeTab === 'incoming' ? 'var(--primary)' : 'transparent',
+                            color: activeTab === 'incoming' ? '#fff' : 'var(--text-main)',
+                            fontWeight: 600,
+                            fontSize: '0.875rem',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        📥 Incoming ({incoming.length})
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab('outgoing')}
+                        style={{
+                            padding: '0.5rem 1rem',
+                            borderRadius: '0.5rem',
+                            border: activeTab === 'outgoing' ? '1px solid var(--primary)' : '1px solid var(--border)',
+                            background: activeTab === 'outgoing' ? 'var(--primary)' : 'transparent',
+                            color: activeTab === 'outgoing' ? '#fff' : 'var(--text-main)',
+                            fontWeight: 600,
+                            fontSize: '0.875rem',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        📤 Outgoing ({outgoing.length})
+                    </button>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Funnel size={16} color="var(--text-muted)" />
+                    <select
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                        style={{ ...inputStyle, width: 'auto', padding: '0.4rem 0.75rem', fontSize: '0.85rem' }}
+                    >
+                        <option value="all">All Statuses</option>
+                        <option value="in_transit">Pending / In Transit</option>
+                        <option value="delivered">Delivered</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                </div>
             </div>
 
             {message && <div className="glass-panel" style={{ padding: '1rem 1.25rem', borderLeft: '4px solid var(--primary)' }}>{message}</div>}
@@ -259,85 +365,89 @@ const Shipments = () => {
                 </form>
             </div>
 
-            <div className="glass-panel" style={{ padding: '1.5rem' }}>
-                <h2 style={{ margin: '0 0 1rem', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <ArrowUp size={20} color="var(--primary)" /> Outgoing Shipments (to Pharmacies)
-                </h2>
-                {loading ? (
-                    <p style={{ color: 'var(--text-muted)' }}>Loading...</p>
-                ) : outgoing.length === 0 ? (
-                    <p style={{ color: 'var(--text-muted)' }}>No outgoing shipments yet.</p>
-                ) : (
-                    <div style={{ display: 'grid', gap: '0.75rem' }}>
-                        {outgoing.map((shipment) => (
-                            <div key={shipment.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.25rem', borderRadius: '0.85rem', border: '1px solid var(--border)', flexWrap: 'wrap', gap: '0.75rem' }}>
-                                <div>
-                                    <div style={{ fontWeight: 700 }}>{shipment.batch_details.medicine} &bull; Batch {shipment.batch_details.batch_number}</div>
-                                    <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                                        To {shipment.to_details.username} &bull; {shipment.quantity} units &bull; Tracking {shipment.tracking_number || 'N/A'}
+            {(activeTab === 'all' || activeTab === 'outgoing') && (
+                <div className="glass-panel" style={{ padding: '1.5rem' }}>
+                    <h2 style={{ margin: '0 0 1rem', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <ArrowUp size={20} color="var(--primary)" /> Outgoing Shipments (to Pharmacies)
+                    </h2>
+                    {loading ? (
+                        <p style={{ color: 'var(--text-muted)' }}>Loading...</p>
+                    ) : filteredOutgoing.length === 0 ? (
+                        <p style={{ color: 'var(--text-muted)' }}>No outgoing shipments found matching filter criteria.</p>
+                    ) : (
+                        <div style={{ display: 'grid', gap: '0.75rem' }}>
+                            {filteredOutgoing.map((shipment) => (
+                                <div key={shipment.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.25rem', borderRadius: '0.85rem', border: '1px solid var(--border)', flexWrap: 'wrap', gap: '0.75rem' }}>
+                                    <div>
+                                        <div style={{ fontWeight: 700 }}>{shipment.batch_details.medicine} &bull; Batch {shipment.batch_details.batch_number}</div>
+                                        <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                                            To {shipment.to_details.username} &bull; {shipment.quantity} units &bull; Tracking {shipment.tracking_number || 'N/A'}
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                        <StatusPill tone={statusTone(shipment.status)}>{shipment.status.replace('_', ' ')}</StatusPill>
+                                        {shipment.status !== 'delivered' && shipment.status !== 'cancelled' && (
+                                            <select
+                                                value={shipment.status}
+                                                disabled={updatingId === shipment.id}
+                                                onChange={(e) => handleStatusChange(shipment, e.target.value)}
+                                                style={{ ...inputStyle, width: 'auto', padding: '0.5rem 0.75rem' }}
+                                            >
+                                                <option value="pending">Pending</option>
+                                                <option value="in_transit">In Transit</option>
+                                                <option value="cancelled">Cancelled</option>
+                                            </select>
+                                        )}
                                     </div>
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                    <StatusPill tone={statusTone(shipment.status)}>{shipment.status.replace('_', ' ')}</StatusPill>
-                                    {shipment.status !== 'delivered' && shipment.status !== 'cancelled' && (
-                                        <select
-                                            value={shipment.status}
-                                            disabled={updatingId === shipment.id}
-                                            onChange={(e) => handleStatusChange(shipment, e.target.value)}
-                                            style={{ ...inputStyle, width: 'auto', padding: '0.5rem 0.75rem' }}
-                                        >
-                                            <option value="pending">Pending</option>
-                                            <option value="in_transit">In Transit</option>
-                                            <option value="cancelled">Cancelled</option>
-                                        </select>
-                                    )}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
 
-            <div className="glass-panel" style={{ padding: '1.5rem' }}>
-                <h2 style={{ margin: '0 0 1rem', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <ArrowDown size={20} color="var(--primary)" /> Incoming Shipments (from Manufacturers)
-                </h2>
-                {loading ? (
-                    <p style={{ color: 'var(--text-muted)' }}>Loading...</p>
-                ) : incoming.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '2rem 0', color: 'var(--text-muted)' }}>
-                        <Truck size={48} weight="duotone" style={{ marginBottom: '0.75rem' }} />
-                        <p>No incoming shipments yet.</p>
-                    </div>
-                ) : (
-                    <div style={{ display: 'grid', gap: '0.75rem' }}>
-                        {incoming.map((shipment) => (
-                            <div key={shipment.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.25rem', borderRadius: '0.85rem', border: '1px solid var(--border)', flexWrap: 'wrap', gap: '0.75rem' }}>
-                                <div>
-                                    <div style={{ fontWeight: 700 }}>{shipment.batch_details.medicine} &bull; Batch {shipment.batch_details.batch_number}</div>
-                                    <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                                        From {shipment.from_details.username} &bull; {shipment.quantity} units &bull; Tracking {shipment.tracking_number || 'N/A'}
+            {(activeTab === 'all' || activeTab === 'incoming') && (
+                <div className="glass-panel" style={{ padding: '1.5rem' }}>
+                    <h2 style={{ margin: '0 0 1rem', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <ArrowDown size={20} color="var(--primary)" /> Incoming Shipments (from Manufacturers)
+                    </h2>
+                    {loading ? (
+                        <p style={{ color: 'var(--text-muted)' }}>Loading...</p>
+                    ) : filteredIncoming.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '2rem 0', color: 'var(--text-muted)' }}>
+                            <Truck size={48} weight="duotone" style={{ marginBottom: '0.75rem' }} />
+                            <p>No incoming shipments found matching filter criteria.</p>
+                        </div>
+                    ) : (
+                        <div style={{ display: 'grid', gap: '0.75rem' }}>
+                            {filteredIncoming.map((shipment) => (
+                                <div key={shipment.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.25rem', borderRadius: '0.85rem', border: '1px solid var(--border)', flexWrap: 'wrap', gap: '0.75rem' }}>
+                                    <div>
+                                        <div style={{ fontWeight: 700 }}>{shipment.batch_details.medicine} &bull; Batch {shipment.batch_details.batch_number}</div>
+                                        <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                                            From {shipment.from_details.username} &bull; {shipment.quantity} units &bull; Tracking {shipment.tracking_number || 'N/A'}
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                        <StatusPill tone={statusTone(shipment.status)}>{shipment.status.replace('_', ' ')}</StatusPill>
+                                        {shipment.status !== 'delivered' && (
+                                            <button
+                                                type="button"
+                                                className="ui-btn ui-btn-primary"
+                                                style={{ width: 'auto', padding: '0.6rem 1rem' }}
+                                                disabled={receivingId === shipment.id}
+                                                onClick={() => handleReceive(shipment)}
+                                            >
+                                                <CheckCircle size={18} /> Mark Received
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                    <StatusPill tone={statusTone(shipment.status)}>{shipment.status.replace('_', ' ')}</StatusPill>
-                                    {shipment.status !== 'delivered' && (
-                                        <button
-                                            type="button"
-                                            className="ui-btn ui-btn-primary"
-                                            style={{ width: 'auto', padding: '0.6rem 1rem' }}
-                                            disabled={receivingId === shipment.id}
-                                            onClick={() => handleReceive(shipment)}
-                                        >
-                                            <CheckCircle size={18} /> Mark Received
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 };

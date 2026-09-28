@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Warning, Info, ShieldWarning, Robot, CheckCircle, ArrowRight } from '@phosphor-icons/react';
+import { useNavigate } from 'react-router-dom';
+import { Warning, Info, ShieldWarning, Robot, CheckCircle, ArrowRight, ArrowLeft } from '@phosphor-icons/react';
 import api from '../../services/api';
 
 const StatusPill = ({ children, tone = 'amber' }) => {
@@ -13,6 +14,7 @@ const StatusPill = ({ children, tone = 'amber' }) => {
 };
 
 const RouteRisk = () => {
+    const navigate = useNavigate();
     const [alerts, setAlerts] = useState([]);
     const [note, setNote] = useState('');
     const [loading, setLoading] = useState(true);
@@ -43,6 +45,26 @@ const RouteRisk = () => {
 
     return (
         <div style={{ maxWidth: '950px', margin: '0 auto', display: 'grid', gap: '1.5rem' }}>
+            <button
+                type="button"
+                onClick={() => navigate('/dashboard/distributor')}
+                style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--primary)',
+                    fontSize: '0.9rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    width: 'fit-content',
+                    padding: 0
+                }}
+            >
+                <ArrowLeft size={16} weight="bold" /> Back to Distributor Dashboard
+            </button>
+
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
                 <div>
                     <h1 style={{ fontSize: '1.75rem', margin: 0, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>

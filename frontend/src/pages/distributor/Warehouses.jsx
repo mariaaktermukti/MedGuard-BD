@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Warehouse as WarehouseIcon, Plus, Trash, PencilSimple, Check, X } from '@phosphor-icons/react';
+import { useNavigate } from 'react-router-dom';
+import { Warehouse as WarehouseIcon, Plus, Trash, PencilSimple, Check, X, ArrowLeft } from '@phosphor-icons/react';
 import api from '../../services/api';
 
 const inputStyle = {
@@ -21,6 +22,7 @@ const Field = ({ label, children }) => (
 );
 
 const Warehouses = () => {
+    const navigate = useNavigate();
     const [warehouses, setWarehouses] = useState([]);
     const [loading, setLoading] = useState(true);
     const [message, setMessage] = useState('');
@@ -125,6 +127,27 @@ const Warehouses = () => {
     return (
         <div style={{ maxWidth: '900px', margin: '0 auto', display: 'grid', gap: '1.5rem' }}>
             <div>
+                <button
+                    type="button"
+                    onClick={() => navigate('/dashboard/distributor')}
+                    style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.4rem',
+                        padding: '0.45rem 0.9rem',
+                        borderRadius: '0.5rem',
+                        border: '1px solid var(--border)',
+                        background: 'var(--bg-card)',
+                        color: 'var(--primary)',
+                        fontSize: '0.875rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        marginBottom: '0.75rem',
+                        boxShadow: 'var(--shadow-sm)'
+                    }}
+                >
+                    <ArrowLeft size={18} /> Back to Distributor Dashboard
+                </button>
                 <h1 style={{ fontSize: '1.75rem', margin: 0, color: 'var(--primary)' }}>Warehouse Management</h1>
                 <p style={{ color: 'var(--text-muted)', margin: '0.35rem 0 0' }}>Create and manage your warehouse locations.</p>
             </div>

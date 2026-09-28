@@ -1,14 +1,20 @@
 import os
 from collections import defaultdict
 
+# pyrefly: ignore [missing-import]
 from django.contrib.auth import get_user_model
+ # pyrefly: ignore [missing-import]
 from django.db.models import Count, Q
+ # pyrefly: ignore [missing-import]
 from django.shortcuts import get_object_or_404
+ # pyrefly: ignore [missing-import]
 from rest_framework import generics, permissions, status, views
+ # pyrefly: ignore [missing-import]
 from rest_framework.exceptions import PermissionDenied
+ # pyrefly: ignore [missing-import]
 from rest_framework.response import Response
 
-from core.models import ADRReport, Consultation, DosageSchedule, Medicine, Prescription, PrescriptionItem, Recall, ResearchDataset, Sale
+from core.models import ADRReport, Consultation, ConsultationMessage, DosageSchedule, Medicine, Prescription, PrescriptionItem, Recall, ResearchDataset, Sale
 from users.permissions import IsDoctor
 
 from .utils import _chat_completion, check_prescription_warnings
@@ -50,19 +56,14 @@ class DoctorPatientListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated, IsDoctor]
 
     def get_queryset(self):
-        return User.objects.filter(id__in=_doctor_patient_ids(self.request.user)).order_by('full_name')
+        doctor_patients = _doctor_patient_ids(self.request.user)
+        return User.objects.filter(Q(role='citizen') | Q(id__in=doctor_patients)).order_by('full_name', 'username')
 
 
 class DoctorPatientMedicineHistoryView(views.APIView):
     permission_classes = [permissions.IsAuthenticated, IsDoctor]
 
     def get(self, request, patient_id):
-        if not _is_existing_patient(request.user, patient_id):
-            return Response(
-                {'detail': 'You do not have an existing consultation or prescription with this patient.'},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
         patient = get_object_or_404(User, pk=patient_id)
 
         dosage_schedules = DosageSchedule.objects.filter(citizen=patient).select_related('medicine').order_by('-start_date')
@@ -94,8 +95,8 @@ class DoctorPrescriptionListCreateView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         citizen = serializer.validated_data.get('citizen')
-        if not _is_existing_patient(self.request.user, citizen.id):
-            raise PermissionDenied('You do not have an existing consultation or prescription with this patient.')
+        if not citizen:
+            raise ValidationError('Valid patient is required.')
         serializer.save()
 
 
@@ -300,3 +301,61 @@ class DoctorInteractionCheckerView(views.APIView):
             return Response({'response': response_text})
         except Exception as e:
             return Response({'error': f'AI provider error: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class DoctorPrescriptionSendChatView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, IsDoctor]
+
+    def post(self, request, pk):
+        try:
+            prescription = get_object_or_404(Prescription, pk=pk, doctor=request.user)
+            items = prescription.items.all().select_related('medicine')
+
+            rx_lines = []
+            for item in items:
+                med_name = item.medicine.name if item.medicine else 'Medicine'
+                line = f"• {med_name}"
+                if item.dosage: line += f" — {item.dosage}"
+                if item.duration: line += f" ({item.duration})"
+                if item.instructions: line += f" [{item.instructions}]"
+                rx_lines.append(line)
+
+            consultation = Consultation.objects.filter(
+                doctor=request.user,
+                citizen=prescription.citizen
+            ).order_by('-consultation_date').first()
+
+            if not consultation:
+                consultation = Consultation.objects.create(
+                    doctor=request.user,
+                    citizen=prescription.citizen,
+                    status='accepted',
+                    consultation_type='chat',
+                    notes="Digital Prescription Shared"
+                )
+            elif consultation.status not in ('accepted', 'ongoing'):
+                consultation.status = 'accepted'
+                consultation.save()
+
+            dr_name = request.user.full_name or request.user.username
+            chat_text = (
+                f"📋 DIGITAL PRESCRIPTION (Rx #{prescription.id})\n"
+                f"Dr. {dr_name}\n"
+                f"----------------------------------------\n"
+                + "\n".join(rx_lines) +
+                (f"\n\n📝 Notes & Advice:\n{prescription.notes}" if prescription.notes else "") +
+                f"\n----------------------------------------\n"
+                f"Status: {prescription.status.upper()} | Date: {prescription.prescription_date.strftime('%d %b %Y')}"
+            )
+
+            ConsultationMessage.objects.create(
+                consultation=consultation,
+                sender=request.user,
+                message=chat_text
+            )
+
+            return Response({'success': True, 'detail': 'Prescription shared in patient live chat.'})
+        except Exception as err:
+            print("DoctorPrescriptionSendChatView error:", err)
+            return Response({'detail': f'Error sending prescription to chat: {str(err)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+

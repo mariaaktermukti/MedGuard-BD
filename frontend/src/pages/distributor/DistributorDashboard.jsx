@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { 
-    Warehouse, Truck, Package, QrCode, CheckCircle, Warning, Clock, 
-    ArrowClockwise, PaperPlaneTilt, MagnifyingGlass, ShieldCheck, 
-    ArrowRight, MapPin, XCircle, FileText
+import {
+    Warehouse, Truck, Package, QrCode, CheckCircle, Warning, Clock,
+    ArrowClockwise, PaperPlaneTilt, MagnifyingGlass, ShieldCheck,
+    ArrowRight, XCircle
 } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
@@ -10,28 +10,28 @@ import Card, { CardContent, CardHeader } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 
 const StatCard = ({ icon, label, value, color, onClick }) => (
-    <Card 
-        padding="md" 
-        onClick={onClick} 
-        style={{ 
-            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)', 
+    <Card
+        padding="md"
+        onClick={onClick}
+        style={{
+            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
             cursor: onClick ? 'pointer' : 'default',
             border: '1px solid var(--border)',
             position: 'relative',
             overflow: 'hidden'
-        }} 
+        }}
         className="hover-lift"
     >
         <CardContent style={{ display: 'flex', gap: '1rem', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                <div style={{ 
-                    width: '46px', 
-                    height: '46px', 
-                    borderRadius: '12px', 
-                    background: `var(--${color}-light, rgba(59, 130, 246, 0.1))`, 
-                    color: `var(--${color}, var(--primary))`, 
-                    display: 'flex', 
-                    alignItems: 'center', 
+                <div style={{
+                    width: '46px',
+                    height: '46px',
+                    borderRadius: '12px',
+                    background: `var(--${color}-light, rgba(59, 130, 246, 0.1))`,
+                    color: `var(--${color}, var(--primary))`,
+                    display: 'flex',
+                    alignItems: 'center',
                     justifyContent: 'center',
                     flexShrink: 0
                 }}>
@@ -58,7 +58,7 @@ const StatCard = ({ icon, label, value, color, onClick }) => (
 const StatusBadge = ({ status }) => {
     let tone = 'amber';
     let label = status ? status.replace('_', ' ') : 'pending';
-    
+
     if (status === 'delivered') tone = 'green';
     else if (status === 'in_transit') tone = 'blue';
     else if (status === 'cancelled' || status === 'recalled') tone = 'red';
@@ -67,15 +67,15 @@ const StatusBadge = ({ status }) => {
     const bg = tone === 'green' ? 'rgba(16, 185, 129, 0.1)' : tone === 'red' ? 'rgba(239, 68, 68, 0.1)' : tone === 'amber' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(59, 130, 246, 0.1)';
 
     return (
-        <span style={{ 
-            display: 'inline-flex', 
-            alignItems: 'center', 
-            gap: '0.35rem', 
-            padding: '0.3rem 0.75rem', 
-            borderRadius: '999px', 
-            background: bg, 
-            color, 
-            fontSize: '0.775rem', 
+        <span style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.35rem',
+            padding: '0.3rem 0.75rem',
+            borderRadius: '999px',
+            background: bg,
+            color,
+            fontSize: '0.775rem',
             fontWeight: 700,
             textTransform: 'capitalize'
         }}>
@@ -213,9 +213,9 @@ const DistributorDashboard = () => {
 
             {/* Notice Banner */}
             {notice && (
-                <div style={{ 
-                    padding: '0.875rem 1.25rem', 
-                    borderRadius: '10px', 
+                <div style={{
+                    padding: '0.875rem 1.25rem',
+                    borderRadius: '10px',
                     borderLeft: `4px solid ${notice.tone === 'error' ? 'var(--danger)' : 'var(--success)'}`,
                     background: notice.tone === 'error' ? 'rgba(239, 68, 68, 0.08)' : 'rgba(16, 185, 129, 0.08)',
                     color: 'var(--text-main)',
@@ -228,68 +228,68 @@ const DistributorDashboard = () => {
 
             {/* 7 Operational Stat Cards */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '1.15rem' }}>
-                <StatCard 
-                    icon={<Warehouse size={24} weight="duotone" />} 
-                    label="Warehouse Stock" 
-                    value={`${Number(summary.total_stock || 0).toLocaleString()} units`} 
+                <StatCard
+                    icon={<Warehouse size={24} weight="duotone" />}
+                    label="Warehouse Stock"
+                    value={`${Number(summary.total_stock || 0).toLocaleString()} units`}
                     color="primary"
-                    onClick={() => navigate('/dashboard/distributor/warehouses')}
+                    onClick={() => navigate('/dashboard/distributor/warehouses', { state: { view: 'stock' } })}
                 />
-                <StatCard 
-                    icon={<Truck size={24} weight="duotone" />} 
-                    label="Incoming Shipments" 
-                    value={summary.incoming_shipments || 0} 
+                <StatCard
+                    icon={<Truck size={24} weight="duotone" />}
+                    label="Incoming Shipments"
+                    value={summary.incoming_shipments || 0}
                     color="info"
-                    onClick={() => navigate('/dashboard/distributor/shipments')}
+                    onClick={() => navigate('/dashboard/distributor/shipments', { state: { tab: 'incoming' } })}
                 />
-                <StatCard 
-                    icon={<PaperPlaneTilt size={24} weight="duotone" />} 
-                    label="Outgoing Shipments" 
-                    value={summary.outgoing_shipments || 0} 
+                <StatCard
+                    icon={<PaperPlaneTilt size={24} weight="duotone" />}
+                    label="Outgoing Shipments"
+                    value={summary.outgoing_shipments || 0}
                     color="success"
-                    onClick={() => navigate('/dashboard/distributor/shipments')}
+                    onClick={() => navigate('/dashboard/distributor/shipments', { state: { tab: 'outgoing' } })}
                 />
-                <StatCard 
-                    icon={<Clock size={24} weight="duotone" />} 
-                    label="Pending Deliveries" 
-                    value={summary.pending_deliveries || 0} 
+                <StatCard
+                    icon={<Clock size={24} weight="duotone" />}
+                    label="Pending Deliveries"
+                    value={summary.pending_deliveries || 0}
                     color="warning"
-                    onClick={() => navigate('/dashboard/distributor/shipments')}
+                    onClick={() => navigate('/dashboard/distributor/shipments', { state: { tab: 'outgoing', filterStatus: 'in_transit' } })}
                 />
-                <StatCard 
-                    icon={<CheckCircle size={24} weight="duotone" />} 
-                    label="Completed Deliveries" 
-                    value={summary.completed_deliveries || 0} 
+                <StatCard
+                    icon={<CheckCircle size={24} weight="duotone" />}
+                    label="Completed Deliveries"
+                    value={summary.completed_deliveries || 0}
                     color="success"
-                    onClick={() => navigate('/dashboard/distributor/shipments')}
+                    onClick={() => navigate('/dashboard/distributor/shipments', { state: { tab: 'outgoing', filterStatus: 'delivered' } })}
                 />
-                <StatCard 
-                    icon={<Warning size={24} weight="duotone" />} 
-                    label="Low-Stock Alerts" 
-                    value={summary.low_stock_alerts || 0} 
+                <StatCard
+                    icon={<Warning size={24} weight="duotone" />}
+                    label="Low-Stock Alerts"
+                    value={summary.low_stock_alerts || 0}
                     color="warning"
-                    onClick={() => navigate('/dashboard/distributor/warehouses')}
+                    onClick={() => navigate('/dashboard/distributor/warehouses', { state: { view: 'low_stock' } })}
                 />
-                <StatCard 
-                    icon={<Clock size={24} weight="duotone" />} 
-                    label="Expiring Batches" 
-                    value={summary.expiring_alerts || 0} 
+                <StatCard
+                    icon={<Clock size={24} weight="duotone" />}
+                    label="Expiring Batches"
+                    value={summary.expiring_alerts || 0}
                     color="danger"
-                    onClick={() => navigate('/dashboard/distributor/analytics')}
+                    onClick={() => navigate('/dashboard/distributor/analytics', { state: { view: 'expiring' } })}
                 />
             </div>
 
             {/* Quick Actions & QR Batch Verification Section */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
+            <div style={{ marginBottom: '0.5rem' }}>
                 {/* Batch / QR Code Verification Tool */}
                 <Card padding="lg" style={{ border: '1px solid var(--border)' }}>
-                    <CardHeader 
-                        title="Quick Batch & QR Code Verification" 
+                    <CardHeader
+                        title="Quick Batch & QR Code Verification"
                         subtitle="Scan or input batch number / QR code to check authenticity against national registry."
                     />
                     <CardContent style={{ marginTop: '1rem' }}>
                         <form onSubmit={handleVerifyBatch} style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.25rem' }}>
-                            <input 
+                            <input
                                 value={qrQuery}
                                 onChange={(e) => setQrQuery(e.target.value)}
                                 placeholder="Scan QR code or enter Batch # (e.g. PCM-2026-001)"
@@ -309,9 +309,9 @@ const DistributorDashboard = () => {
                         </form>
 
                         {verifyResult && (
-                            <div style={{ 
-                                padding: '1rem 1.15rem', 
-                                borderRadius: '10px', 
+                            <div style={{
+                                padding: '1rem 1.15rem',
+                                borderRadius: '10px',
                                 background: verifyResult.verified ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)',
                                 border: `1px solid ${verifyResult.verified ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
                             }}>
@@ -337,39 +337,14 @@ const DistributorDashboard = () => {
                         )}
                     </CardContent>
                 </Card>
-
-                {/* Quick Navigation Cards */}
-                <Card padding="lg" style={{ border: '1px solid var(--border)' }}>
-                    <CardHeader title="Distributor Navigation" subtitle="Direct links to portal workflows." />
-                    <CardContent style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginTop: '1rem' }}>
-                        <Button variant="outline" fullWidth onClick={() => navigate('/dashboard/distributor/warehouses')} style={{ padding: '0.9rem', justifyContent: 'flex-start' }}>
-                            <Warehouse size={20} color="var(--primary)" /> Manage Warehouse
-                        </Button>
-                        <Button variant="outline" fullWidth onClick={() => navigate('/dashboard/distributor/shipments')} style={{ padding: '0.9rem', justifyContent: 'flex-start' }}>
-                            <Truck size={20} color="var(--primary)" /> Manage Shipments
-                        </Button>
-                        <Button variant="outline" fullWidth onClick={() => navigate('/dashboard/distributor/route-optimization')} style={{ padding: '0.9rem', justifyContent: 'flex-start' }}>
-                            <MapPin size={20} color="var(--primary)" /> Route Optimization
-                        </Button>
-                        <Button variant="outline" fullWidth onClick={() => navigate('/dashboard/distributor/fleet-monitoring')} style={{ padding: '0.9rem', justifyContent: 'flex-start' }}>
-                            <Truck size={20} color="var(--primary)" /> Fleet Monitoring
-                        </Button>
-                        <Button variant="outline" fullWidth onClick={() => navigate('/dashboard/distributor/route-risk')} style={{ padding: '0.9rem', justifyContent: 'flex-start' }}>
-                            <Warning size={20} color="var(--primary)" /> Route Risk Detection
-                        </Button>
-                        <Button variant="outline" fullWidth onClick={() => navigate('/dashboard/distributor/analytics')} style={{ padding: '0.9rem', justifyContent: 'flex-start' }}>
-                            <FileText size={20} color="var(--primary)" /> Analytics & Reports
-                        </Button>
-                    </CardContent>
-                </Card>
             </div>
 
             {/* Recent Incoming & Outgoing Tables */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.5rem' }}>
                 {/* Incoming Shipments from Manufacturers */}
                 <Card padding="lg">
-                    <CardHeader 
-                        title="Incoming Manufacturer Shipments" 
+                    <CardHeader
+                        title="Incoming Manufacturer Shipments"
                         subtitle="Receive verified shipments into warehouse stock."
                         action={
                             <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard/distributor/shipments')}>
@@ -383,9 +358,9 @@ const DistributorDashboard = () => {
                         ) : (
                             <div style={{ display: 'grid', gap: '0.85rem' }}>
                                 {recentIncoming.map((item) => (
-                                    <div key={item.id} style={{ 
-                                        padding: '0.85rem 1rem', 
-                                        borderRadius: '10px', 
+                                    <div key={item.id} style={{
+                                        padding: '0.85rem 1rem',
+                                        borderRadius: '10px',
                                         border: '1px solid var(--border)',
                                         display: 'flex',
                                         justifyContent: 'space-between',
@@ -418,8 +393,8 @@ const DistributorDashboard = () => {
 
                 {/* Outgoing Shipments to Pharmacies */}
                 <Card padding="lg">
-                    <CardHeader 
-                        title="Outgoing Pharmacy Deliveries" 
+                    <CardHeader
+                        title="Outgoing Pharmacy Deliveries"
                         subtitle="Monitor delivery progress and confirm Proof of Delivery (POD)."
                         action={
                             <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard/distributor/shipments')}>
@@ -433,9 +408,9 @@ const DistributorDashboard = () => {
                         ) : (
                             <div style={{ display: 'grid', gap: '0.85rem' }}>
                                 {recentOutgoing.map((item) => (
-                                    <div key={item.id} style={{ 
-                                        padding: '0.85rem 1rem', 
-                                        borderRadius: '10px', 
+                                    <div key={item.id} style={{
+                                        padding: '0.85rem 1rem',
+                                        borderRadius: '10px',
                                         border: '1px solid var(--border)',
                                         display: 'flex',
                                         justifyContent: 'space-between',
@@ -481,8 +456,8 @@ const DistributorDashboard = () => {
                     padding: '1rem'
                 }}>
                     <Card padding="lg" style={{ maxWidth: '460px', width: '100%', background: 'var(--bg-card)' }}>
-                        <CardHeader 
-                            title="Confirm Proof of Delivery (POD)" 
+                        <CardHeader
+                            title="Confirm Proof of Delivery (POD)"
                             subtitle={`Record delivery receipt for Batch ${podModalShipment.batch_number}`}
                         />
                         <form onSubmit={handleConfirmPOD} style={{ marginTop: '1.25rem', display: 'grid', gap: '1rem' }}>
@@ -490,7 +465,7 @@ const DistributorDashboard = () => {
                                 <label style={{ fontSize: '0.85rem', fontWeight: 600, display: 'block', marginBottom: '0.35rem' }}>
                                     Pharmacy Receiver Name / Signature
                                 </label>
-                                <input 
+                                <input
                                     value={receiverName}
                                     onChange={(e) => setReceiverName(e.target.value)}
                                     placeholder="e.g. Lazz Pharma Manager - Abul Kalam"
@@ -509,7 +484,7 @@ const DistributorDashboard = () => {
                                 <label style={{ fontSize: '0.85rem', fontWeight: 600, display: 'block', marginBottom: '0.35rem' }}>
                                     Delivery Notes / Remarks (optional)
                                 </label>
-                                <input 
+                                <input
                                     value={signatureNote}
                                     onChange={(e) => setSignatureNote(e.target.value)}
                                     placeholder="e.g. Delivered 2,000 units in good condition"

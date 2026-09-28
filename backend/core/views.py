@@ -6,7 +6,7 @@ from django.contrib.auth import get_user_model
 User = get_user_model()
 # pyrefly: ignore [missing-import]
 from decimal import Decimal
-
+# pyrefly: ignore [missing-import]
 from django.db import models, transaction
 # pyrefly: ignore [missing-import]
 from django.db.models import Sum, Q, Count
@@ -267,17 +267,19 @@ class DistributionEventListCreateView(generics.ListCreateAPIView):
         with transaction.atomic():
             event = serializer.save(batch=batch, from_user=self.request.user)
 
-            # Create shipment record for downstream recipient (Distributor or Pharmacy)
-            if event.to_user_id and event.to_user_id != self.request.user.id:
-                Shipment.objects.create(
-                    batch=batch,
-                    from_user=self.request.user,
-                    to_user=event.to_user,
-                    quantity=event.quantity,
-                    shipment_date=date.today(),
-                    status='in_transit',
-                    geo_location=event.geo_location or '',
-                )
+            notes_str = str(event.notes or '').lower()
+            shipment_status = 'delivered' if 'delivered' in notes_str else 'in_transit'
+            target_user = event.to_user if (event.to_user_id and event.to_user_id != self.request.user.id) else self.request.user
+
+            Shipment.objects.create(
+                batch=batch,
+                from_user=self.request.user,
+                to_user=target_user,
+                quantity=event.quantity,
+                shipment_date=date.today(),
+                status=shipment_status,
+                geo_location=event.geo_location or '',
+            )
 
 
 class RecallListCreateView(generics.ListCreateAPIView):

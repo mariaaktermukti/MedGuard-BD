@@ -76,7 +76,23 @@ const Dashboard = () => {
     const { user } = useContext(AuthContext);
     const navigate = useNavigate();
     const today = new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date());
-    
+
+    useEffect(() => {
+        if (user?.role && user.role !== 'citizen') {
+            const roleRedirects = {
+                distributor: '/dashboard/distributor',
+                manufacturer: '/dashboard/manufacturer',
+                pharmacy: '/dashboard/pharmacy',
+                dgda: '/dashboard/dgda/command-center',
+                doctor: '/dashboard/doctor',
+                researcher: '/dashboard/researcher',
+            };
+            if (roleRedirects[user.role]) {
+                navigate(roleRedirects[user.role], { replace: true });
+            }
+        }
+    }, [user, navigate]);
+
     const [data, setData] = useState({
         stats: { total_scans: 42, active_medicines: 5, reports_submitted: 4, pharmacy_visits: 8 },
         recent_activity: [],

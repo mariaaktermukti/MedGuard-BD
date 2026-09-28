@@ -2,7 +2,7 @@ import React, { useContext } from 'react';
 import { NavLink } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { LanguageContext } from '../context/LanguageContext';
-import { House, QrCode, Pill, WarningCircle, MapPin, ChatText, Bell, Gear, UserCircle, Package, Truck, Receipt, ChartLineUp, ChatCenteredText, Warehouse, ChartBar, Crosshair, ShieldWarning, ClipboardText, Buildings, MapTrifold, Brain, Factory, SealWarning, ShieldCheck, Pulse, SquaresFour, DownloadSimple, Graph, BookOpen, Lightbulb, UsersThree, Users, MagnifyingGlass, Star, Database, VideoCamera } from '@phosphor-icons/react';
+import { House, QrCode, Pill, WarningCircle, MapPin, ChatText, Bell, Gear, UserCircle, Package, Truck, Receipt, ChartLineUp, ChatCenteredText, Warehouse, ChartBar, Crosshair, ShieldWarning, ClipboardText, Buildings, MapTrifold, Brain, Factory, SealWarning, ShieldCheck, Pulse, SquaresFour, DownloadSimple, Graph, BookOpen, Lightbulb, UsersThree, Users, MagnifyingGlass, Star, Database, VideoCamera, Stethoscope } from '@phosphor-icons/react';
 
 const Sidebar = ({ isTablet }) => {
     const { user, logout } = useContext(AuthContext);
@@ -16,6 +16,7 @@ const Sidebar = ({ isTablet }) => {
         { path: '/dashboard/report-counterfeit', icon: <ShieldWarning size={20} weight="duotone" />, label: 'Report Counterfeit' },
         { path: '/dashboard/find-pharmacy', icon: <MapPin size={20} weight="duotone" />, label: t('pharmacy') },
         { path: '/dashboard/ai-assistant', icon: <ChatText size={20} weight="duotone" />, label: t('ai_assistant') },
+        { path: '/dashboard/doctor-consultation', icon: <Stethoscope size={20} weight="duotone" />, label: 'Doctor Consultation' },
     ];
 
     const pharmacyNavItems = [
@@ -36,7 +37,6 @@ const Sidebar = ({ isTablet }) => {
         { path: '/dashboard/distributor/shipments', icon: <Truck size={20} weight="duotone" />, label: 'Shipments' },
         { path: '/dashboard/distributor/analytics', icon: <ChartBar size={20} weight="duotone" />, label: 'Analytics' },
         { path: '/dashboard/distributor/route-optimization', icon: <MapPin size={20} weight="duotone" />, label: 'Route Optimization' },
-        { path: '/dashboard/distributor/fleet-monitoring', icon: <Truck size={20} weight="duotone" />, label: 'Fleet Monitoring' },
         { path: '/dashboard/distributor/route-risk', icon: <WarningCircle size={20} weight="duotone" />, label: 'Route Risk' },
     ];
 
@@ -107,15 +107,15 @@ const Sidebar = ({ isTablet }) => {
             padding: '1.5rem 0',
             color: 'var(--text-main)',
         }}>
-            
+
             {/* Main Navigation */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.25rem', overflowY: 'auto' }}>
                 <div style={{ padding: '0 1.5rem', marginBottom: '0.5rem', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     Menu
                 </div>
                 {navItems.map((item, index) => (
-                    <NavLink 
-                        key={index} 
+                    <NavLink
+                        key={index}
                         to={item.path}
                         end={item.path === '/dashboard' || item.path === '/dashboard/pharmacy' || item.path === '/dashboard/dgda' || item.path === '/dashboard/manufacturer' || item.path === '/dashboard/distributor'}
                         style={({ isActive }) => ({
@@ -141,8 +141,8 @@ const Sidebar = ({ isTablet }) => {
             {/* Bottom Navigation */}
             <div style={{ paddingBottom: '1rem', borderTop: '1px solid var(--border)', paddingTop: '1rem', marginTop: '1rem' }}>
                 {bottomNavItems.map((item, index) => (
-                    <NavLink 
-                        key={index} 
+                    <NavLink
+                        key={index}
                         to={item.path}
                         style={({ isActive }) => ({
                             display: 'flex',
@@ -162,9 +162,9 @@ const Sidebar = ({ isTablet }) => {
                         {!isTablet && <span>{item.label}</span>}
                     </NavLink>
                 ))}
-                
+
                 {/* Logout Button */}
-                <button 
+                <button
                     onClick={() => logout()}
                     style={{
                         display: 'flex',

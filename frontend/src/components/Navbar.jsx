@@ -35,6 +35,19 @@ const Navbar = ({ isMobile }) => {
         navigate('/login');
     };
 
+    const handleLogoClick = () => {
+        const rolePaths = {
+            citizen: '/dashboard',
+            doctor: '/dashboard/doctor',
+            pharmacy: '/dashboard/pharmacy',
+            manufacturer: '/dashboard/manufacturer',
+            distributor: '/dashboard/distributor',
+            dgda: '/dashboard/dgda/command-center',
+            researcher: '/dashboard/researcher',
+        };
+        navigate(rolePaths[user?.role] || '/dashboard');
+    };
+
     return (
         <nav style={{
             position: 'fixed',
@@ -52,7 +65,7 @@ const Navbar = ({ isMobile }) => {
             boxShadow: 'var(--shadow-sm)'
         }}>
             {/* Left: Logo */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', width: isMobile ? 'auto' : '256px' }}>
+            <div onClick={handleLogoClick} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', width: isMobile ? 'auto' : '256px', cursor: 'pointer' }}>
                 <Shield weight="fill" size={32} color="var(--primary)" />
                 {!isMobile && (
                     <h2 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text-main)', fontWeight: 700 }}>

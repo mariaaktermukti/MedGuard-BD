@@ -1420,7 +1420,6 @@ const ManufacturerPortal = () => {
                                 <th style={{ padding: '0.85rem 1rem' }}>Test Name</th>
                                 <th style={{ padding: '0.85rem 1rem' }}>Measured Value</th>
                                 <th style={{ padding: '0.85rem 1rem' }}>Result</th>
-                                <th style={{ padding: '0.85rem 1rem' }}>Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1440,7 +1439,7 @@ const ManufacturerPortal = () => {
                                 return matchesSearch && matchesFilter;
                             }).length === 0 ? (
                                 <tr>
-                                    <td colSpan={7} style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                                    <td colSpan={6} style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
                                         No quality test reports found matching your filter criteria.
                                     </td>
                                 </tr>
@@ -1472,18 +1471,6 @@ const ManufacturerPortal = () => {
                                                 <StatusPill tone={test.is_out_of_spec ? 'red' : (test.test_result || '').toLowerCase() === 'fail' ? 'red' : 'green'}>
                                                     {test.is_out_of_spec ? 'Out of spec' : (test.test_result || 'Passed')}
                                                 </StatusPill>
-                                            </td>
-                                            <td style={{ padding: '0.85rem 1rem' }}>
-                                                <button
-                                                    type="button"
-                                                    style={{ background: 'transparent', border: 'none', color: 'var(--primary)', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline' }}
-                                                    onClick={() => {
-                                                        const targetId = test.batch || test.batch_details?.id;
-                                                        if (targetId) selectBatch(targetId);
-                                                    }}
-                                                >
-                                                    Inspect Batch
-                                                </button>
                                             </td>
                                         </tr>
                                     ))

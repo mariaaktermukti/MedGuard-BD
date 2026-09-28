@@ -164,9 +164,20 @@ class Consultation(models.Model):
     doctor = models.ForeignKey(User, on_delete=models.RESTRICT, related_name='consultations_as_doctor')
     citizen = models.ForeignKey(User, on_delete=models.RESTRICT, related_name='consultations_as_citizen')
     consultation_date = models.DateTimeField(auto_now_add=True)
-    consultation_type = models.CharField(max_length=20, choices=[('chat', 'Chat'), ('audio', 'Audio'), ('video', 'Video'), ('in_person', 'In Person')])
-    status = models.CharField(max_length=20, choices=[('scheduled', 'Scheduled'), ('ongoing', 'Ongoing'), ('completed', 'Completed'), ('cancelled', 'Cancelled')], default='scheduled')
+    consultation_type = models.CharField(max_length=20, choices=[('chat', 'Chat'), ('audio', 'Audio'), ('video', 'Video'), ('in_person', 'In Person')], default='chat')
+    status = models.CharField(max_length=20, choices=[('requested', 'Requested'), ('scheduled', 'Scheduled'), ('accepted', 'Accepted'), ('ongoing', 'Ongoing'), ('completed', 'Completed'), ('cancelled', 'Cancelled')], default='requested')
     notes = models.TextField(blank=True, null=True)
+
+
+class ConsultationMessage(models.Model):
+    consultation = models.ForeignKey(Consultation, on_delete=models.CASCADE, related_name='messages')
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_consultation_messages')
+    message = models.TextField(blank=True, default='')
+    image = models.FileField(upload_to="consultation-attachments/", blank=True, null=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['timestamp']
 
 
 class Prescription(models.Model):

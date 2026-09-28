@@ -1,6 +1,6 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { Stethoscope } from '@phosphor-icons/react';
+import { Stethoscope, ShieldCheck, Heartbeat } from '@phosphor-icons/react';
 import PatientMedicineHistory from './PatientMedicineHistory';
 import DigitalPrescription from './DigitalPrescription';
 import DrugInteractionChecker from './DrugInteractionChecker';
@@ -12,21 +12,25 @@ import MedicineLibrary from './MedicineLibrary';
 import ResearchDatasets from './ResearchDatasets';
 import DoctorConsultations from './DoctorConsultations';
 
-// These ten destinations now live in the sidebar (components/Sidebar.jsx, doctorNavItems);
-// keep the two lists in step when a tab is added or renamed.
 const DoctorPortal = () => {
     return (
-        // One column for the heading and whichever page is showing, so the two line up.
-        // Capped and centred the way the other portals cap their own pages, which stops
-        // a form from stretching the full width of a large screen.
-        <div style={{ display: 'grid', gap: '1.5rem', maxWidth: '1100px', margin: '0 auto' }}>
-            <div>
-                <h1 style={{ margin: 0, fontSize: '1.75rem', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}><Stethoscope size={30} weight="duotone" /> Doctor Portal</h1>
-                <p style={{ margin: '0.35rem 0 0', color: 'var(--text-muted)' }}>Smart prescriptions and patient medicine management.</p>
+        <div style={{ display: 'grid', gap: '1.75rem', maxWidth: '1200px', margin: '0 auto', paddingBottom: '2.5rem' }}>
+            {/* Sleek Portal Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                <div>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.3rem 0.75rem', borderRadius: '999px', background: 'rgba(16, 185, 129, 0.1)', color: 'var(--success)', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.5rem' }}>
+                        <ShieldCheck size={16} weight="fill" /> Verified BMDC Doctor Workspace
+                    </div>
+                    <h1 style={{ margin: 0, fontSize: '2rem', fontWeight: 800, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                        <Stethoscope size={34} weight="duotone" color="var(--primary)" /> Doctor Portal
+                    </h1>
+                    <p style={{ margin: '0.35rem 0 0', color: 'var(--text-muted)', fontSize: '0.925rem' }}>
+                        Smart digital prescriptions, patient medicine intelligence & real-time telehealth consultations.
+                    </p>
+                </div>
             </div>
 
-            {/* The same ten destinations are in the sidebar, which every other portal
-                navigates from, so repeating them across the top said nothing new. */}
+            {/* Portal Routes */}
             <Routes>
                 <Route index element={<PatientMedicineHistory />} />
                 <Route path="patient-history" element={<PatientMedicineHistory />} />

@@ -43,10 +43,11 @@ class DoctorPrescriptionSerializer(serializers.ModelSerializer):
         ]
 
 
-class DoctorPrescriptionItemWriteSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = PrescriptionItem
-        fields = ['medicine', 'dosage', 'duration', 'instructions']
+class DoctorPrescriptionItemWriteSerializer(serializers.Serializer):
+    medicine = serializers.CharField(required=True)
+    dosage = serializers.CharField(required=False, allow_blank=True, allow_null=True, default='')
+    duration = serializers.CharField(required=False, allow_blank=True, allow_null=True, default='')
+    instructions = serializers.CharField(required=False, allow_blank=True, allow_null=True, default='')
 
 
 class DoctorPrescriptionWriteSerializer(serializers.ModelSerializer):
@@ -63,11 +64,108 @@ class DoctorPrescriptionWriteSerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data):
+        # pyrefly: ignore [missing-import]
+        from django.contrib.auth import get_user_model
+        # pyrefly: ignore [missing-import
+        from core.models import Medicine, DosageSchedule, Consultation, ConsultationMessage
+        import datetime
+        UserModel = get_user_model()
+
         items_data = validated_data.pop('items')
         prescription = Prescription.objects.create(doctor=self.context['request'].user, **validated_data)
+        
+        rx_lines = []
         for item_data in items_data:
-            PrescriptionItem.objects.create(prescription=prescription, **item_data)
+            med_val = str(item_data.pop('medicine', '')).strip()
+            dosage = str(item_data.get('dosage') or '')[:50]
+            duration = str(item_data.get('duration') or '')[:50]
+            instructions = str(item_data.get('instructions') or '')
+
+            med_obj = None
+            if med_val.isdigit():
+                med_obj = Medicine.objects.filter(id=int(med_val)).first()
+            if not med_obj:
+                med_obj = Medicine.objects.filter(name__iexact=med_val).first()
+            if not med_obj and ' (' in med_val:
+                base_name = med_val.split(' (')[0].strip()
+                med_obj = Medicine.objects.filter(name__iexact=base_name).first()
+            if not med_obj:
+                clean_name = med_val.split(' (')[0].strip() if ' (' in med_val else med_val
+                med_obj = Medicine.objects.filter(name__icontains=clean_name).first()
+            if not med_obj:
+                mfr = UserModel.objects.filter(role='manufacturer').first() or self.context['request'].user
+                med_obj = Medicine.objects.create(
+                    name=med_val,
+                    manufacturer=mfr,
+                    description="Custom prescription medicine"
+                )
+
+            PrescriptionItem.objects.create(
+                prescription=prescription,
+                medicine=med_obj,
+                dosage=dosage,
+                duration=duration,
+                instructions=instructions
+            )
+
+            line = f"• {med_obj.name}"
+            if dosage: line += f" — {dosage}"
+            if duration: line += f" ({duration})"
+            if instructions: line += f" [{instructions}]"
+            rx_lines.append(line)
+
+            try:
+                DosageSchedule.objects.create(
+                    citizen=prescription.citizen,
+                    medicine=med_obj,
+                    dosage=dosage or '1+0+1',
+                    frequency=duration or '7 Days',
+                    start_date=datetime.date.today(),
+                    notes=f"Prescribed by Dr. {self.context['request'].user.full_name or self.context['request'].user.username}. {instructions}".strip()
+                )
+            except Exception as exc:
+                print("DosageSchedule creation notice:", exc)
+
+        # Automatically post formatted Prescription into Live Chat with Citizen
+        try:
+            consultation = Consultation.objects.filter(
+                doctor=self.context['request'].user,
+                citizen=prescription.citizen
+            ).order_by('-consultation_date').first()
+
+            if not consultation:
+                consultation = Consultation.objects.create(
+                    doctor=self.context['request'].user,
+                    citizen=prescription.citizen,
+                    status='accepted',
+                    consultation_type='chat',
+                    notes="Digital Prescription Issued"
+                )
+            elif consultation.status not in ('accepted', 'ongoing'):
+                consultation.status = 'accepted'
+                consultation.save()
+
+            dr_name = self.context['request'].user.full_name or self.context['request'].user.username
+            chat_text = (
+                f"📋 DIGITAL PRESCRIPTION ISSUED\n"
+                f"Dr. {dr_name}\n"
+                f"----------------------------------------\n"
+                + "\n".join(rx_lines) +
+                (f"\n\n📝 Notes & Advice:\n{prescription.notes}" if prescription.notes else "") +
+                f"\n----------------------------------------\n"
+                f"Status: Active | Date: {datetime.date.today().strftime('%d %b %Y')}"
+            )
+
+            ConsultationMessage.objects.create(
+                consultation=consultation,
+                sender=self.context['request'].user,
+                message=chat_text
+            )
+        except Exception as exc:
+            print("Chat message creation notice:", exc)
+
         return prescription
+
 
 
 def _manufacturer_name(medicine):
@@ -148,13 +246,14 @@ class DoctorADRReportSerializer(serializers.ModelSerializer):
 
 
 class DoctorConsultationSerializer(serializers.ModelSerializer):
+    citizen_id = serializers.IntegerField(source='citizen.id', read_only=True)
     citizen_username = serializers.CharField(source='citizen.username', read_only=True)
     citizen_full_name = serializers.CharField(source='citizen.full_name', read_only=True)
 
     class Meta:
         model = Consultation
         fields = [
-            'id', 'citizen_username', 'citizen_full_name',
+            'id', 'citizen_id', 'citizen_username', 'citizen_full_name',
             'consultation_date', 'consultation_type', 'status', 'notes',
         ]
 

@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { MapPin, Package, Info, Lightning, TrendUp, CheckCircle } from '@phosphor-icons/react';
+import { useNavigate } from 'react-router-dom';
+import { MapPin, Package, Info, Lightning, TrendUp, CheckCircle, ArrowLeft } from '@phosphor-icons/react';
 import api from '../../services/api';
 
 const RouteOptimization = () => {
+    const navigate = useNavigate();
     const [suggestions, setSuggestions] = useState([]);
     const [note, setNote] = useState('');
     const [loading, setLoading] = useState(true);
@@ -32,6 +34,27 @@ const RouteOptimization = () => {
         <div style={{ maxWidth: '950px', margin: '0 auto', display: 'grid', gap: '1.5rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
                 <div>
+                    <button
+                        type="button"
+                        onClick={() => navigate('/dashboard/distributor')}
+                        style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.4rem',
+                            padding: '0.45rem 0.9rem',
+                            borderRadius: '0.5rem',
+                            border: '1px solid var(--border)',
+                            background: 'var(--bg-card)',
+                            color: 'var(--primary)',
+                            fontSize: '0.875rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            marginBottom: '0.75rem',
+                            boxShadow: 'var(--shadow-sm)'
+                        }}
+                    >
+                        <ArrowLeft size={18} /> Back to Distributor Dashboard
+                    </button>
                     <h1 style={{ fontSize: '1.75rem', margin: 0, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                         <MapPin size={28} weight="duotone" color="var(--primary)" /> Route Optimization
                     </h1>

@@ -42,31 +42,47 @@ def _chat_completion(api_key, model, messages, is_openrouter=False):
 def check_prescription_warnings(citizen_id, items, exclude_prescription_id=None):
     warnings = []
 
-    medicine_ids = [item.get('medicine') for item in items if item.get('medicine')]
+    medicine_ids = []
+    medicine_names_input = []
+    for item in items:
+        med = item.get('medicine')
+        if not med:
+            continue
+        if str(med).isdigit():
+            medicine_ids.append(int(med))
+        else:
+            medicine_names_input.append(str(med).strip().lower())
+
     medicine_names = dict(Medicine.objects.filter(id__in=medicine_ids).values_list('id', 'name'))
 
     seen = set()
     flagged_duplicates = set()
-    for medicine_id in medicine_ids:
-        if medicine_id in seen and medicine_id not in flagged_duplicates:
-            name = medicine_names.get(medicine_id, f'Medicine #{medicine_id}')
-            warnings.append(f'{name} is listed more than once in this prescription.')
-            flagged_duplicates.add(medicine_id)
-        seen.add(medicine_id)
+    for item in items:
+        med = item.get('medicine')
+        if not med:
+            continue
+        med_key = int(med) if str(med).isdigit() else str(med).strip().lower()
+        if med_key in seen and med_key not in flagged_duplicates:
+            display_name = medicine_names.get(med_key, str(med))
+            warnings.append(f'{display_name} is listed more than once in this prescription.')
+            flagged_duplicates.add(med_key)
+        seen.add(med_key)
 
     active_prescriptions = Prescription.objects.filter(
         citizen_id=citizen_id, status='active'
-    ).select_related('doctor').prefetch_related('items')
+    ).select_related('doctor').prefetch_related('items__medicine')
     if exclude_prescription_id:
         active_prescriptions = active_prescriptions.exclude(pk=exclude_prescription_id)
 
     for prescription in active_prescriptions:
-        for item in prescription.items.all():
-            if item.medicine_id in medicine_ids:
-                name = medicine_names.get(item.medicine_id, f'Medicine #{item.medicine_id}')
-                warnings.append(
-                    f'Patient already has an active prescription for {name} '
-                    f'(by Dr. {prescription.doctor.username} on {prescription.prescription_date.date()}).'
-                )
+        for p_item in prescription.items.all():
+            if p_item.medicine:
+                p_med_name = p_item.medicine.name.strip().lower()
+                if p_item.medicine_id in medicine_ids or p_med_name in medicine_names_input:
+                    warnings.append(
+                        f'Patient already has an active prescription for {p_item.medicine.name} '
+                        f'(by Dr. {prescription.doctor.username} on {prescription.prescription_date.date()}).'
+                    )
 
     return warnings
+

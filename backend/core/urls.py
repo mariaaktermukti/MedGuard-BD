@@ -79,8 +79,12 @@ from .counterfeit_intel_views import (
 )
 
 from .counterfeit_report_views import CounterfeitReportListCreateView
+from .consultation_views import DoctorListView, CitizenConsultationListCreateView, ConsultationMessagesView
 
 urlpatterns = [
+    path('doctors/', DoctorListView.as_view(), name='doctor-list'),
+    path('citizen/consultations/', CitizenConsultationListCreateView.as_view(), name='citizen-consultations'),
+    path('consultations/<int:pk>/messages/', ConsultationMessagesView.as_view(), name='consultation-messages'),
     path('passport/<str:qr_code>/', DrugPassportView.as_view(), name='drug-passport'),
     path('medicines/personal/', PersonalMedicineRecordView.as_view(), name='personal-medicines'),
     path('medicines/personal/<int:pk>/', PersonalMedicineRecordDetailView.as_view(), name='personal-medicines-detail'),
