@@ -1,0 +1,86 @@
+[
+  {
+    "id": "dgda-guideline-001",
+    "title": "DGDA Guideline on OTC vs Prescription Antibiotics",
+    "category": "Regulatory Guideline",
+    "source": "Directorate General of Drug Administration (DGDA) Bangladesh",
+    "content": "Under DGDA National Regulations, antibiotics (e.g. Azithromycin, Ciprofloxacin, Amoxicillin, Cefuroxime) are strictly classified as Prescription-Only Medicines (POM). Pharmacies in Bangladesh are legally prohibited from dispensing antibiotics without a valid digital or written prescription from a registered MBBS/BDS doctor (BMDC registered). Over-the-counter (OTC) sale of antibiotics contributes to antimicrobial resistance (AMR). Always complete the full prescribed course of antibiotics even if symptoms improve early."
+  },
+  {
+    "id": "dgda-counterfeit-002",
+    "title": "DGDA Safety Advisory: Verification of Authentic Medicines",
+    "category": "Safety Advisory",
+    "source": "DGDA Pharmacovigilance & Inspection Wing",
+    "content": "Citizens can verify medicine authenticity using MedGuard-BD QR verification or 2D DataMatrix code printed on outer packaging. A valid QR code links directly to DGDA batch registration database. If a QR code fails verification, displays 'INVALID', or shows a status of 'RECALLED/FROZEN', do not consume the medicine. Report suspected counterfeit or substandard drugs immediately via MedGuard Citizen Portal or DGDA hotline."
+  },
+  {
+    "id": "mono-napa-003",
+    "title": "Paracetamol (Napa / Ace / Renova) Clinical Monograph",
+    "category": "Medicine Monograph",
+    "source": "Bangladesh National Formulary (BDNF)",
+    "content": "Generic Name: Paracetamol (Acetaminophen). Common Brand Names in BD: Napa, Ace, Renova, Fast. Indications: Fever, mild to moderate pain (headache, toothache, muscle ache, dysmenorrhea). Adult Dosage: 500 mg to 1000 mg every 4-6 hours as needed. Maximum daily limit: 4,000 mg (4 grams) per 24 hours. Pediatric Dosage: 10-15 mg/kg body weight per dose. Cautions & Warnings: Excessive doses cause severe hepatotoxicity (liver failure). Avoid alcohol during paracetamol therapy. Patients with chronic liver disease must consult a physician before use."
+  },
+  {
+    "id": "mono-seclo-004",
+    "title": "Omeprazole & Esomeprazole (Seclo / Sergel / Maxpro) Clinical Monograph",
+    "category": "Medicine Monograph",
+    "source": "Bangladesh National Formulary (BDNF)",
+    "content": "Generic Names: Omeprazole, Esomeprazole. Common Brand Names in BD: Seclo, Sergel, Maxpro, Nexum. Indications: Gastroesophageal Reflux Disease (GERD), gastric & duodenal ulcers, hyperacidity, NSAID-induced ulcer prophylaxis. Administration: Best taken 30-60 minutes BEFORE meals (preferably breakfast). Dosage: 20 mg or 40 mg once daily. Side Effects: Headache, diarrhea, abdominal pain, flatulence. Long-term use (>1 year) may decrease Vitamin B12 and Magnesium absorption and increase fracture risk."
+  },
+  {
+    "id": "mono-ciprocin-005",
+    "title": "Ciprofloxacin (Ciprocin / Neocip) Clinical Monograph",
+    "category": "Medicine Monograph",
+    "source": "Bangladesh National Formulary (BDNF)",
+    "content": "Generic Name: Ciprofloxacin. Common Brand Names in BD: Ciprocin, Neocip, Beclocin. Indications: Urinary tract infections (UTI), typhoid fever, infectious diarrhea, respiratory tract infections. Class: Fluoroquinolone Antibiotic. Administration: Take with plenty of fluids. Important Interaction: DO NOT take simultaneously with antacids (Entacyd), calcium supplements, or milk/dairy products. Antacids reduce ciprofloxacin absorption by up to 90%. Space antacids at least 2 hours BEFORE or 4 hours AFTER ciprofloxacin."
+  },
+  {
+    "id": "mono-monas-006",
+    "title": "Montelukast (Monas / Provair / Montene) Clinical Monograph",
+    "category": "Medicine Monograph",
+    "source": "Bangladesh National Formulary (BDNF)",
+    "content": "Generic Name: Montelukast Sodium. Common Brand Names in BD: Monas, Provair, Montene, Odmon. Indications: Prophylaxis and chronic treatment of asthma, seasonal and perennial allergic rhinitis. Dosage: Adults & Adolescents (15+ yrs): 10 mg once daily taken in the evening/bedtime. Children (6-14 yrs): 5 mg chewable tablet once daily. Mechanism: Leukotriene receptor antagonist. Notes: Not intended for immediate reversal of acute asthma attacks (use short-acting beta agonist inhaler for acute attacks)."
+  },
+  {
+    "id": "mono-azithromycin-007",
+    "title": "Azithromycin (Zimax / Tridosil / Azithcin) Clinical Monograph",
+    "category": "Medicine Monograph",
+    "source": "Bangladesh National Formulary (BDNF)",
+    "content": "Generic Name: Azithromycin. Common Brand Names in BD: Zimax, Tridosil, Azithcin, Macrobac. Indications: Upper & lower respiratory tract infections, tonsillitis, sinusitis, skin infections, typhoid fever. Class: Macrolide Antibiotic. Dosage: 500 mg once daily for 3 to 5 days, or 1 gram single dose for specific infections. Take 1 hour before or 2 hours after food for optimal absorption. Warning: Complete the full prescribed 3-day or 5-day regimen to prevent bacterial resistance."
+  },
+  {
+    "id": "mono-entacyd-008",
+    "title": "Antacids (Entacyd / ACME's Antacid) Clinical Monograph",
+    "category": "Medicine Monograph",
+    "source": "Bangladesh National Formulary (BDNF)",
+    "content": "Generic Name: Aluminium Hydroxide + Magnesium Hydroxide + Simethicone. Common Brand Names in BD: Entacyd, Flatameal DS, Almex. Indications: Rapid symptomatic relief from heartburn, hyperacidity, peptic ulcer pain, flatulence. Administration: Chew tablets thoroughly 1-3 hours after meals and at bedtime, or take liquid suspension. Interaction Alert: Antacids bind with and dramatically reduce absorption of Tetracyclines, Ciprofloxacin, Iron supplements, and Ketoconazole. Always separate administration by 2 hours."
+  },
+  {
+    "id": "interaction-009",
+    "title": "Major Drug Interaction Matrix: Ciprofloxacin + Antacids (Entacyd)",
+    "category": "Drug Interaction",
+    "source": "Clinical Pharmacology & DGDA Safety Alerts",
+    "content": "Severity: HIGH / MAJOR. Combination: Ciprofloxacin (Ciprocin) + Aluminium/Magnesium Antacids (Entacyd). Mechanism: Polyvalent cations in antacids form insoluble chelate complexes with Ciprofloxacin in the stomach, rendering the antibiotic unabsorbable. Clinical Consequence: Severe therapeutic failure of antibiotic treatment. Recommendation: Take Ciprofloxacin at least 2 hours before or 4-6 hours after taking any antacid or calcium supplement."
+  },
+  {
+    "id": "interaction-010",
+    "title": "Major Drug Interaction Matrix: Paracetamol + High-Dose Alcohol / Hepatotoxic Agents",
+    "category": "Drug Interaction",
+    "source": "Clinical Pharmacology & DGDA Safety Alerts",
+    "content": "Severity: HIGH / MODERATE. Combination: Paracetamol (Napa/Ace) + Chronic Alcohol Consumption or Hepatotoxic drugs. Mechanism: Induction of CYP2E1 enzymes increases conversion of Paracetamol to toxic metabolite NAPQI, depleting glutathione. Clinical Consequence: Increased risk of severe liver damage even at normal upper therapeutic doses of Paracetamol. Recommendation: Limit Paracetamol dose and avoid alcohol."
+  },
+  {
+    "id": "interaction-011",
+    "title": "Moderate Drug Interaction Matrix: Omeprazole + Clopidogrel",
+    "category": "Drug Interaction",
+    "source": "Clinical Pharmacology & DGDA Safety Alerts",
+    "content": "Severity: MODERATE. Combination: Omeprazole (Seclo) + Clopidogrel (Antiplatelet). Mechanism: Omeprazole inhibits CYP2C19, preventing bioactivation of Clopidogrel to its active metabolite. Recommendation: Use Pantoprazole or Rabeprazole instead of Omeprazole if antiplatelet protection is required."
+  },
+  {
+    "id": "adr-guideline-012",
+    "title": "Adverse Drug Reaction (ADR) Reporting Protocol",
+    "category": "Pharmacovigilance",
+    "source": "National Pharmacovigilance Centre, DGDA Bangladesh",
+    "content": "An Adverse Drug Reaction (ADR) is any noxious, unintended response to a drug occurring at normal therapeutic doses. Common severe ADRs include anaphylaxis, Stevens-Johnson syndrome (SJS), severe rash, toxic epidermal necrolysis, or unexplained jaundice. Citizens and doctors in Bangladesh should report ADR incidents via the MedGuard ADR Portal. Critical ADR spikes trigger immediate DGDA investigation and potential batch recall."
+  }
+]

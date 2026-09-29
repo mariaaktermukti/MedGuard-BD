@@ -1,4 +1,6 @@
+# pyrefly: ignore [missing-import]
 from django.contrib.auth import get_user_model
+# pyrefly: ignore [missing-import]
 from rest_framework import serializers
 
 from core.models import ADRReport, Consultation, DosageSchedule, Medicine, Prescription, PrescriptionItem, ResearchDataset, Sale
