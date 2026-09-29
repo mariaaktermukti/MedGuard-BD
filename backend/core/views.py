@@ -244,6 +244,16 @@ class ManufacturerQualityTestListView(generics.ListAPIView):
         return QualityTest.objects.filter(batch__manufacturer=self.request.user).select_related('batch', 'batch__medicine').order_by('-conducted_date', '-id')
 
 
+class ManufacturerDistributionEventListView(generics.ListAPIView):
+    serializer_class = DistributionEventSerializer
+    permission_classes = [permissions.IsAuthenticated, IsManufacturer]
+
+    def get_queryset(self):
+        return DistributionEvent.objects.filter(
+            Q(batch__manufacturer=self.request.user) | Q(from_user=self.request.user)
+        ).select_related('batch', 'batch__medicine', 'from_user', 'to_user').order_by('-event_date', '-id')
+
+
 class DistributionEventListCreateView(generics.ListCreateAPIView):
     serializer_class = DistributionEventSerializer
     permission_classes = [permissions.IsAuthenticated, IsManufacturer]

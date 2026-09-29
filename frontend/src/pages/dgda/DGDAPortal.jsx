@@ -667,7 +667,7 @@ const DGDAPortal = () => {
                             <div>
                                 <h2 style={{ margin: 0, fontSize: '1.5rem', color: 'var(--primary)' }}>Real-Time Bangladesh 8-Division Heatmap</h2>
                                 <p style={{ color: 'var(--text-muted)', margin: '0.35rem 0 0', fontSize: '0.95rem' }}>
-                                    Live tracking across Bangladesh's 8 Divisions: Blue = Active Medicine Supply & Deliveries, Red = Recalled Batch / Hazard Alert.
+                                    Live tracking across Bangladesh's 8 Divisions: Blue = Active Medicine Supply & Deliveries, Red = No Supply / Supply Deficit.
                                 </p>
                             </div>
                         </div>
@@ -677,7 +677,7 @@ const DGDAPortal = () => {
                                     points={data}
                                     legend={[
                                         { label: 'Active Medicine Supply (BLUE)', color: '#0d6efd' },
-                                        { label: 'Hazard / Recalled Batch (RED)', color: '#dc3545' },
+                                        { label: 'No Supply / Deficit (RED)', color: '#dc3545' },
                                     ]}
                                 />
                             )}

@@ -1166,30 +1166,21 @@ class DGDAHeatmapDataView(views.APIView):
             lat, lng = DIVISION_MAP_COORDINATES[div_name]
             bucket = stats[div_name]
             
-            has_valid_supply = bucket['valid_units'] > 0 or (bucket['shipment_count'] > 0 and bucket['recalled_batches'] == 0)
-            has_supply = bucket['shipment_count'] > 0 or bucket['total_units'] > 0
+            has_supply = (bucket['shipment_count'] > 0 or bucket['total_units'] > 0) and (bucket['valid_units'] > 0 or bucket['recalled_batches'] == 0)
 
-            # A division with active valid manufacturer supply or delivered shipments is marked BLUE.
-            # It is only marked RED if it has no active valid medicine supply AND has active recalls/hazards.
-            is_hazard = (bucket['hazard_count'] > 0 or bucket['recalled_batches'] > 0) and not has_valid_supply
-
-            # ONLY include divisions that have active supply or hazard entries!
-            if not (has_supply or is_hazard or bucket['hazard_count'] > 0):
-                continue
-
-            if is_hazard:
-                color = '#dc3545'  # RED
-                status_label = 'Critical Hazard / Recalled Batch (RED)'
-                marker_type = 'red'
-                severity = 'critical'
-            else:
+            if has_supply and bucket['shipment_count'] > 0:
                 color = '#0d6efd'  # BLUE
                 status_label = 'Active Medicine Supply (BLUE)'
                 marker_type = 'blue'
                 severity = 'low'
+            else:
+                color = '#dc3545'  # RED
+                status_label = 'No Supply / Supply Deficit (RED)'
+                marker_type = 'red'
+                severity = 'critical'
 
             med_list = list(bucket['medicines'])[:3]
-            med_summary = ', '.join(med_list) if med_list else 'Pharmaceutical Products'
+            med_summary = ', '.join(med_list) if med_list else 'No Active Supply'
 
             data.append({
                 "id": idx,
@@ -1207,7 +1198,7 @@ class DGDAHeatmapDataView(views.APIView):
                     ["Supply Status", status_label],
                     ["Live Shipments", f"{bucket['shipment_count']} shipments"],
                     ["Total Units Supplied", f"{bucket['total_units']:,} units"],
-                    ["Hazard / Recall Flags", f"{bucket['hazard_count']} flags" if is_hazard else "Clear (0)"],
+                    ["Valid Units", f"{bucket['valid_units']:,} units"],
                     ["Active Medicines", med_summary],
                 ]
             })

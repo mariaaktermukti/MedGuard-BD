@@ -104,18 +104,33 @@ class DistributorShipmentSerializer(serializers.ModelSerializer):
 class DistributionEventSerializer(serializers.ModelSerializer):
     batch = serializers.PrimaryKeyRelatedField(queryset=Batch.objects.all())
     batch_details = serializers.SerializerMethodField(read_only=True)
+    from_user_name = serializers.SerializerMethodField(read_only=True)
+    to_user_name = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = DistributionEvent
         fields = '__all__'
 
     def get_batch_details(self, obj):
+        if not obj.batch:
+            return {'id': None, 'batch_number': '', 'ddp_id': '', 'medicine': ''}
         return {
             'id': obj.batch_id,
             'batch_number': obj.batch.batch_number,
             'ddp_id': obj.batch.ddp_id,
-            'medicine': obj.batch.medicine.name,
+            'medicine': obj.batch.medicine.name if obj.batch.medicine else '',
         }
+
+    def get_from_user_name(self, obj):
+        if not obj.from_user:
+            return ''
+        return getattr(obj.from_user, 'company_name', None) or obj.from_user.get_full_name() or obj.from_user.username
+
+    def get_to_user_name(self, obj):
+        if not obj.to_user:
+            return ''
+        return getattr(obj.to_user, 'company_name', None) or obj.to_user.get_full_name() or obj.to_user.username
+
 
 
 class QualityTestSerializer(serializers.ModelSerializer):

@@ -339,6 +339,8 @@ const ManufacturerPortal = () => {
     const [shipmentForm, setShipmentForm] = useState(emptyShipmentForm);
     const [complianceForm, setComplianceForm] = useState(emptyComplianceForm);
     const [shipmentEvents, setShipmentEvents] = useState([]);
+    const [shipmentFilterBatch, setShipmentFilterBatch] = useState('all');
+    const [shipmentSearchTerm, setShipmentSearchTerm] = useState('');
 
     const [recallReason, setRecallReason] = useState('');
     const [selectedRecallBatch, setSelectedRecallBatch] = useState(null);
@@ -411,15 +413,17 @@ const ManufacturerPortal = () => {
                 return;
             }
             case 'shipment': {
-                const [batchesRes, pharmaciesRes, distributorsRes] = await Promise.allSettled([
+                const [batchesRes, pharmaciesRes, distributorsRes, eventsRes] = await Promise.allSettled([
                     api.get('core/manufacturer/batches/'),
                     api.get('core/pharmacies/'),
                     api.get('core/distributors/'),
+                    api.get('core/manufacturer/distribution-events/'),
                 ]);
                 if (batchesRes.status === 'rejected') throw batchesRes.reason;
                 setBatches(asList(batchesRes.value.data));
                 setPharmacies(pharmaciesRes.status === 'fulfilled' ? asList(pharmaciesRes.value.data) : []);
                 setDistributors(distributorsRes.status === 'fulfilled' ? asList(distributorsRes.value.data) : []);
+                setShipmentEvents(eventsRes.status === 'fulfilled' ? asList(eventsRes.value.data) : []);
                 return;
             }
             default:
@@ -939,14 +943,19 @@ const ManufacturerPortal = () => {
 
     const loadShipmentEvents = async (batchId) => {
         if (!batchId) {
-            setShipmentEvents([]);
+            setShipmentFilterBatch('all');
             return;
         }
+        setShipmentFilterBatch(String(batchId));
         try {
             const res = await api.get(`core/manufacturer/batches/${batchId}/distribution-events/`);
-            setShipmentEvents(asList(res.data));
+            const fetched = asList(res.data);
+            setShipmentEvents((current) => {
+                const existingIds = new Set(current.map((e) => e.id));
+                const newItems = fetched.filter((e) => !existingIds.has(e.id));
+                return [...newItems, ...current];
+            });
         } catch (error) {
-            setShipmentEvents([]);
             notify(getErrorMessage(error, 'Could not load the distribution history for this batch.'), 'error');
         }
     };
@@ -1712,23 +1721,133 @@ const ManufacturerPortal = () => {
                 </div>
 
                 <div className="glass-panel" style={{ padding: '2rem' }}>
-                    <SectionTitle title="Distribution History" subtitle={shipmentForm.batch ? 'Movements recorded for the selected batch.' : 'Select a batch above to see its movements.'} />
-                    <div style={{ display: 'grid', gap: '0.75rem' }}>
-                        {shipmentForm.batch && shipmentEvents.length === 0 && <EmptyText>No movements recorded for this batch yet.</EmptyText>}
-                        {shipmentEvents.map((eventItem) => (
-                            <div key={eventItem.id} style={rowStyle}>
-                                <div style={{ display: 'grid', gap: '0.25rem' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700 }}>
-                                        <Truck size={18} color="var(--primary)" />{labelize(eventItem.stage_from)} → {labelize(eventItem.stage_to)}
-                                    </div>
-                                    <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                                        {eventItem.geo_location || 'No destination'} | {eventItem.event_date ? new Date(eventItem.event_date).toLocaleString() : '—'}
-                                    </div>
-                                    {eventItem.notes && <div style={{ fontSize: '0.88rem' }}>{eventItem.notes}</div>}
-                                </div>
-                                <StatusPill tone="blue">{Number(eventItem.quantity).toLocaleString()} units</StatusPill>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
+                        <div>
+                            <SectionTitle
+                                title="Distribution History (পূর্ববর্তী বিতরণ ও চালান তালিকা)"
+                                subtitle={`Complete history of all previous outbound shipments and distribution events (${shipmentEvents.length} total recorded).`}
+                            />
+                        </div>
+                        <Button size="sm" variant="outline" onClick={() => {
+                            const csvRows = ['id,batch_number,medicine,stage_from,stage_to,recipient,quantity,geo_location,notes,event_date'];
+                            shipmentEvents.forEach((ev) => {
+                                const bNum = ev.batch_details?.batch_number || ev.batch || '';
+                                const med = ev.batch_details?.medicine || '';
+                                const recipient = ev.to_user_name || ev.stage_to || '';
+                                csvRows.push(`${ev.id},"${bNum}","${med}","${ev.stage_from}","${ev.stage_to}","${recipient}",${ev.quantity},"${ev.geo_location || ''}","${(ev.notes || '').replace(/"/g, '""')}","${ev.event_date || ''}"`);
+                            });
+                            downloadFile('distribution-history.csv', csvRows.join('\n'), 'text/csv');
+                        }} disabled={shipmentEvents.length === 0}>
+                            <DownloadSimple size={16} /> Export History (CSV)
+                        </Button>
+                    </div>
+
+                    {/* Distribution History KPI Summary */}
+                    <div className="medguard-metric-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
+                        <div style={{ background: 'var(--bg-input)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid var(--border)' }}>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>Total Shipments / Events</div>
+                            <div style={{ fontSize: '1.4rem', fontWeight: 800, marginTop: '0.2rem' }}>{shipmentEvents.length}</div>
+                        </div>
+                        <div style={{ background: 'rgba(59, 130, 246, 0.06)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--primary)', fontWeight: 600 }}>Total Units Shipped</div>
+                            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--primary)', marginTop: '0.2rem' }}>
+                                {shipmentEvents.reduce((acc, item) => acc + (Number(item.quantity) || 0), 0).toLocaleString()}
                             </div>
-                        ))}
+                        </div>
+                        <div style={{ background: 'rgba(16, 185, 129, 0.06)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                            <div style={{ fontSize: '0.8rem', color: '#059669', fontWeight: 600 }}>Destination Locations</div>
+                            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#059669', marginTop: '0.2rem' }}>
+                                {new Set(shipmentEvents.map(e => e.geo_location).filter(Boolean)).size} Locations
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Search & Batch Filters */}
+                    <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '1.5rem' }}>
+                        <div style={{ flex: '1 1 260px' }}>
+                            <input
+                                value={shipmentSearchTerm}
+                                onChange={(e) => setShipmentSearchTerm(e.target.value)}
+                                placeholder="Search by batch number, medicine, destination, or recipient..."
+                                style={{ ...inputStyle, width: '100%' }}
+                            />
+                        </div>
+                        <select
+                            value={shipmentFilterBatch}
+                            onChange={(e) => setShipmentFilterBatch(e.target.value)}
+                            style={{ ...inputStyle, width: 'auto', minWidth: '200px' }}
+                        >
+                            <option value="all">All Batches ({shipmentEvents.length} total events)</option>
+                            {batches.map((b) => {
+                                const count = shipmentEvents.filter(e => String(e.batch) === String(b.id)).length;
+                                return (
+                                    <option key={b.id} value={String(b.id)}>
+                                        Batch: {b.batch_number} ({count} events)
+                                    </option>
+                                );
+                            })}
+                        </select>
+                    </div>
+
+                    {/* Events List */}
+                    <div style={{ display: 'grid', gap: '0.75rem' }}>
+                        {shipmentEvents.filter((eventItem) => {
+                            const term = shipmentSearchTerm.toLowerCase().trim();
+                            const bNum = (eventItem.batch_details?.batch_number || String(eventItem.batch || '')).toLowerCase();
+                            const med = (eventItem.batch_details?.medicine || '').toLowerCase();
+                            const geo = (eventItem.geo_location || '').toLowerCase();
+                            const notes = (eventItem.notes || '').toLowerCase();
+                            const recipient = (eventItem.to_user_name || eventItem.stage_to || '').toLowerCase();
+                            const matchesSearch = !term || bNum.includes(term) || med.includes(term) || geo.includes(term) || notes.includes(term) || recipient.includes(term);
+
+                            const matchesBatch = shipmentFilterBatch === 'all' || String(eventItem.batch) === shipmentFilterBatch;
+                            return matchesSearch && matchesBatch;
+                        }).length === 0 ? (
+                            <EmptyText>No previous distribution history records found matching your filter.</EmptyText>
+                        ) : (
+                            shipmentEvents.filter((eventItem) => {
+                                const term = shipmentSearchTerm.toLowerCase().trim();
+                                const bNum = (eventItem.batch_details?.batch_number || String(eventItem.batch || '')).toLowerCase();
+                                const med = (eventItem.batch_details?.medicine || '').toLowerCase();
+                                const geo = (eventItem.geo_location || '').toLowerCase();
+                                const notes = (eventItem.notes || '').toLowerCase();
+                                const recipient = (eventItem.to_user_name || eventItem.stage_to || '').toLowerCase();
+                                const matchesSearch = !term || bNum.includes(term) || med.includes(term) || geo.includes(term) || notes.includes(term) || recipient.includes(term);
+
+                                const matchesBatch = shipmentFilterBatch === 'all' || String(eventItem.batch) === shipmentFilterBatch;
+                                return matchesSearch && matchesBatch;
+                            }).map((eventItem) => (
+                                <div key={eventItem.id} style={rowStyle}>
+                                    <div style={{ display: 'grid', gap: '0.35rem', flex: 1 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                                            <Truck size={18} color="var(--primary)" />
+                                            <span style={{ fontWeight: 800, fontSize: '0.95rem' }}>
+                                                {eventItem.batch_details?.batch_number ? `Batch: ${eventItem.batch_details.batch_number}` : `Batch #${eventItem.batch}`}
+                                            </span>
+                                            {eventItem.batch_details?.medicine && (
+                                                <span style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>
+                                                    ({eventItem.batch_details.medicine})
+                                                </span>
+                                            )}
+                                            <span style={{ background: 'var(--bg-input)', padding: '0.15rem 0.5rem', borderRadius: '0.4rem', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-main)' }}>
+                                                {labelize(eventItem.stage_from)} → {eventItem.to_user_name || labelize(eventItem.stage_to)}
+                                            </span>
+                                        </div>
+                                        <div style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>
+                                            📍 {eventItem.geo_location || 'No destination specified'} | 📅 {eventItem.event_date ? new Date(eventItem.event_date).toLocaleString() : '—'}
+                                        </div>
+                                        {eventItem.notes && (
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-main)', opacity: 0.9 }}>
+                                                📝 {eventItem.notes}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <StatusPill tone="blue">
+                                        {Number(eventItem.quantity).toLocaleString()} units
+                                    </StatusPill>
+                                </div>
+                            ))
+                        )}
                     </div>
                 </div>
             </div>
