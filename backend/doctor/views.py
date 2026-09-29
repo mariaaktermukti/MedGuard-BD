@@ -379,11 +379,14 @@ class DoctorDashboardView(views.APIView):
 
         adr_reports_count = ADRReport.objects.filter(reported_by_user=doctor).count()
 
-        recall_view = DoctorRecallAlertsView()
-        try:
-            recall_response = recall_view.get(request)
-            recall_alerts_count = len(recall_response.data.get('alerts', []))
-        except Exception:
+        if patient_ids:
+            med_ids = set(
+                DosageSchedule.objects.filter(citizen_id__in=patient_ids, is_active=True).values_list('medicine_id', flat=True)
+            ) | set(
+                PrescriptionItem.objects.filter(prescription__citizen_id__in=patient_ids, prescription__status='active').values_list('medicine_id', flat=True)
+            )
+            recall_alerts_count = Recall.objects.filter(status='active', batch__medicine_id__in=med_ids).count()
+        else:
             recall_alerts_count = 0
 
         recent_prescriptions = DoctorPrescriptionSerializer(

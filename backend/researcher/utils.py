@@ -279,8 +279,8 @@ def _metric_adr_monthly_trend():
     """Reports per calendar month, keyed on reaction_date where present."""
     from core.models import ADRReport
     buckets = {}
-    for report in ADRReport.objects.only('reaction_date', 'date_reported'):
-        month = coarsen_date(report.reaction_date) or coarsen_date(report.date_reported)
+    for r_date, d_date in ADRReport.objects.values_list('reaction_date', 'date_reported'):
+        month = coarsen_date(r_date) or coarsen_date(d_date)
         if month:
             buckets[month] = buckets.get(month, 0) + 1
     return [{'label': month, 'value': buckets[month]} for month in sorted(buckets)]

@@ -355,26 +355,32 @@ class ManufacturerDashboardView(views.APIView):
             compliance_grade = 'C'
 
         monthly_production = defaultdict(int)
-        for batch in batches:
-            monthly_production[batch.created_at.strftime('%Y-%m')] += batch.quantity_produced
+        for b_date, b_qty in batches.values_list('created_at', 'quantity_produced'):
+            if b_date:
+                monthly_production[b_date.strftime('%Y-%m')] += b_qty
 
         monthly_distribution = defaultdict(int)
-        for shipment in shipments:
-            monthly_distribution[shipment.created_at.strftime('%Y-%m')] += shipment.quantity
+        for s_date, s_qty in shipments.values_list('created_at', 'quantity'):
+            if s_date:
+                monthly_distribution[s_date.strftime('%Y-%m')] += s_qty
 
-        expiry_forecast = defaultdict(int)
         next_six_months = [date.today().replace(day=1)]
         for _ in range(5):
             current = next_six_months[-1]
             next_month = (current.replace(day=28) + timedelta(days=4)).replace(day=1)
             next_six_months.append(next_month)
-        for batch in batches:
-            if batch.expiry_date >= date.today() and batch.expiry_date <= date.today() + timedelta(days=180):
-                expiry_forecast[batch.expiry_date.strftime('%Y-%m')] += batch.quantity_produced
+
+        expiry_forecast = defaultdict(int)
+        today_val = date.today()
+        horizon_val = today_val + timedelta(days=180)
+        for e_date, e_qty in batches.values_list('expiry_date', 'quantity_produced'):
+            if e_date and today_val <= e_date <= horizon_val:
+                expiry_forecast[e_date.strftime('%Y-%m')] += e_qty
 
         medicine_distribution = defaultdict(int)
-        for event in DistributionEvent.objects.filter(batch__manufacturer=request.user).select_related('batch', 'batch__medicine'):
-            medicine_distribution[event.batch.medicine.name] += event.quantity
+        for m_name, e_qty in DistributionEvent.objects.filter(batch__manufacturer=request.user).values_list('batch__medicine__name', 'quantity'):
+            if m_name:
+                medicine_distribution[m_name] += e_qty
 
         top_selling_medicines = [
             {'medicine': medicine, 'units': quantity}
@@ -923,25 +929,18 @@ class CitizenDashboardView(views.APIView):
         active_medicines = DosageSchedule.objects.filter(citizen=user, is_active=True).count()
 
         # 3. Reports Submitted
-        user_email = getattr(user, 'email', None)
         reports_submitted = ADRReport.objects.filter(
-            Q(reported_by_user=user) | 
-            Q(citizen=user) |
-            (Q(reported_by_user__email=user_email) if user_email else Q(id__in=[])) |
-            (Q(citizen__email=user_email) if user_email else Q(id__in=[]))
+            Q(reported_by_user=user) | Q(citizen=user)
         ).distinct().count()
 
         pharmacy_visits = Sale.objects.filter(citizen=user).values('pharmacy').distinct().count()
 
         # Dynamic Recent Activity from real user actions in DB
         activities = []
-        user_email = getattr(user, 'email', None)
 
         # 1. Real ADR Reports
         adr_items = ADRReport.objects.filter(
-            Q(reported_by_user=user) | Q(citizen=user) |
-            (Q(reported_by_user__email=user_email) if user_email else Q(id__in=[])) |
-            (Q(citizen__email=user_email) if user_email else Q(id__in=[]))
+            Q(reported_by_user=user) | Q(citizen=user)
         ).select_related('medicine').order_by('-date_reported')[:5]
 
         for adr in adr_items:
@@ -1442,7 +1441,7 @@ class PharmacyDashboardView(views.APIView):
         inventory = Inventory.objects.filter(
             entity_type='pharmacy', entity_id=request.user.id
         ).select_related('batch', 'batch__medicine')
-        low_stock_count = sum(1 for item in inventory if item.quantity <= LOW_STOCK_THRESHOLD)
+        low_stock_count = inventory.filter(quantity__lte=LOW_STOCK_THRESHOLD).count()
         expiring_count = inventory.filter(batch__expiry_date__lte=date.today() + timedelta(days=90)).count()
         expired_count = inventory.filter(batch__expiry_date__lt=date.today()).count()
 
@@ -1472,18 +1471,19 @@ class PharmacyDashboardView(views.APIView):
         else:
             trust_grade = 'C'
 
-        # The column is DecimalField(max_digits=3, decimal_places=2), i.e. a 0-1 ratio,
-        # and that is the scale every DGDA view reads (high risk is trust_score < 0.5).
-        # Writing the 0-100 figure straight in overflows the column and 500s this page.
-        PharmacyProfile.objects.filter(user=request.user).update(
-            trust_score=(Decimal(trust_score) / Decimal(100)).quantize(Decimal('0.01'))
-        )
+        target_score = (Decimal(trust_score) / Decimal(100)).quantize(Decimal('0.01'))
+        prof = PharmacyProfile.objects.filter(user=request.user).first()
+        if prof and prof.trust_score != target_score:
+            prof.trust_score = target_score
+            prof.save(update_fields=['trust_score'])
 
         monthly_sales = defaultdict(int)
         medicine_sales = defaultdict(int)
-        for sale in sales_90d.select_related('batch', 'batch__medicine'):
-            monthly_sales[sale.sale_date.strftime('%Y-%m')] += sale.quantity
-            medicine_sales[sale.batch.medicine.name] += sale.quantity
+        for s_name, s_date, s_qty in sales_90d.values_list('batch__medicine__name', 'sale_date', 'quantity'):
+            if s_date:
+                monthly_sales[s_date.strftime('%Y-%m')] += s_qty
+            if s_name:
+                medicine_sales[s_name] += s_qty
 
         top_selling_medicines = [
             {'medicine': medicine, 'units': quantity}
@@ -1938,11 +1938,12 @@ class DistributorDashboardView(views.APIView):
                 capacity=100000
             )
 
-        # Sync any delivered incoming shipments into warehouse inventory if not credited yet
-        for ship in incoming.filter(status='delivered'):
+        warehouse_ids = list(Warehouse.objects.filter(distributor=request.user).values_list('id', flat=True))
+        credited_batch_ids = set(Inventory.objects.filter(entity_type='warehouse', entity_id__in=warehouse_ids).values_list('batch_id', flat=True))
+        uncredited_delivered = incoming.filter(status='delivered').exclude(batch_id__in=credited_batch_ids)
+        for ship in uncredited_delivered:
             _credit_receiver_stock(ship)
 
-        warehouse_ids = list(Warehouse.objects.filter(distributor=request.user).values_list('id', flat=True))
         stock = Inventory.objects.filter(entity_type='warehouse', entity_id__in=warehouse_ids).select_related('batch')
         expiry_horizon = date.today() + timedelta(days=90)
 

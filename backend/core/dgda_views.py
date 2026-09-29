@@ -88,12 +88,13 @@ class DGDACommandCenterView(views.APIView):
         counterfeit_signals_count = active_alerts_qs.filter(event_type='counterfeit').count()
 
         # Severity Overview Breakdown
-        severity_overview = {
-            "critical": active_alerts_qs.filter(severity='critical').count(),
-            "high": active_alerts_qs.filter(severity='high').count(),
-            "medium": active_alerts_qs.filter(severity='medium').count(),
-            "low": active_alerts_qs.filter(severity='low').count(),
-        }
+        from django.db.models import Count, Q
+        severity_overview = active_alerts_qs.aggregate(
+            critical=Count('id', filter=Q(severity='critical')),
+            high=Count('id', filter=Q(severity='high')),
+            medium=Count('id', filter=Q(severity='medium')),
+            low=Count('id', filter=Q(severity='low')),
+        )
 
         # Live Regulatory Alerts
         # MonitoringEventSerializer resolves nine related names per row, each
