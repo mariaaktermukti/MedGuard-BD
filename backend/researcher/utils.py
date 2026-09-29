@@ -3,7 +3,9 @@ import json
 import os
 from urllib import error, request
 
+# pyrefly: ignore [missing-import]
 from django.conf import settings
+# pyrefly: ignore [missing-import]
 from django.db.models import Count
 
 from core.models import ResearchADRData
