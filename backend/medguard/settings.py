@@ -89,9 +89,19 @@ DATABASES = {
     'default': dj_database_url.config(
         # Local fallback: when DATABASE_URL is not set, use SQLite
         default=os.environ.get('DATABASE_URL') or f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
-        conn_max_age=0,
+        conn_max_age=60,
+        conn_health_checks=True,
     )
 }
+
+if DATABASES['default'].get('ENGINE') == 'django.db.backends.postgresql':
+    DATABASES['default'].setdefault('OPTIONS', {}).update({
+        'keepalives': 1,
+        'keepalives_idle': 30,
+        'keepalives_interval': 10,
+        'keepalives_count': 5,
+    })
+
 
 
 # Password validation

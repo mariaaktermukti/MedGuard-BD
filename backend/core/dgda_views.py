@@ -88,6 +88,7 @@ class DGDACommandCenterView(views.APIView):
         counterfeit_signals_count = active_alerts_qs.filter(event_type='counterfeit').count()
 
         # Severity Overview Breakdown
+        # pyrefly: ignore [missing-import]
         from django.db.models import Count, Q
         severity_overview = active_alerts_qs.aggregate(
             critical=Count('id', filter=Q(severity='critical')),
