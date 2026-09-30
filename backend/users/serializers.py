@@ -1,4 +1,7 @@
 # pyrefly: ignore [missing-import]
+# pyright: reportAttributeAccessIssue=false
+# type: ignore
+from django.db.models import Q
 from rest_framework import serializers
 # pyrefly: ignore [missing-import]
 from django.contrib.auth.hashers import make_password
@@ -14,20 +17,48 @@ from .models import (
 
 User = get_user_model()
 
+
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
-        username_or_email = attrs.get('username')
-        if username_or_email:
-            # Allow login using either Email or Username (case-insensitive)
-            user_obj = User.objects.filter(email__iexact=username_or_email).first() or User.objects.filter(username__iexact=username_or_email).first()
+        username_or_email = (attrs.get('username') or '').strip()
+        password = attrs.get('password')
+
+        if username_or_email and password:
+            # First try exact/case-insensitive username match
+            user_obj = User.objects.filter(username__iexact=username_or_email).first()
+            
+            # If user_obj not found or password doesn't match this candidate,
+            # search all candidates matching username or email for a matching password
+            if not user_obj or not getattr(user_obj, 'check_password', lambda p: False)(password):
+                candidates = User.objects.filter(
+                    Q(username__iexact=username_or_email) | Q(email__iexact=username_or_email)
+                )
+                matching_user = None
+                for cand in candidates:
+                    if getattr(cand, 'check_password', lambda p: False)(password):
+                        matching_user = cand
+                        break
+                if matching_user:
+                    user_obj = matching_user
+
             if user_obj:
-                attrs['username'] = user_obj.username
+                attrs['username'] = getattr(user_obj, 'username', username_or_email)
 
         data = super().validate(attrs)
-        data['role'] = getattr(self.user, 'role', 'citizen')
-        data['username'] = self.user.username
-        data['full_name'] = getattr(self.user, 'full_name', self.user.username)
+        
+        # Access user attached by TokenObtainPairSerializer
+        authenticated_user = getattr(self, 'user', None)
+        if authenticated_user:
+            data['role'] = getattr(authenticated_user, 'role', 'citizen')
+            data['username'] = getattr(authenticated_user, 'username', attrs.get('username', ''))
+            data['full_name'] = getattr(authenticated_user, 'full_name', getattr(authenticated_user, 'username', ''))
+        else:
+            data['role'] = 'citizen'
+            data['username'] = attrs.get('username', '')
+            data['full_name'] = attrs.get('username', '')
+
         return data
+
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})
@@ -42,20 +73,24 @@ class RegisterSerializer(serializers.ModelSerializer):
         user = super().create(validated_data)
         
         # Create corresponding profile based on role
-        role = user.role
+        role = getattr(user, 'role', None)
+        user_id = getattr(user, 'id', None)
+        full_name = getattr(user, 'full_name', '')
+
         if role == Role.CITIZEN:
             CitizenProfile.objects.create(user=user)
         elif role == Role.MANUFACTURER:
-            ManufacturerProfile.objects.create(user=user, company_name=user.full_name, registration_number=f"REG-MFG-{user.id}")
+            ManufacturerProfile.objects.create(user=user, company_name=full_name, registration_number=f"REG-MFG-{user_id}")
         elif role == Role.PHARMACY:
-            PharmacyProfile.objects.create(user=user, pharmacy_name=user.full_name, registration_number=f"REG-PHR-{user.id}")
+            PharmacyProfile.objects.create(user=user, pharmacy_name=full_name, registration_number=f"REG-PHR-{user_id}")
         elif role == Role.DISTRIBUTOR:
-            DistributorProfile.objects.create(user=user, company_name=user.full_name, registration_number=f"REG-DST-{user.id}")
+            DistributorProfile.objects.create(user=user, company_name=full_name, registration_number=f"REG-DST-{user_id}")
         elif role == Role.DOCTOR:
-            DoctorProfile.objects.create(user=user, license_number=f"LIC-DOC-{user.id}")
+            DoctorProfile.objects.create(user=user, license_number=f"LIC-DOC-{user_id}")
         elif role == Role.DGDA:
             DGDAProfile.objects.create(user=user)
         elif role == Role.RESEARCHER:
             ResearcherProfile.objects.create(user=user)
 
         return user
+

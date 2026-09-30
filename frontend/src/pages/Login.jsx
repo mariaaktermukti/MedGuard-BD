@@ -43,8 +43,13 @@ const Login = () => {
                     researcher: '/dashboard/researcher'
                 };
                 navigate(rolePaths[result.role] || '/dashboard');
-            }, 2500);
+            }, 800);
         }
+    };
+
+    const handleQuickFill = (username) => {
+        setCredentials({ username, password: 'password123' });
+        setError(null);
     };
 
     return (
@@ -295,6 +300,53 @@ const Login = () => {
                                         <Link to="/register" style={{ color: 'var(--primary)', textDecoration: 'none', fontWeight: 600 }}>
                                             Create an account
                                         </Link>
+                                    </div>
+
+                                    {/* Quick Demo Accounts Selection */}
+                                    <div style={{ marginTop: '1.5rem', paddingTop: '1.25rem', borderTop: '1px dashed var(--border)' }}>
+                                        <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.6rem', textAlign: 'center' }}>
+                                            ⚡ Quick Demo Login (Click to Autofill)
+                                        </div>
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', justifyContent: 'center' }}>
+                                            {[
+                                                { label: 'Citizen', username: 'citizentest' },
+                                                { label: 'Doctor', username: 'doctortest' },
+                                                { label: 'Pharmacy', username: 'pharmacytest' },
+                                                { label: 'Manufacturer', username: 'mfgtest' },
+                                                { label: 'Distributor', username: 'distributortest' },
+                                                { label: 'DGDA Officer', username: 'dgdatest' },
+                                                { label: 'Researcher', username: 'researchertest' }
+                                            ].map((demo) => (
+                                                <button
+                                                    key={demo.username}
+                                                    type="button"
+                                                    onClick={() => handleQuickFill(demo.username)}
+                                                    style={{
+                                                        padding: '0.35rem 0.65rem',
+                                                        fontSize: '0.75rem',
+                                                        fontWeight: 600,
+                                                        borderRadius: '6px',
+                                                        border: '1px solid var(--border)',
+                                                        backgroundColor: 'var(--bg-input)',
+                                                        color: 'var(--text-main)',
+                                                        cursor: 'pointer',
+                                                        transition: 'all 0.15s ease'
+                                                    }}
+                                                    onMouseEnter={(e) => {
+                                                        e.currentTarget.style.borderColor = 'var(--primary)';
+                                                        e.currentTarget.style.color = 'var(--primary)';
+                                                        e.currentTarget.style.backgroundColor = 'var(--primary-light)';
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        e.currentTarget.style.borderColor = 'var(--border)';
+                                                        e.currentTarget.style.color = 'var(--text-main)';
+                                                        e.currentTarget.style.backgroundColor = 'var(--bg-input)';
+                                                    }}
+                                                >
+                                                    {demo.label}
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
                                 </CardContent>
                             </Card>
