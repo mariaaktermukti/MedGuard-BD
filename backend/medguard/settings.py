@@ -85,14 +85,21 @@ WSGI_APPLICATION = "medguard.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+db_url = os.environ.get('DATABASE_URL')
+if not db_url:
+    if os.environ.get('VERCEL'):
+        db_url = "sqlite:////tmp/db.sqlite3"
+    else:
+        db_url = f"sqlite:///{BASE_DIR / 'db.sqlite3'}"
+
 DATABASES = {
     'default': dj_database_url.config(
-        # Local fallback: when DATABASE_URL is not set, use SQLite
-        default=os.environ.get('DATABASE_URL') or f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
-        conn_max_age=60,
+        default=db_url,
+        conn_max_age=0 if os.environ.get('VERCEL') else 60,
         conn_health_checks=True,
     )
 }
+
 
 if DATABASES['default'].get('ENGINE') == 'django.db.backends.postgresql':
     DATABASES['default'].setdefault('OPTIONS', {}).update({
