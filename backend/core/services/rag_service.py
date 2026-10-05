@@ -4,11 +4,20 @@ import logging
 import re
 from typing import List, Dict, Any, Tuple
 # pyrefly: ignore [missing-import]
+# pyrefly: ignore [missing-import]
 from django.conf import settings
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
+
+try:
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    from sklearn.metrics.pairwise import cosine_similarity
+    SKLEARN_AVAILABLE = True
+except ImportError:
+    SKLEARN_AVAILABLE = False
+    TfidfVectorizer = None
+    cosine_similarity = None
 
 logger = logging.getLogger(__name__)
+
 
 KNOWLEDGE_BASE_PATH = os.path.join(settings.BASE_DIR, 'knowledge_base', 'medical_documents.json')
 
@@ -72,6 +81,12 @@ class RAGService:
             self.tfidf_matrix = None
             return
 
+        if not SKLEARN_AVAILABLE:
+            self.vectorizer = None
+            self.tfidf_matrix = None
+            logger.info("scikit-learn not available; using pure Python keyword search.")
+            return
+
         corpus = []
         for doc in self.documents:
             # Weight title and category heavily in text representation
@@ -91,19 +106,23 @@ class RAGService:
         Returns:
             Tuple[context_text, sources_list]
         """
-        if not self.documents or not self.vectorizer or self.tfidf_matrix is None:
+        if not self.documents:
             return "", []
 
         query_cleaned = query.strip()
         if not query_cleaned:
             return "", []
 
-        try:
-            query_vec = self.vectorizer.transform([query_cleaned])
-            cosine_scores = cosine_similarity(query_vec, self.tfidf_matrix).flatten()
+        scores = [0.0] * len(self.documents)
+        if SKLEARN_AVAILABLE and self.vectorizer and self.tfidf_matrix is not None:
+            try:
+                query_vec = self.vectorizer.transform([query_cleaned])
+                cosine_scores = cosine_similarity(query_vec, self.tfidf_matrix).flatten()
+                scores = list(cosine_scores)
+            except Exception as e:
+                logger.error(f"TF-IDF retrieval error: {e}")
+                scores = [0.0] * len(self.documents)
 
-            # Hybrid keyword boost for exact medicine or category matches
-            scores = list(cosine_scores)
             query_lower = query_cleaned.lower()
             
             for idx, doc in enumerate(self.documents):
