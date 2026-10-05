@@ -1,7 +1,10 @@
 import os
 import sys
+from pathlib import Path
 
-# Ensure backend root is on Python sys.path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add project root directory to sys.path
+BASE_DIR = Path(__file__).resolve().parent.parent
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
 
 from medguard.wsgi import app
