@@ -112,21 +112,21 @@ class RAGService:
         query_cleaned = query.strip()
         if not query_cleaned:
             return "", []
-
-        scores = [0.0] * len(self.documents)
-        if SKLEARN_AVAILABLE and self.vectorizer and self.tfidf_matrix is not None:
-            try:
-                query_vec = self.vectorizer.transform([query_cleaned])
-                cosine_scores = cosine_similarity(query_vec, self.tfidf_matrix).flatten()
-                scores = list(cosine_scores)
-            except Exception as e:
-                logger.error(f"TF-IDF retrieval error: {e}")
-                scores = [0.0] * len(self.documents)
+        try:
+            scores = [0.0] * len(self.documents)
+            if SKLEARN_AVAILABLE and self.vectorizer and self.tfidf_matrix is not None:
+                try:
+                    query_vec = self.vectorizer.transform([query_cleaned])
+                    cosine_scores = cosine_similarity(query_vec, self.tfidf_matrix).flatten()
+                    scores = list(cosine_scores)
+                except Exception as e:
+                    logger.error(f"TF-IDF retrieval error: {e}")
+                    scores = [0.0] * len(self.documents)
 
             query_lower = query_cleaned.lower()
             
             for idx, doc in enumerate(self.documents):
-                doc_text = f"{doc.get('title', '')} {doc.get('content', '')}".lower()
+                doc_text = f"{doc.get('title', '')} {doc.get('category', '')} {doc.get('content', '')}".lower()
                 # Boost if drug name or keyword appears explicitly
                 for word in query_lower.split():
                     if len(word) >= 4 and word in doc_text:
@@ -156,6 +156,7 @@ class RAGService:
         except Exception as e:
             logger.error(f"Error during RAG retrieval: {e}")
             return "", []
+
 
     def build_rag_prompt(self, user_prompt: str, active_medicines: List[str] = None) -> Tuple[str, List[Dict[str, Any]]]:
         """
