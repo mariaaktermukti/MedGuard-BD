@@ -149,8 +149,19 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# CORS Settings
+# CORS & CSRF Settings
 CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    "https://medguard-bd-frontend.vercel.app",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+CSRF_TRUSTED_ORIGINS = [
+    "https://medguard-bd-frontend.vercel.app",
+    "https://*.vercel.app",
+]
+
 
 # Custom User Model
 AUTH_USER_MODEL = 'users.CustomUser'
