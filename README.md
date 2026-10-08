@@ -25,7 +25,7 @@
 
 ---
 
-## 🏗️ 7-Tier Stakeholder Architecture
+##  7-Tier Stakeholder Architecture
 
 MedGuard-BD unifies all seven essential actors in Bangladesh's pharmaceutical landscape into a cohesive, role-protected ecosystem:
 
@@ -110,7 +110,7 @@ MedGuard-BD unifies all seven essential actors in Bangladesh's pharmaceutical la
 
 ---
 
-## 📂 Project Structure
+##  Project Structure
 
 ```
 MedGuard-BD/
@@ -241,7 +241,7 @@ MedGuard-BD/
 
 ---
 
-## 👥 Role & Access Matrix
+##  Role & Access Matrix
 
 MedGuard-BD uses Role-Based Access Control (RBAC). For testing, seed users can be initialized via `create_test_users.py` or registered through `/register`:
 
@@ -314,9 +314,7 @@ python test_end_to_end_chain.py
 
 ---
 
-##  License
 
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
 
 ---
 
